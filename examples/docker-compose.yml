@@ -1,0 +1,163 @@
+# =============================================================================
+# Author: Vladyslav Zaiets | https://sarmkadan.com
+# CTO & Software Architect
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # gRPC-Web Bridge Service
+  grpc-web-bridge:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: grpc-web-bridge
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000;https://+:5001
+      GrpcWebBridge__MaxStreamCount: 5000
+      GrpcWebBridge__StreamIdleTimeoutSeconds: 300
+      GrpcWebBridge__RequireAuthentication: "false"
+      GrpcWebBridge__EnableSwagger: "true"
+      GrpcWebBridge__AllowedOrigins__0: "*"
+    volumes:
+      - ../src/GrpcWebBridge:/app
+      - ../logs:/app/logs
+    depends_on:
+      - grpc-backend-service
+    networks:
+      - grpc-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.example.description=gRPC-Web Bridge Server"
+
+  # Example gRPC Backend Service
+  # Replace this with your actual gRPC service
+  grpc-backend-service:
+    image: mcr.microsoft.com/dotnet/samples:aspnetcore-8.0
+    container_name: grpc-backend
+    ports:
+      - "50051:50051"
+    environment:
+      ASPNETCORE_URLS: http://+:50051
+      ASPNETCORE_ENVIRONMENT: Development
+    networks:
+      - grpc-network
+    restart: unless-stopped
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - grpc-network
+    restart: unless-stopped
+    depends_on:
+      - grpc-web-bridge
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - grpc-network
+    restart: unless-stopped
+
+  # Optional: Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"  # UI
+      - "14250:14250"  # gRPC collector
+      - "14268:14268"  # HTTP collector
+    environment:
+      COLLECTOR_ZIPKIN_HTTP_PORT: "9411"
+    networks:
+      - grpc-network
+    restart: unless-stopped
+
+  # Optional: Elasticsearch for logs (if using ELK stack)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - grpc-network
+    restart: unless-stopped
+
+  # Optional: Kibana for log visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.0.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - grpc-network
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  elasticsearch-data:
+
+networks:
+  grpc-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Usage:
+#   Start all services:  docker-compose up -d
+#   View logs:           docker-compose logs -f grpc-web-bridge
+#   Stop all services:   docker-compose down
+#   Clean up:            docker-compose down -v
+#
+# Access:
+#   Bridge:   http://localhost:5000
+#   Swagger:  http://localhost:5000/swagger
+#   Grafana:  http://localhost:3000 (admin/admin)
+#   Prometheus: http://localhost:9090
+#   Jaeger:   http://localhost:16686
+#   Kibana:   http://localhost:5601
