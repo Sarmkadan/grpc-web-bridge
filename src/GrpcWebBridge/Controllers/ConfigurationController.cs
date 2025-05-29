@@ -4,6 +4,8 @@
 // =============================================================================
 
 using Microsoft.AspNetCore.Mvc;
+using GrpcWebBridge.Configuration;
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
 
@@ -44,14 +46,14 @@ public class ConfigurationController : ControllerBase
         {
             var config = new
             {
-                Environment = _options.Environment,
-                MaxStreamCount = _options.MaxStreamCount,
-                StreamIdleTimeoutSeconds = _options.StreamIdleTimeoutSeconds,
-                MaxMessageSize = _options.MaxMessageSize,
-                CompressResponses = _options.CompressResponses,
-                CompressionLevel = _options.CompressionLevel,
-                EnableSwagger = _options.EnableSwagger,
-                AllowedOrigins = _options.AllowedOrigins,
+                Environment = _options.Configuration.Environment,
+                MaxStreamCount = _options.Configuration.MaxStreamCount,
+                StreamIdleTimeoutSeconds = _options.Configuration.StreamIdleTimeoutSeconds,
+                MaxMessageSize = _options.Configuration.MaxMessageSize,
+                CompressResponses = _options.Configuration.CompressResponses,
+                CompressionLevel = _options.Configuration.CompressionLevel,
+                EnableSwagger = _options.Configuration.EnableSwagger,
+                AllowedOrigins = _options.Configuration.AllowedOrigins,
                 RateLimiting = new
                 {
                     Enabled = _runtimeConfig.ContainsKey("RateLimitingEnabled"),
@@ -166,7 +168,7 @@ public class ConfigurationController : ControllerBase
                     endpoint = service.Endpoint,
                     port = service.Port,
                     methodCount = service.Methods.Count,
-                    isHealthy = service.Status == "healthy"
+                    isHealthy = service.Status == ServiceStatus.Serving
                 });
             }
 
@@ -174,7 +176,7 @@ public class ConfigurationController : ControllerBase
             {
                 success = true,
                 validationStatus = "completed",
-                serviceCount = services.Count,
+                serviceCount = services.Count(),
                 healthyServices = validationResults.Count(r => (bool)r.GetType().GetProperty("isHealthy")?.GetValue(r, null)!),
                 details = validationResults,
                 timestamp = DateTime.UtcNow

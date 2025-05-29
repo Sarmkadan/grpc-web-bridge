@@ -32,14 +32,6 @@ public class ProtocolException : GrpcWebBridgeException
         GrpcStatus = GrpcStatusCode.InvalidArgument;
     }
 
-    public ProtocolException(string requestId, string sourceFormat, string message)
-        : base($"Request {requestId}: Protocol conversion from {sourceFormat} failed: {message}", "CONVERSION_FAILED")
-    {
-        RequestId = requestId;
-        SourceFormat = sourceFormat;
-        GrpcStatus = GrpcStatusCode.InvalidArgument;
-    }
-
     public override string ToString()
     {
         var result = base.ToString();

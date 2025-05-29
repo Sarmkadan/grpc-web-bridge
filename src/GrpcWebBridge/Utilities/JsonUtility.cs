@@ -23,18 +23,16 @@ public static class JsonUtility
     /// </summary>
     private static JsonSerializerOptions CreateDefaultOptions()
     {
-        return new JsonSerializerOptions
+        var opts = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = false,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            Converters = new List<JsonConverter>
-            {
-                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
-                new JsonDateTimeConverter()
-            }
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
+        opts.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+        opts.Converters.Add(new JsonDateTimeConverter());
+        return opts;
     }
 
     /// <summary>

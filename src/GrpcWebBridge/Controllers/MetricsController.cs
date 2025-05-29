@@ -4,6 +4,7 @@
 // =============================================================================
 
 using Microsoft.AspNetCore.Mvc;
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Services;
 using System.Diagnostics;
 
@@ -21,8 +22,8 @@ public class MetricsController : ControllerBase
     private readonly StreamingService _streamingService;
     private readonly ServiceRegistry _serviceRegistry;
     private readonly ILogger<MetricsController> _logger;
-    private static long _totalRequests = 0;
-    private static long _totalErrors = 0;
+    internal static long _totalRequests = 0;
+    internal static long _totalErrors = 0;
     private static Dictionary<string, long> _methodCallCounts = new();
     private static Dictionary<string, long> _methodErrorCounts = new();
     private static DateTime _startTime = DateTime.UtcNow;
@@ -83,8 +84,8 @@ public class MetricsController : ControllerBase
                 },
                 serviceMetrics = new
                 {
-                    totalServices = services.Count,
-                    healthyServices = services.Count(s => s.Status == "healthy"),
+                    totalServices = services.Count(),
+                    healthyServices = services.Count(s => s.Status == ServiceStatus.Serving),
                     totalMethods = services.Sum(s => s.Methods.Count)
                 },
                 resourceMetrics = new

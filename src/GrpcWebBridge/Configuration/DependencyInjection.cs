@@ -75,25 +75,6 @@ public static class DependencyInjection
             throw new ArgumentNullException(nameof(services));
 
         services.AddOpenApi();
-        services.AddSwaggerGen(c =>
-        {
-            c.SwaggerDoc(version, new()
-            {
-                Title = title,
-                Version = version,
-                Description = "gRPC-Web bridge server for .NET - protocol translation, streaming support, authentication middleware, Swagger docs",
-                Contact = new()
-                {
-                    Name = "Vladyslav Zaiets",
-                    Url = new Uri("https://sarmkadan.com")
-                },
-                License = new()
-                {
-                    Name = "MIT",
-                    Url = new Uri("https://opensource.org/licenses/MIT")
-                }
-            });
-        });
 
         return services;
     }
@@ -110,10 +91,11 @@ public static class DependencyInjection
 
         options ??= new GrpcWebBridgeOptions();
 
-        services.AddCors(options => options.AddPolicy("AllowGrpcWeb",
+        var allowedOrigins = options?.Configuration.AllowedOrigins ?? ["*"];
+        services.AddCors(corsOptions => corsOptions.AddPolicy("AllowGrpcWeb",
             policy =>
             {
-                foreach (var origin in options.Configuration.AllowedOrigins)
+                foreach (var origin in allowedOrigins)
                 {
                     if (origin == "*")
                     {

@@ -196,13 +196,12 @@ public class MetricsCollectionWorker : BackgroundService
         _logger.LogInformation("Metrics history cleared");
     }
 
-    private double GetCpuUsage()
+    private static double GetCpuUsage()
     {
         try
         {
-            var cpuCounter = new System.Diagnostics.PerformanceCounter(
-                "Processor", "% Processor Time", "_Total", true);
-            return Math.Round(cpuCounter.NextValue(), 2);
+            var process = System.Diagnostics.Process.GetCurrentProcess();
+            return Math.Round(process.TotalProcessorTime.TotalSeconds, 2);
         }
         catch
         {

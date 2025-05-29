@@ -3,7 +3,9 @@
 // CTO & Software Architect
 // =============================================================================
 
+using Grpc.Core;
 using Grpc.Net.Client;
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
@@ -130,24 +132,27 @@ public class GrpcConnectionManager : IAsyncDisposable
     /// </summary>
     public async Task CloseAllChannelsAsync()
     {
+        List<GrpcChannel> channelsToClose;
         lock (_lock)
         {
-            foreach (var channel in _channels.Values)
-            {
-                try
-                {
-                    await channel.ShutdownAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error closing channel");
-                }
-            }
-
+            channelsToClose = _channels.Values.ToList();
             _channels.Clear();
             _metrics.Clear();
-            _logger.LogInformation("All gRPC channels closed");
         }
+
+        foreach (var channel in channelsToClose)
+        {
+            try
+            {
+                await channel.ShutdownAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error closing channel");
+            }
+        }
+
+        _logger.LogInformation("All gRPC channels closed");
     }
 
     /// <summary>

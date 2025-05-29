@@ -77,21 +77,21 @@ public static class DateTimeUtility
             return "just now";
 
         if (diff.TotalMinutes < 60)
-            return $"{(int)diff.TotalMinutes} minute{(int)diff.TotalMinutes != 1 ? "s" : ""} ago";
+            return $"{(int)diff.TotalMinutes} minute{((int)diff.TotalMinutes != 1 ? "s" : "")} ago";
 
         if (diff.TotalHours < 24)
-            return $"{(int)diff.TotalHours} hour{(int)diff.TotalHours != 1 ? "s" : ""} ago";
+            return $"{(int)diff.TotalHours} hour{((int)diff.TotalHours != 1 ? "s" : "")} ago";
 
         if (diff.TotalDays < 7)
-            return $"{(int)diff.TotalDays} day{(int)diff.TotalDays != 1 ? "s" : ""} ago";
+            return $"{(int)diff.TotalDays} day{((int)diff.TotalDays != 1 ? "s" : "")} ago";
 
         if (diff.TotalDays < 30)
-            return $"{(int)(diff.TotalDays / 7)} week{(int)(diff.TotalDays / 7) != 1 ? "s" : ""} ago";
+            return $"{(int)(diff.TotalDays / 7)} week{((int)(diff.TotalDays / 7) != 1 ? "s" : "")} ago";
 
         if (diff.TotalDays < 365)
-            return $"{(int)(diff.TotalDays / 30)} month{(int)(diff.TotalDays / 30) != 1 ? "s" : ""} ago";
+            return $"{(int)(diff.TotalDays / 30)} month{((int)(diff.TotalDays / 30) != 1 ? "s" : "")} ago";
 
-        return $"{(int)(diff.TotalDays / 365)} year{(int)(diff.TotalDays / 365) != 1 ? "s" : ""} ago";
+        return $"{(int)(diff.TotalDays / 365)} year{((int)(diff.TotalDays / 365) != 1 ? "s" : "")} ago";
     }
 
     /// <summary>

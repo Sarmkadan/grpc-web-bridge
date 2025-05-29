@@ -4,6 +4,7 @@
 // =============================================================================
 
 using GrpcWebBridge.Data;
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

@@ -6,6 +6,7 @@
 using GrpcWebBridge.Events;
 using GrpcWebBridge.Utilities;
 using System.Collections.Concurrent;
+using System.Threading.Channels;
 
 namespace GrpcWebBridge.Integration;
 

@@ -3,6 +3,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Services;
 using GrpcWebBridge.Events;
 
@@ -74,7 +75,7 @@ public class HealthCheckWorker : BackgroundService
 
         try
         {
-            var services = _serviceRegistry.ListServices();
+            var services = _serviceRegistry.ListServices().ToList();
 
             if (services.Count == 0)
             {
@@ -113,9 +114,9 @@ public class HealthCheckWorker : BackgroundService
             if (isHealthy)
             {
                 _healthyServicesCount++;
-                if (service.Status != "healthy")
+                if (service.Status != ServiceStatus.Serving)
                 {
-                    service.Status = "healthy";
+                    service.Status = ServiceStatus.Serving;
                     _logger.LogInformation("Service recovered: ServiceId={ServiceId}, Name={Name}",
                         service.Id, service.Name);
                 }
@@ -123,9 +124,9 @@ public class HealthCheckWorker : BackgroundService
             else
             {
                 _unhealthyServicesCount++;
-                if (service.Status == "healthy")
+                if (service.Status == ServiceStatus.Serving)
                 {
-                    service.Status = "unhealthy";
+                    service.Status = ServiceStatus.NotServing;
                     _logger.LogWarning("Service degraded: ServiceId={ServiceId}, Name={Name}",
                         service.Id, service.Name);
 
@@ -139,7 +140,7 @@ public class HealthCheckWorker : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Health check failed for service: ServiceId={ServiceId}", service.Id);
-            service.Status = "unhealthy";
+            service.Status = ServiceStatus.NotServing;
             _unhealthyServicesCount++;
         }
     }

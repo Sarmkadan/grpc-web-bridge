@@ -115,7 +115,7 @@ public static class ProtobufUtility
             throw new ArgumentNullException(nameof(message));
 
         var clone = new T();
-        clone.MergeFrom(message);
+        clone.MergeFrom(message.ToByteArray());
         return clone;
     }
 
@@ -132,7 +132,7 @@ public static class ProtobufUtility
         foreach (var message in messages)
         {
             if (message != null)
-                result.MergeFrom(message);
+                result.MergeFrom(message.ToByteArray());
         }
 
         return result;
@@ -175,7 +175,7 @@ public static class ProtobufUtility
         }
 
         // Check required fields
-        foreach (var field in descriptor.Fields.InDeclarationOrder)
+        foreach (var field in descriptor.Fields.InDeclarationOrder())
         {
             if (field.IsRequired)
             {
@@ -255,15 +255,15 @@ public static class ProtobufUtility
         {
             Name = descriptor.Name,
             FullName = descriptor.FullName,
-            FieldCount = descriptor.Fields.Count,
-            Fields = descriptor.Fields.InDeclarationOrder
+            FieldCount = descriptor.Fields.InDeclarationOrder().Count(),
+            Fields = descriptor.Fields.InDeclarationOrder()
                 .Select(f => new FieldMetadata
                 {
                     Name = f.Name,
                     Type = f.FieldType.ToString(),
                     IsRequired = f.IsRequired,
                     IsRepeated = f.IsRepeated,
-                    DefaultValue = f.DefaultValue?.ToString()
+                    DefaultValue = null
                 })
                 .ToList()
         };

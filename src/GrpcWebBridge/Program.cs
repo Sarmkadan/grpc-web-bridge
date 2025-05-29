@@ -3,11 +3,12 @@
 // CTO & Software Architect
 // =============================================================================
 
+using Grpc.AspNetCore.Web;
 using GrpcWebBridge.Configuration;
 using GrpcWebBridge.Services;
 using Serilog;
 
-var builder = WebApplicationBuilder.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog logging
 Log.Logger = new LoggerConfiguration()
@@ -28,11 +29,6 @@ services.AddGrpc(options =>
 {
     options.MaxReceiveMessageSize = 4 * 1024 * 1024; // 4MB
     options.MaxSendMessageSize = 4 * 1024 * 1024;
-});
-
-services.AddGrpcWeb(options =>
-{
-    options.GrpcWebEnabled = true;
 });
 
 // Register gRPC-Web bridge services
@@ -57,6 +53,9 @@ services.AddGrpcWebBridgeCors();
 // Add authentication
 services.AddGrpcWebBridgeAuthentication();
 
+// Add reflection service
+services.AddGrpcWebBridgeReflection();
+
 // Add controllers for REST endpoints
 services.AddControllers();
 
@@ -64,26 +63,19 @@ var app = builder.Build();
 
 // Configure middleware
 app.UseRouting();
+app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
 
 app.UseCors("AllowGrpcWeb");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Swagger UI
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/1.0.0/swagger.json", "gRPC-Web Bridge v1.0.0");
-        c.RoutePrefix = "swagger";
-    });
-
     app.MapOpenApi();
 }
 
-// Map gRPC services
-app.MapGrpcReflectionService();
+// Map reflection endpoints
+app.MapGrpcReflectionEndpoints();
 
 // Health check endpoint
 app.MapGet("/health", async (ServiceRegistry registry, StreamingService streaming) =>
