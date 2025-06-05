@@ -30,7 +30,7 @@ public static class StreamUtility
             throw new ArgumentNullException(nameof(destination));
 
         if (chunkSize <= 0)
-            throw new ArgumentException("Chunk size must be positive", nameof(chunkSize));
+            throw new ArgumentOutOfRangeException(nameof(chunkSize), chunkSize, "Chunk size must be positive");
 
         var buffer = new byte[chunkSize];
         int bytesRead;
@@ -157,6 +157,13 @@ public static class StreamUtility
     {
         if (stream == null)
             throw new ArgumentNullException(nameof(stream));
+
+        // Fix: validate boundary values for retry parameters
+        if (maxRetries < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxRetries), maxRetries, "Max retries cannot be negative");
+
+        if (delayMs < 0)
+            throw new ArgumentOutOfRangeException(nameof(delayMs), delayMs, "Delay cannot be negative");
 
         if (data == null || data.Length == 0)
             return;

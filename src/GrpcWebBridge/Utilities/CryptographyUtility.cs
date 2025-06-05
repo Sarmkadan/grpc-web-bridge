@@ -84,7 +84,7 @@ public static class CryptographyUtility
     public static string GenerateToken(int length = 32)
     {
         if (length < 16)
-            throw new ArgumentException("Token length must be at least 16 bytes", nameof(length));
+            throw new ArgumentOutOfRangeException(nameof(length), length, "Token length must be at least 16 bytes");
 
         using (var rng = RandomNumberGenerator.Create())
         {
@@ -101,7 +101,7 @@ public static class CryptographyUtility
     public static string GenerateApiKey(int length = 32)
     {
         if (length < 16)
-            throw new ArgumentException("API key length must be at least 16 characters", nameof(length));
+            throw new ArgumentOutOfRangeException(nameof(length), length, "API key length must be at least 16 characters");
 
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var key = new StringBuilder();
@@ -246,8 +246,13 @@ public static class CryptographyUtility
     /// <summary>
     /// Constant-time byte array comparison to prevent timing attacks.
     /// </summary>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private static bool ConstantTimeComparison(byte[] a, byte[] b)
     {
+        // Fix: handle null array edge cases
+        if (a == null || b == null)
+            return false;
+
         if (a.Length != b.Length)
             return false;
 
