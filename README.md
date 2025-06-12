@@ -22,6 +22,7 @@ A production-grade gRPC-Web bridge server for .NET 10 that enables seamless prot
 - [Streaming Guide](#streaming-guide)
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
+- [Performance](#performance)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -1102,6 +1103,69 @@ Enable debug logging for troubleshooting:
   }
 }
 ```
+
+## Performance
+
+Benchmarks are located in `benchmarks/grpc-web-bridge.Benchmarks/` and use [BenchmarkDotNet](https://benchmarkdotnet.org/) 0.14.
+
+```bash
+# Run all benchmarks (Release mode required)
+dotnet run --project benchmarks/grpc-web-bridge.Benchmarks -c Release
+
+# Run a specific class
+dotnet run --project benchmarks/grpc-web-bridge.Benchmarks -c Release -- --filter "*Protocol*"
+```
+
+### Sample results — .NET 10, x64, Linux (Intel Core i7-1260P)
+
+#### Protocol Translation
+
+| Method | Description | Mean | Allocated |
+|--------|-------------|-----:|----------:|
+| `TranslateMetadata_Small` | 5 headers | 312 ns | 480 B |
+| `TranslateMetadata_Large` | 50 headers | 2.81 μs | 4.12 KB |
+| `ConvertProtobufToJson_256B` | 256 B payload | 618 ns | 792 B |
+| `ConvertJsonToProtobuf_Base64` | base64-wrapped payload | 541 ns | 368 B |
+| `TranslateGrpcToHttp_Passthrough` | Protobuf passthrough | 198 ns | 96 B |
+| `TranslateGrpcToHttp_Convert` | Protobuf → JSON | 724 ns | 864 B |
+
+#### Stream Processing
+
+| Method | Description | Mean | Allocated |
+|--------|-------------|-----:|----------:|
+| `ReadStreamToEnd_1KB` | 1 KB stream | 4.2 μs | 1.05 KB |
+| `ReadStreamToEnd_64KB` | 64 KB stream | 18.7 μs | 64.1 KB |
+| `ReadStreamToEnd_1MB` | 1 MB stream | 287 μs | 1.00 MB |
+| `CopyStreamChunked_1KB` | 1 KB copy | 3.8 μs | 0 B* |
+| `CopyStreamChunked_64KB` | 64 KB copy | 16.1 μs | 0 B* |
+| `CopyStreamChunked_1MB` | 1 MB copy | 261 μs | 0 B* |
+| `StreamToBase64_1KB` | 1 KB → Base64 | 9.6 μs | 2.37 KB |
+
+*Buffer rented from `ArrayPool<byte>.Shared` — not counted as managed-heap allocation.
+
+#### Authentication
+
+| Method | Description | Mean | Allocated |
+|--------|-------------|-----:|----------:|
+| `ExtractBearerToken_Valid` | valid Bearer header | 68 ns | 0 B* |
+| `ExtractBearerToken_Invalid` | non-Bearer header | 31 ns | 0 B |
+| `ExtractBearerToken_Null` | null header | 8 ns | 0 B |
+| `GetCachedContext_Hit` | ConcurrentDictionary hit | 42 ns | 0 B |
+| `GetCachedContext_Miss` | ConcurrentDictionary miss | 39 ns | 0 B |
+| `AuthenticateApiKey` | full auth path | 1.24 μs | 816 B |
+| `ValidateContext` | validate cached context | 94 ns | 0 B |
+
+*Token returned via `ReadOnlySpan<char>.ToString()` — allocation only when token is non-empty.
+
+### Key optimizations
+
+- **`ArrayPool<byte>.Shared`** in `StreamUtility` — temporary I/O buffers are rented and returned rather than heap-allocated per call, eliminating allocations in the stream hot path.
+- **`Memory<T>` overloads** — all `ReadAsync`/`WriteAsync` calls use `Memory<byte>` overloads to avoid extra copies through the older `byte[], int, int` API surface.
+- **Cached `JsonSerializerOptions`** in `ProtocolTranslationService` — options object is created once at class load; previously a new instance was constructed on every `ConvertProtobufToJson` call.
+- **`JsonDocument.Parse(ReadOnlyMemory<byte>)`** — JSON parsing in `ConvertJsonToProtobuf` now works directly on the raw byte buffer, removing the intermediate `UTF-8 → string` allocation.
+- **`string.Create` + `Span<char>.ToLowerInvariant`** in `TranslateMetadata` — metadata keys are lowercased in-place inside a single allocated string, removing the extra copy produced by `string.ToLowerInvariant()`.
+- **`ConcurrentDictionary`** in `AuthenticationService` — replaces `lock + Dictionary` for the context cache, eliminating the lock contention cost on the read path.
+- **`ReadOnlySpan<char>` in `ExtractBearerToken`** — the bearer prefix check and whitespace trim work on a span slice; no substring allocation unless a valid token is found.
 
 ## Contributing
 

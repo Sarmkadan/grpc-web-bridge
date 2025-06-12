@@ -7,6 +7,7 @@ using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -18,8 +19,7 @@ namespace GrpcWebBridge.Services;
 public class AuthenticationService
 {
     private readonly ILogger<AuthenticationService> _logger;
-    private readonly Dictionary<string, AuthenticationContext> _contextCache = [];
-    private readonly object _cacheLock = new();
+    private readonly ConcurrentDictionary<string, AuthenticationContext> _contextCache = new();
 
     public AuthenticationService(ILogger<AuthenticationService> logger)
     {
@@ -182,24 +182,14 @@ public class AuthenticationService
     /// <summary>
     /// Retrieves cached context by ID
     /// </summary>
-    public AuthenticationContext? GetCachedContext(string contextId)
-    {
-        lock (_cacheLock)
-        {
-            return _contextCache.TryGetValue(contextId, out var context) ? context : null;
-        }
-    }
+    public AuthenticationContext? GetCachedContext(string contextId) =>
+        _contextCache.TryGetValue(contextId, out var context) ? context : null;
 
     /// <summary>
     /// Caches an authentication context
     /// </summary>
-    private void CacheContext(AuthenticationContext context)
-    {
-        lock (_cacheLock)
-        {
-            _contextCache[context.Id] = context;
-        }
-    }
+    private void CacheContext(AuthenticationContext context) =>
+        _contextCache[context.Id] = context;
 
     /// <summary>
     /// Creates a response for authentication failure
@@ -223,9 +213,11 @@ public class AuthenticationService
             return null;
 
         const string bearerPrefix = "Bearer ";
-        if (authHeader.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
-            return authHeader[bearerPrefix.Length..].Trim();
+        var span = authHeader.AsSpan();
+        if (!span.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+            return null;
 
-        return null;
+        var token = span[bearerPrefix.Length..].Trim();
+        return token.Length > 0 ? token.ToString() : null;
     }
 }

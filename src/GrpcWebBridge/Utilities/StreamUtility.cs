@@ -32,15 +32,19 @@ public static class StreamUtility
         if (chunkSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(chunkSize), chunkSize, "Chunk size must be positive");
 
-        var buffer = new byte[chunkSize];
-        int bytesRead;
-
-        while ((bytesRead = await source.ReadAsync(buffer, 0, buffer.Length)) > 0)
+        var buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
+        try
         {
-            await destination.WriteAsync(buffer, 0, bytesRead);
-        }
+            int bytesRead;
+            while ((bytesRead = await source.ReadAsync(buffer.AsMemory(0, chunkSize))) > 0)
+                await destination.WriteAsync(buffer.AsMemory(0, bytesRead));
 
-        await destination.FlushAsync();
+            await destination.FlushAsync();
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     /// <summary>
@@ -52,21 +56,26 @@ public static class StreamUtility
         if (stream == null)
             throw new ArgumentNullException(nameof(stream));
 
-        using (var ms = new MemoryStream())
+        const int chunkSize = 81920;
+        var buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
+        try
         {
-            const int chunkSize = 81920;
-            var buffer = new byte[chunkSize];
+            using var ms = new MemoryStream(stream.CanSeek ? (int)Math.Min(stream.Length, maxSizeBytes) : chunkSize);
             int bytesRead;
 
-            while ((bytesRead = await stream.ReadAsync(buffer, 0, chunkSize)) > 0)
+            while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, chunkSize))) > 0)
             {
                 if (ms.Length + bytesRead > maxSizeBytes)
                     throw new InvalidOperationException($"Stream exceeds maximum size of {maxSizeBytes} bytes");
 
-                await ms.WriteAsync(buffer, 0, bytesRead);
+                await ms.WriteAsync(buffer.AsMemory(0, bytesRead));
             }
 
             return ms.ToArray();
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 
@@ -173,11 +182,11 @@ public static class StreamUtility
         {
             try
             {
-                await stream.WriteAsync(data, 0, data.Length);
+                await stream.WriteAsync(data.AsMemory());
                 await stream.FlushAsync();
                 return;
             }
-            catch (IOException ex) when (retries < maxRetries)
+            catch (IOException) when (retries < maxRetries)
             {
                 retries++;
                 await Task.Delay(delayMs * retries);
@@ -301,21 +310,26 @@ public static class StreamUtility
             throw new ArgumentException("At least one destination stream required", nameof(destinations));
 
         const int bufferSize = 81920;
-        var buffer = new byte[bufferSize];
-        int bytesRead;
-
-        while ((bytesRead = await source.ReadAsync(buffer, 0, bufferSize)) > 0)
+        var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+        try
         {
-            var tasks = destinations
-                .Where(d => d != null && d.CanWrite)
-                .Select(d => d.WriteAsync(buffer, 0, bytesRead));
+            int bytesRead;
+            while ((bytesRead = await source.ReadAsync(buffer.AsMemory(0, bufferSize))) > 0)
+            {
+                var segment = buffer.AsMemory(0, bytesRead);
+                var tasks = destinations
+                    .Where(d => d != null && d.CanWrite)
+                    .Select(d => d.WriteAsync(segment).AsTask());
 
-            await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks);
+            }
+
+            foreach (var dest in destinations.Where(d => d != null))
+                await dest.FlushAsync();
         }
-
-        foreach (var dest in destinations.Where(d => d != null))
+        finally
         {
-            await dest.FlushAsync();
+            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 }
