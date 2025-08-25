@@ -1,0 +1,93 @@
+# =============================================================================
+# Author: Vladyslav Zaiets | https://sarmkadan.com
+# CTO & Software Architect
+# =============================================================================
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Build artifacts
+bin/
+obj/
+*.dll
+*.exe
+*.o
+*.so
+*.dylib
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# Visual Studio
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+*.csproj.user
+.vscode/launch.json
+.vscode/settings.json
+
+# Rider
+.idea/
+*.sln.iml
+*.swp
+*.swo
+*~
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# Documentation
+docs/
+*.md
+!Dockerfile*
+
+# Docker
+docker-compose*.yml
+.dockerignore
+Dockerfile*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+appveyor.yml
+azure-pipelines.yml
+
+# Development
+.env
+.env.local
+appsettings.Development.json
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Miscellaneous
+.editorconfig
+Makefile
+.editorconfig
+LICENSE
+
+# Example files
+examples/
+tests/
+benchmarks/
+
+# Local development artifacts
+local/
+tmp/
+temp/
+*.tmp
+*.temp
