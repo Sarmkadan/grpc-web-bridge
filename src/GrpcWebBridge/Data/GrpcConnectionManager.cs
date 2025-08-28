@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -240,7 +241,7 @@ public class GrpcConnectionManager : IAsyncDisposable
 /// <summary>
 /// Metrics for a gRPC connection
 /// </summary>
-public class ConnectionMetrics
+public sealed class ConnectionMetrics
 {
     public string? ServiceName { get; set; }
     public string? Address { get; set; }

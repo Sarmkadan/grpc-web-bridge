@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -15,7 +16,7 @@ using System.Collections.Generic;
 
 namespace GrpcWebBridge.Tests;
 
-public class ServiceRegistryTests
+public sealed class ServiceRegistryTests
 {
     private readonly ILogger<ServiceRegistry> _mockLogger;
     private readonly ServiceRegistry _serviceRegistry;

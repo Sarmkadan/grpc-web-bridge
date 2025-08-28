@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -81,7 +82,7 @@ public class HttpClientFactory : IDisposable
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("Client name cannot be null or empty", nameof(name));
 
-        if (client == null)
+        if (client is null)
             throw new ArgumentNullException(nameof(client));
 
         _clients.AddOrUpdate(name, client, (_, old) =>
@@ -102,7 +103,7 @@ public class HttpClientFactory : IDisposable
             throw new ArgumentException("Base URI cannot be null or empty", nameof(baseUri));
 
         var client = GetClient(baseUri);
-        if (client.BaseAddress == null)
+        if (client.BaseAddress is null)
         {
             client.BaseAddress = new Uri(baseUri);
         }
@@ -141,7 +142,7 @@ public class HttpClientFactory : IDisposable
         if (string.IsNullOrEmpty(uri))
             throw new ArgumentException("URI cannot be null or empty", nameof(uri));
 
-        if (payload == null)
+        if (payload is null)
             throw new ArgumentNullException(nameof(payload));
 
         try
@@ -183,7 +184,7 @@ public class HttpClientFactory : IDisposable
                 Content = content
             };
 
-            if (headers != null)
+            if (headers is not null)
             {
                 foreach (var (key, value) in headers)
                 {
@@ -244,7 +245,7 @@ public class HttpClientFactory : IDisposable
 /// <summary>
 /// Configuration options for HTTP client factory.
 /// </summary>
-public class HttpClientFactoryOptions
+public sealed class HttpClientFactoryOptions
 {
     public int RequestTimeoutMs { get; set; } = 30000;
     public int MaxConnectionsPerServer { get; set; } = 10;

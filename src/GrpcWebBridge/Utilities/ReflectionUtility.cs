@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -20,12 +21,12 @@ public static class ReflectionUtility
         Type type,
         Func<MethodInfo, bool>? filter = null)
     {
-        if (type == null)
+        if (type is null)
             throw new ArgumentNullException(nameof(type));
 
         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance);
 
-        if (filter != null)
+        if (filter is not null)
             methods = methods.Where(filter).ToArray();
 
         return methods.ToList();
@@ -36,7 +37,7 @@ public static class ReflectionUtility
     /// </summary>
     public static List<PropertyInfo> GetPublicProperties(Type type)
     {
-        if (type == null)
+        if (type is null)
             throw new ArgumentNullException(nameof(type));
 
         return type.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToList();
@@ -47,7 +48,7 @@ public static class ReflectionUtility
     /// </summary>
     public static bool ImplementsInterface(Type type, Type interfaceType)
     {
-        if (type == null || interfaceType == null)
+        if (type is null || interfaceType is null)
             return false;
 
         return interfaceType.IsAssignableFrom(type);
@@ -58,7 +59,7 @@ public static class ReflectionUtility
     /// </summary>
     public static List<Type> GetGenericArguments(Type type)
     {
-        if (type == null)
+        if (type is null)
             return new List<Type>();
 
         return type.GetGenericArguments().ToList();
@@ -72,7 +73,7 @@ public static class ReflectionUtility
         string methodName,
         params object?[]? parameters)
     {
-        if (instance == null)
+        if (instance is null)
             throw new ArgumentNullException(nameof(instance));
 
         if (string.IsNullOrEmpty(methodName))
@@ -81,7 +82,7 @@ public static class ReflectionUtility
         var type = instance.GetType();
         var method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
 
-        if (method == null)
+        if (method is null)
             throw new MethodAccessException($"Method not found: {methodName}");
 
         return method.Invoke(instance, parameters);
@@ -92,7 +93,7 @@ public static class ReflectionUtility
     /// </summary>
     public static object? GetPropertyValue(object instance, string propertyName)
     {
-        if (instance == null)
+        if (instance is null)
             throw new ArgumentNullException(nameof(instance));
 
         if (string.IsNullOrEmpty(propertyName))
@@ -101,7 +102,7 @@ public static class ReflectionUtility
         var type = instance.GetType();
         var property = type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
-        if (property == null)
+        if (property is null)
             return null;
 
         return property.GetValue(instance);
@@ -112,7 +113,7 @@ public static class ReflectionUtility
     /// </summary>
     public static void SetPropertyValue(object instance, string propertyName, object? value)
     {
-        if (instance == null)
+        if (instance is null)
             throw new ArgumentNullException(nameof(instance));
 
         if (string.IsNullOrEmpty(propertyName))
@@ -121,7 +122,7 @@ public static class ReflectionUtility
         var type = instance.GetType();
         var property = type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
-        if (property == null)
+        if (property is null)
             throw new PropertyAccessException($"Property not found: {propertyName}");
 
         if (!property.CanWrite)
@@ -137,7 +138,7 @@ public static class ReflectionUtility
     {
         var dictionary = new Dictionary<string, object?>();
 
-        if (instance == null)
+        if (instance is null)
             return dictionary;
 
         var properties = GetPublicProperties(instance.GetType());
@@ -161,12 +162,12 @@ public static class ReflectionUtility
     /// </summary>
     public static object? CreateInstance(Type type, params object?[]? constructorParams)
     {
-        if (type == null)
+        if (type is null)
             throw new ArgumentNullException(nameof(type));
 
         try
         {
-            return Activator.CreateInstance(type, constructorParams ?? Array.Empty<object>());
+            return Activator.CreateInstance(type, constructorParams ?? []);
         }
         catch (Exception ex)
         {
@@ -179,7 +180,7 @@ public static class ReflectionUtility
     /// </summary>
     public static List<T> GetCustomAttributes<T>(MemberInfo member) where T : Attribute
     {
-        if (member == null)
+        if (member is null)
             return new List<T>();
 
         return member.GetCustomAttributes(typeof(T), true)
@@ -192,7 +193,7 @@ public static class ReflectionUtility
     /// </summary>
     public static bool IsPrimitiveOrValueType(Type type)
     {
-        if (type == null)
+        if (type is null)
             return false;
 
         return type.IsPrimitive ||
@@ -211,7 +212,7 @@ public static class ReflectionUtility
         var hierarchy = new List<Type> { type };
 
         var current = type.BaseType;
-        while (current != null && current != typeof(object))
+        while (current is not null && current != typeof(object))
         {
             hierarchy.Add(current);
             current = current.BaseType;
@@ -230,14 +231,14 @@ public static class ReflectionUtility
 
         // Try built-in types first
         var type = Type.GetType(typeName);
-        if (type != null)
+        if (type is not null)
             return type;
 
         // Search in loaded assemblies
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
             type = assembly.GetType(typeName);
-            if (type != null)
+            if (type is not null)
                 return type;
         }
 
@@ -249,7 +250,7 @@ public static class ReflectionUtility
     /// </summary>
     public static string? GetAssemblyVersion(Type type)
     {
-        if (type == null)
+        if (type is null)
             return null;
 
         return type.Assembly.GetName().Version?.ToString();
@@ -260,7 +261,7 @@ public static class ReflectionUtility
     /// </summary>
     public static bool IsAsyncMethod(MethodInfo method)
     {
-        if (method == null)
+        if (method is null)
             return false;
 
         return method.ReturnType == typeof(Task) ||

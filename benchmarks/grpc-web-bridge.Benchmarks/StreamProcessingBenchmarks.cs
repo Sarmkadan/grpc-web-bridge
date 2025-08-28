@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -12,7 +13,7 @@ namespace GrpcWebBridge.Benchmarks;
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
-public class StreamProcessingBenchmarks
+public sealed class StreamProcessingBenchmarks
 {
     private byte[] _payload1KB = null!;
     private byte[] _payload64KB = null!;

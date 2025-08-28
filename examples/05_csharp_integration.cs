@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -16,7 +17,7 @@ namespace GrpcWebBridge.Examples
     /// <summary>
     /// gRPC-Web Bridge integration examples for .NET applications
     /// </summary>
-    public class GrpcWebBridgeClientExample
+    public sealed class GrpcWebBridgeClientExample
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<GrpcWebBridgeClientExample> _logger;
@@ -235,7 +236,7 @@ namespace GrpcWebBridge.Examples
                         methodName,
                         request);
 
-                    if (result != null)
+                    if (result is not null)
                     {
                         return result;
                     }
@@ -279,7 +280,7 @@ namespace GrpcWebBridge.Examples
                         methodName,
                         item);
 
-                    if (result == null)
+                    if (result is null)
                     {
                         _logger.LogWarning("Failed to process item");
                         continue;
@@ -299,7 +300,7 @@ namespace GrpcWebBridge.Examples
     /// <summary>
     /// Data models for bridge responses
     /// </summary>
-    public class ServiceInfo
+    public sealed class ServiceInfo
     {
         public string ServiceName { get; set; } = "";
         public string Address { get; set; } = "";
@@ -307,7 +308,7 @@ namespace GrpcWebBridge.Examples
         public Dictionary<string, string> Metadata { get; set; } = new();
     }
 
-    public class MetricsInfo
+    public sealed class MetricsInfo
     {
         public int TotalRequests { get; set; }
         public int SuccessfulRequests { get; set; }
@@ -320,12 +321,12 @@ namespace GrpcWebBridge.Examples
         public string Uptime { get; set; } = "";
     }
 
-    public class StreamInfo
+    public sealed class StreamInfo
     {
         public List<ActiveStream> ActiveStreams { get; set; } = new();
     }
 
-    public class ActiveStream
+    public sealed class ActiveStream
     {
         public string Id { get; set; } = "";
         public string ServiceName { get; set; } = "";
@@ -370,7 +371,7 @@ namespace GrpcWebBridge.Examples
     /// <summary>
     /// Example usage in a console application
     /// </summary>
-    public class Program
+    public sealed class Program
     {
         public static async Task Main(string[] args)
         {

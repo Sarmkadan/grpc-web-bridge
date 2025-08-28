@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -13,7 +14,7 @@ namespace GrpcWebBridge.Middleware;
 /// Logs all incoming requests and outgoing responses with performance metrics.
 /// Captures request headers, body (when applicable), response status, and elapsed time.
 /// </summary>
-public class RequestLoggingMiddleware
+public sealed class RequestLoggingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RequestLoggingMiddleware> _logger;

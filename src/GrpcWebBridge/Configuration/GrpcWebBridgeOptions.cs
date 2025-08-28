@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -10,7 +11,7 @@ namespace GrpcWebBridge.Configuration;
 /// <summary>
 /// Configuration options for the gRPC-Web bridge
 /// </summary>
-public class GrpcWebBridgeOptions
+public sealed class GrpcWebBridgeOptions
 {
     public BridgeConfiguration Configuration { get; set; } = new();
 

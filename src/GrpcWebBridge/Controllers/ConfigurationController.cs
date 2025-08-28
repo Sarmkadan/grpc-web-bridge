@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -89,7 +90,7 @@ public class ConfigurationController : ControllerBase
     [HttpPut]
     public IActionResult UpdateConfiguration([FromBody] ConfigurationUpdateRequest request)
     {
-        if (request?.Settings == null || request.Settings.Count == 0)
+        if (request?.Settings is null || request.Settings.Count == 0)
             return BadRequest(new { error = "No settings provided to update" });
 
         try
@@ -219,7 +220,7 @@ public class ConfigurationController : ControllerBase
 /// <summary>
 /// Request model for configuration updates.
 /// </summary>
-public class ConfigurationUpdateRequest
+public sealed class ConfigurationUpdateRequest
 {
     public Dictionary<string, object> Settings { get; set; } = new();
 }

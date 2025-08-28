@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -13,7 +14,7 @@ namespace GrpcWebBridge.Middleware;
 /// Enforces per-IP and global rate limits to protect against abuse.
 /// Uses sliding window approach for accurate rate calculation.
 /// </summary>
-public class RateLimitingMiddleware
+public sealed class RateLimitingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitingMiddleware> _logger;
@@ -142,7 +143,7 @@ public class RateLimitingMiddleware
 /// <summary>
 /// Per-client rate limit tracking using sliding window.
 /// </summary>
-public class ClientRateLimit
+public sealed class ClientRateLimit
 {
     private readonly Queue<DateTime> _requestTimestamps = new();
     private readonly object _lockObject = new();
@@ -201,7 +202,7 @@ public class ClientRateLimit
 /// <summary>
 /// Configuration options for rate limiting.
 /// </summary>
-public class RateLimitingOptions
+public sealed class RateLimitingOptions
 {
     public int RequestsPerSecond { get; set; } = 100;
     public int WindowSizeSeconds { get; set; } = 1;
