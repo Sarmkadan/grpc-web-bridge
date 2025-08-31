@@ -12,7 +12,7 @@
     <Description>gRPC-Web bridge server for .NET - protocol translation, streaming support, authentication middleware, Swagger docs</Description>
     <PackageProjectUrl>https://sarmkadan.com</PackageProjectUrl>
     <RepositoryUrl>https://github.com/sarmkadan/grpc-web-bridge</RepositoryUrl>
-    <License>MIT</License>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

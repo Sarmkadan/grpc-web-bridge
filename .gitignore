@@ -1,6 +1,7 @@
 ## Rider
 .idea/
 *.sln.iml
+*.DotSettings.user
 
 ## Visual Studio
 .vs/
@@ -53,6 +54,7 @@ ApplicationInsights.config
 .env
 .env.local
 appsettings.local.json
+appsettings.Development.json
 
 ## Temporary files
 *.tmp
