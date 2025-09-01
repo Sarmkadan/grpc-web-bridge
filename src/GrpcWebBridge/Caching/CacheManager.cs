@@ -209,6 +209,10 @@ public class CacheManager : IDisposable
     /// </summary>
     public bool SetExpiration(string key, TimeSpan expiresIn)
     {
+        // Fix: handle null or empty key edge case
+        if (string.IsNullOrEmpty(key))
+            return false;
+
         if (!_cache.TryGetValue(key, out var entry))
             return false;
 
@@ -222,6 +226,10 @@ public class CacheManager : IDisposable
     /// </summary>
     public TimeSpan? GetTimeToLive(string key)
     {
+        // Fix: handle null or empty key edge case
+        if (string.IsNullOrEmpty(key))
+            return null;
+
         if (!_cache.TryGetValue(key, out var entry))
             return null;
 

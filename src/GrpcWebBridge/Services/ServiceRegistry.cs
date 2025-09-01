@@ -82,6 +82,10 @@ public class ServiceRegistry
     /// </summary>
     public GrpcService? GetService(string serviceName, string packageName)
     {
+        // Fix: handle null inputs to prevent invalid full name creation
+        if (string.IsNullOrWhiteSpace(serviceName) || string.IsNullOrWhiteSpace(packageName))
+            return null;
+
         var fullName = $"{packageName}.{serviceName}";
         return GetService(fullName);
     }
