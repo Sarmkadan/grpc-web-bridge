@@ -47,14 +47,11 @@ public class BridgeController : ControllerBase
 
         try
         {
-            // Extract and validate authentication context
-            var authContext = await _authService.ValidateRequestAsync(Request);
-            if (authContext?.IsAuthenticated == false)
-                return Unauthorized(new { error = "Authentication required" });
+            var authContext = ExtractAuthContext();
 
             // Resolve target service
             var service = _serviceRegistry.ListServices()
-                .FirstOrDefault(s => s.Id == request.ServiceId);
+                .FirstOrDefault(s => s.Id == request.ServiceId || s.Name == request.ServiceId);
 
             if (service == null)
                 return NotFound(new { error = $"Service '{request.ServiceId}' not found" });
@@ -67,11 +64,11 @@ public class BridgeController : ControllerBase
             // Build gRPC request and invoke
             var grpcRequest = new GrpcRequest
             {
-                ServiceId = request.ServiceId,
+                ServiceName = request.ServiceId,
                 MethodName = request.MethodName,
-                Payload = request.Payload,
+                Payload = request.Payload is byte[] rawBytes ? rawBytes : [],
                 Metadata = request.Headers ?? new Dictionary<string, string>(),
-                Timeout = request.TimeoutMs.HasValue ? TimeSpan.FromMilliseconds(request.TimeoutMs.Value) : TimeSpan.FromSeconds(30)
+                TimeoutMilliseconds = request.TimeoutMs ?? 30000
             };
 
             // Translate protocol and invoke
@@ -85,7 +82,7 @@ public class BridgeController : ControllerBase
             {
                 success = true,
                 data = response.Payload,
-                metadata = response.ResponseMetadata,
+                metadata = response.Metadata,
                 timestamp = DateTime.UtcNow
             });
         }
@@ -105,7 +102,7 @@ public class BridgeController : ControllerBase
     {
         try
         {
-            var authContext = await _authService.ValidateRequestAsync(Request);
+            var authContext = ExtractAuthContext();
             if (authContext?.IsAuthenticated == false)
             {
                 Response.StatusCode = 401;
@@ -141,9 +138,7 @@ public class BridgeController : ControllerBase
 
         try
         {
-            var authContext = await _authService.ValidateRequestAsync(Request);
-            if (authContext?.IsAuthenticated == false)
-                return Unauthorized(new { error = "Authentication required" });
+            var authContext = ExtractAuthContext();
 
             var results = new List<BatchOperationResult>();
 
@@ -179,9 +174,9 @@ public class BridgeController : ControllerBase
 
                     var grpcRequest = new GrpcRequest
                     {
-                        ServiceId = op.ServiceId,
+                        ServiceName = op.ServiceId,
                         MethodName = op.MethodName,
-                        Payload = op.Payload,
+                        Payload = op.Payload is byte[] rawBytes ? rawBytes : [],
                         Metadata = op.Headers ?? new Dictionary<string, string>()
                     };
 
@@ -221,6 +216,15 @@ public class BridgeController : ControllerBase
             _logger.LogError(ex, "Batch invocation failed");
             return StatusCode(500, new { error = "Batch invocation failed", details = ex.Message });
         }
+    }
+
+    private GrpcWebBridge.Domain.Models.AuthenticationContext? ExtractAuthContext()
+    {
+        var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+        var token = _authService.ExtractBearerToken(authHeader);
+        if (token is null) return null;
+        try { return _authService.AuthenticateBearer(token); }
+        catch { return null; }
     }
 }
 

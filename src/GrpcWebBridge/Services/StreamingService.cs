@@ -3,6 +3,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
@@ -121,10 +122,7 @@ public class StreamingService
         if (stream is null)
             throw new StreamingException(streamId, "Stream not found");
 
-        var heartbeat = new StreamMessage(streamId, stream.MessageCount)
-        {
-            MessageType = StreamMessageType.Heartbeat
-        };
+        var heartbeat = new StreamMessage(streamId, stream.MessageCount, StreamMessageType.Heartbeat);
 
         stream.EnqueueMessage(heartbeat);
         _logger.LogDebug("Heartbeat sent to stream: {StreamId}", streamId);

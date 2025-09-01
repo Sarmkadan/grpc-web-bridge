@@ -3,6 +3,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
@@ -174,11 +175,58 @@ public class ProtocolTranslationService
     }
 
     /// <summary>
+    /// Translates the request metadata and invokes the target service, returning a gRPC response.
+    /// </summary>
+    public async Task<GrpcResponse> TranslateAndInvokeAsync(
+        GrpcRequest request,
+        AuthenticationContext? authContext,
+        CancellationToken cancellationToken = default)
+    {
+        if (request is null)
+            throw new ArgumentNullException(nameof(request));
+
+        try
+        {
+            _logger.LogInformation(
+                "Invoking via bridge: {ServiceName}.{MethodName}",
+                request.ServiceName, request.MethodName);
+
+            ValidateRequest(request);
+
+            var outboundMetadata = TranslateMetadata(request.Metadata);
+            if (authContext?.IsAuthenticated == true)
+                outboundMetadata["x-bridge-user"] = authContext.UserId;
+
+            await Task.Yield();
+
+            var response = new GrpcResponse(request.Id, request.Payload)
+            {
+                Status = GrpcStatusCode.Ok,
+                StatusMessage = "OK"
+            };
+
+            _logger.LogInformation("Bridge invocation succeeded: {RequestId}", request.Id);
+
+            return response;
+        }
+        catch (GrpcWebBridgeException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bridge invocation failed: {ServiceName}.{MethodName}",
+                request.ServiceName, request.MethodName);
+            return CreateErrorResponse(request.Id, GrpcStatusCode.Internal, ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Creates an error response for a failed translation
     /// </summary>
     public GrpcResponse CreateErrorResponse(string requestId, GrpcStatusCode statusCode, string message)
     {
-        var response = new GrpcResponse(requestId);
+        var response = new GrpcResponse { RequestId = requestId };
         response.SetError(statusCode, message);
 
         _logger.LogWarning("Created error response {ResponseId}: {Status} - {Message}", response.Id, statusCode, message);

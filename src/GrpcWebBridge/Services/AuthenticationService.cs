@@ -3,6 +3,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
@@ -205,7 +206,7 @@ public class AuthenticationService
     /// </summary>
     public GrpcResponse CreateAuthFailureResponse(string requestId)
     {
-        var response = new GrpcResponse(requestId);
+        var response = new GrpcResponse { RequestId = requestId };
         response.SetError(GrpcStatusCode.Unauthenticated, "Authentication required");
 
         _logger.LogWarning("Created auth failure response for request: {RequestId}", requestId);

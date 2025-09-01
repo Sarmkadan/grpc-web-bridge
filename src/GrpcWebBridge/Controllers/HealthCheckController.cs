@@ -4,8 +4,10 @@
 // =============================================================================
 
 using Microsoft.AspNetCore.Mvc;
+using GrpcWebBridge.Domain;
 using GrpcWebBridge.Services;
 using GrpcWebBridge.Formatters;
+using System.Runtime.InteropServices;
 
 namespace GrpcWebBridge.Controllers;
 
@@ -39,14 +41,14 @@ public class HealthCheckController : ControllerBase
     /// Returns 200 if healthy, 503 if degraded.
     /// </summary>
     [HttpGet]
-    [ProduceResponseType(StatusCodes.Status200OK)]
-    [ProduceResponseType(StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public IActionResult GetHealthStatus()
     {
         try
         {
-            var services = _serviceRegistry.ListServices();
-            var healthyCount = services.Count(s => s.Status == "healthy");
+            var services = _serviceRegistry.ListServices().ToList();
+            var healthyCount = services.Count(s => s.Status == ServiceStatus.Serving);
             var totalCount = services.Count;
 
             var isHealthy = totalCount == 0 || healthyCount >= (totalCount * 0.8); // 80% threshold
@@ -112,9 +114,9 @@ public class HealthCheckController : ControllerBase
                 },
                 services = new
                 {
-                    total = services.Count,
-                    healthy = services.Count(s => s.Status == "healthy"),
-                    unhealthy = services.Count(s => s.Status != "healthy"),
+                    total = services.Count(),
+                    healthy = services.Count(s => s.Status == ServiceStatus.Serving),
+                    unhealthy = services.Count(s => s.Status != ServiceStatus.Serving),
                     details = services.Select(s => new
                     {
                         s.Id,
@@ -168,14 +170,14 @@ public class HealthCheckController : ControllerBase
                 status = s.Status,
                 endpoint = s.Endpoint,
                 port = s.Port,
-                isHealthy = s.Status == "healthy",
+                isHealthy = s.Status == ServiceStatus.Serving,
                 lastUpdated = s.UpdatedAt,
                 methodCount = s.Methods.Count
             }).ToList();
 
             var summary = new
             {
-                totalServices = services.Count,
+                totalServices = services.Count(),
                 healthyServices = serviceHealth.Count(s => (bool)s.isHealthy),
                 unhealthyServices = serviceHealth.Count(s => !(bool)s.isHealthy)
             };
@@ -244,8 +246,8 @@ public class HealthCheckController : ControllerBase
     {
         try
         {
-            var services = _serviceRegistry.ListServices();
-            var isReady = services.Count > 0 && services.Any(s => s.Status == "healthy");
+            var services = _serviceRegistry.ListServices().ToList();
+            var isReady = services.Count > 0 && services.Any(s => s.Status == ServiceStatus.Serving);
 
             var status = new
             {
@@ -286,9 +288,8 @@ public class HealthCheckController : ControllerBase
     {
         try
         {
-            var cpuCounter = new System.Diagnostics.PerformanceCounter(
-                "Processor", "% Processor Time", "_Total", true);
-            return Math.Round(cpuCounter.NextValue(), 2);
+            return Math.Round(
+                System.Diagnostics.Process.GetCurrentProcess().TotalProcessorTime.TotalSeconds, 2);
         }
         catch
         {
@@ -296,6 +297,3 @@ public class HealthCheckController : ControllerBase
         }
     }
 }
-
-// Using statements for RuntimeInformation
-using System.Runtime.InteropServices;

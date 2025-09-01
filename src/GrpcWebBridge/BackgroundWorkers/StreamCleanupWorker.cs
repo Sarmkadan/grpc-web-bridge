@@ -81,7 +81,7 @@ public class StreamCleanupWorker : BackgroundService
                     if (stats == null)
                         continue;
 
-                    var lastActivityTime = stats.LastActivityTime ?? startTime;
+                    var lastActivityTime = stats.LastActivityTime;
                     var idleDuration = startTime - lastActivityTime;
 
                     // Check if stream is idle beyond threshold
@@ -91,7 +91,7 @@ public class StreamCleanupWorker : BackgroundService
                             "Removing idle stream: StreamId={StreamId}, IdleDuration={IdleSeconds}s",
                             streamId, idleDuration.TotalSeconds);
 
-                        _streamingService.RemoveStream(streamId);
+                        _streamingService.CloseStream(streamId);
                         removedCount++;
                         _totalStreamsRemoved++;
                     }
@@ -103,7 +103,7 @@ public class StreamCleanupWorker : BackgroundService
                             "Removing stale stream: StreamId={StreamId}, Duration={DurationSeconds}s",
                             streamId, idleDuration.TotalSeconds);
 
-                        _streamingService.RemoveStream(streamId);
+                        _streamingService.CloseStream(streamId);
                         staleCount++;
                         _totalStreamsRemoved++;
                     }
