@@ -1,3 +1,7 @@
+[![Build](https://github.com/sarmkadan/grpc-web-bridge/actions/workflows/build.yml/badge.svg)](https://github.com/sarmkadan/grpc-web-bridge/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
+
 # gRPC-Web Bridge for .NET
 
 A production-grade gRPC-Web bridge server for .NET 10 that enables seamless protocol translation between gRPC and gRPC-Web clients, with comprehensive streaming support, authentication middleware, and integrated Swagger documentation.
