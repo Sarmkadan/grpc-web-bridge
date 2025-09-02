@@ -16,6 +16,8 @@ namespace GrpcWebBridge.Services;
 /// </summary>
 public class ProtocolTranslationService
 {
+    private static readonly JsonSerializerOptions _jsonWriteOptions = new() { WriteIndented = false };
+
     private readonly ILogger<ProtocolTranslationService> _logger;
 
     public ProtocolTranslationService(ILogger<ProtocolTranslationService> logger)
@@ -101,7 +103,7 @@ public class ProtocolTranslationService
 
             var json = JsonSerializer.Serialize(
                 new { data = Convert.ToBase64String(protobufData) },
-                new JsonSerializerOptions { WriteIndented = false });
+                _jsonWriteOptions);
 
             return json.AsBytes();
         }
@@ -124,8 +126,7 @@ public class ProtocolTranslationService
             if (jsonData.Length == 0)
                 return [];
 
-            var jsonString = System.Text.Encoding.UTF8.GetString(jsonData);
-            using var document = JsonDocument.Parse(jsonString);
+            using var document = JsonDocument.Parse(jsonData.AsMemory());
 
             if (document.RootElement.TryGetProperty("data", out var element) && element.ValueKind == JsonValueKind.String)
             {
@@ -163,12 +164,19 @@ public class ProtocolTranslationService
     /// </summary>
     public Dictionary<string, string> TranslateMetadata(Dictionary<string, string> sourceMetadata)
     {
-        var translated = new Dictionary<string, string>();
+        var source = sourceMetadata ?? [];
+        var translated = new Dictionary<string, string>(source.Count, StringComparer.Ordinal);
 
-        foreach (var kvp in sourceMetadata ?? [])
+        foreach (var kvp in source)
         {
-            if (!string.IsNullOrWhiteSpace(kvp.Key))
-                translated[kvp.Key.ToLowerInvariant()] = kvp.Value ?? "";
+            if (string.IsNullOrWhiteSpace(kvp.Key))
+                continue;
+
+            // Lowercase the key without an intermediate string allocation
+            var lowered = string.Create(kvp.Key.Length, kvp.Key, static (span, key) =>
+                key.AsSpan().ToLowerInvariant(span));
+
+            translated[lowered] = kvp.Value ?? "";
         }
 
         return translated;
