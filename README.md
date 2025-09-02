@@ -23,6 +23,8 @@ A production-grade gRPC-Web bridge server for .NET 10 that enables seamless prot
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
 - [Performance](#performance)
+- [Testing](#testing)
+- [Related Projects](#related-projects)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -1166,6 +1168,64 @@ dotnet run --project benchmarks/grpc-web-bridge.Benchmarks -c Release -- --filte
 - **`string.Create` + `Span<char>.ToLowerInvariant`** in `TranslateMetadata` — metadata keys are lowercased in-place inside a single allocated string, removing the extra copy produced by `string.ToLowerInvariant()`.
 - **`ConcurrentDictionary`** in `AuthenticationService` — replaces `lock + Dictionary` for the context cache, eliminating the lock contention cost on the read path.
 - **`ReadOnlySpan<char>` in `ExtractBearerToken`** — the bearer prefix check and whitespace trim work on a span slice; no substring allocation unless a valid token is found.
+
+## Testing
+
+```bash
+# Run the full test suite
+dotnet test
+
+# Run with coverage report
+dotnet test --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+# Run a specific project
+dotnet test tests/grpc-web-bridge.Tests/
+
+# Run benchmarks (Release mode required)
+dotnet run --project benchmarks/grpc-web-bridge.Benchmarks -c Release
+```
+
+Tests are organized under `tests/grpc-web-bridge.Tests/` and cover authentication, validation, protocol translation, and stream lifecycle. The `benchmarks/` folder contains BenchmarkDotNet micro-benchmarks for hot paths.
+
+## Related Projects
+
+Part of a collection of .NET libraries and tools. See more at [github.com/sarmkadan](https://github.com/sarmkadan).
+
+### Integration Examples
+
+**Registering the bridge in an ASP.NET Core host:**
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddGrpcWebBridge(options =>
+{
+    options.RequireAuthentication = true;
+    options.MaxStreamCount = 5000;
+    options.AllowedOrigins = new[] { "https://app.example.com" };
+});
+var app = builder.Build();
+app.UseGrpcWebBridge();
+app.Run();
+```
+
+**Forwarding authentication headers to downstream gRPC services:**
+
+```csharp
+public class TokenForwardingHandler : DelegatingHandler
+{
+    private readonly IHttpContextAccessor _ctx;
+    public TokenForwardingHandler(IHttpContextAccessor ctx) => _ctx = ctx;
+
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken ct)
+    {
+        var auth = _ctx.HttpContext?.Request.Headers["Authorization"].ToString();
+        if (!string.IsNullOrEmpty(auth))
+            request.Headers.TryAddWithoutValidation("Authorization", auth);
+        return base.SendAsync(request, ct);
+    }
+}
+```
 
 ## Contributing
 
