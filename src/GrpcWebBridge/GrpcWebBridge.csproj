@@ -7,13 +7,22 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>GrpcWebBridge</RootNamespace>
     <AssemblyName>GrpcWebBridge</AssemblyName>
+    <PackageId>Zaiets.grpc.web.bridge</PackageId>
     <Version>1.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
     <Description>gRPC-Web bridge server for .NET - protocol translation, streaming support, authentication middleware, Swagger docs</Description>
-    <PackageProjectUrl>https://sarmkadan.com</PackageProjectUrl>
+    <PackageTags>grpc grpc-web bridge dot-net middleware</PackageTags>
+    <PackageProjectUrl>https://github.com/sarmkadan/grpc-web-bridge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/sarmkadan/grpc-web-bridge</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
