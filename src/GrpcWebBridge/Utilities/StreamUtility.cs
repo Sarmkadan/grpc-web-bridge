@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -23,10 +24,10 @@ public static class StreamUtility
         Stream destination,
         int chunkSize = 81920)
     {
-        if (source == null)
+        if (source is null)
             throw new ArgumentNullException(nameof(source));
 
-        if (destination == null)
+        if (destination is null)
             throw new ArgumentNullException(nameof(destination));
 
         if (chunkSize <= 0)
@@ -53,7 +54,7 @@ public static class StreamUtility
     /// </summary>
     public static async Task<byte[]> ReadStreamToEndAsync(Stream stream, int maxSizeBytes = 10 * 1024 * 1024)
     {
-        if (stream == null)
+        if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
         const int chunkSize = 81920;
@@ -84,13 +85,13 @@ public static class StreamUtility
     /// </summary>
     public static async IAsyncEnumerable<string> ReadLinesAsync(Stream stream)
     {
-        if (stream == null)
+        if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
         using (var reader = new StreamReader(stream))
         {
             string? line;
-            while ((line = await reader.ReadLineAsync()) != null)
+            while ((line = await reader.ReadLineAsync()) is not null)
             {
                 yield return line;
             }
@@ -103,7 +104,7 @@ public static class StreamUtility
     /// </summary>
     public static PipeReader CreatePipeReader(Stream stream, int bufferSize = 81920)
     {
-        if (stream == null)
+        if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
         return PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: bufferSize));
@@ -114,7 +115,7 @@ public static class StreamUtility
     /// </summary>
     public static PipeWriter CreatePipeWriter(Stream stream, int bufferSize = 81920)
     {
-        if (stream == null)
+        if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
         return PipeWriter.Create(stream, new StreamPipeWriterOptions());
@@ -125,10 +126,10 @@ public static class StreamUtility
     /// </summary>
     public static async Task CompressStreamAsync(Stream source, Stream destination)
     {
-        if (source == null)
+        if (source is null)
             throw new ArgumentNullException(nameof(source));
 
-        if (destination == null)
+        if (destination is null)
             throw new ArgumentNullException(nameof(destination));
 
         using (var gzip = new System.IO.Compression.GZipStream(destination, System.IO.Compression.CompressionMode.Compress))
@@ -142,10 +143,10 @@ public static class StreamUtility
     /// </summary>
     public static async Task DecompressStreamAsync(Stream source, Stream destination)
     {
-        if (source == null)
+        if (source is null)
             throw new ArgumentNullException(nameof(source));
 
-        if (destination == null)
+        if (destination is null)
             throw new ArgumentNullException(nameof(destination));
 
         using (var gzip = new System.IO.Compression.GZipStream(source, System.IO.Compression.CompressionMode.Decompress))
@@ -164,7 +165,7 @@ public static class StreamUtility
         int maxRetries = 3,
         int delayMs = 100)
     {
-        if (stream == null)
+        if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
         // Fix: validate boundary values for retry parameters
@@ -174,7 +175,7 @@ public static class StreamUtility
         if (delayMs < 0)
             throw new ArgumentOutOfRangeException(nameof(delayMs), delayMs, "Delay cannot be negative");
 
-        if (data == null || data.Length == 0)
+        if (data is null || data.Length == 0)
             return;
 
         int retries = 0;
@@ -199,7 +200,7 @@ public static class StreamUtility
     /// </summary>
     public static void SafeSeek(Stream stream, long offset, SeekOrigin origin)
     {
-        if (stream == null)
+        if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
         if (stream.CanSeek)
@@ -217,7 +218,7 @@ public static class StreamUtility
     /// </summary>
     public static long? GetStreamLength(Stream stream)
     {
-        if (stream == null)
+        if (stream is null)
             return null;
 
         try
@@ -235,7 +236,7 @@ public static class StreamUtility
     /// </summary>
     public static bool IsStreamValid(Stream stream)
     {
-        return stream != null && stream.CanRead;
+        return stream is not null && stream.CanRead;
     }
 
     /// <summary>
@@ -243,7 +244,7 @@ public static class StreamUtility
     /// </summary>
     public static async Task<string> StreamToBase64Async(Stream stream)
     {
-        if (stream == null)
+        if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
         var bytes = await ReadStreamToEndAsync(stream);
@@ -275,10 +276,10 @@ public static class StreamUtility
     /// </summary>
     public static async Task<string> CalculateStreamHashAsync(Stream stream, System.Security.Cryptography.HashAlgorithm algorithm)
     {
-        if (stream == null)
+        if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
-        if (algorithm == null)
+        if (algorithm is null)
             throw new ArgumentNullException(nameof(algorithm));
 
         var originalPosition = stream.CanSeek ? stream.Position : -1;
@@ -303,10 +304,10 @@ public static class StreamUtility
     /// </summary>
     public static async Task TeeStreamAsync(Stream source, params Stream[] destinations)
     {
-        if (source == null)
+        if (source is null)
             throw new ArgumentNullException(nameof(source));
 
-        if (destinations == null || destinations.Length == 0)
+        if (destinations is null || destinations.Length == 0)
             throw new ArgumentException("At least one destination stream required", nameof(destinations));
 
         const int bufferSize = 81920;
@@ -318,13 +319,13 @@ public static class StreamUtility
             {
                 var segment = buffer.AsMemory(0, bytesRead);
                 var tasks = destinations
-                    .Where(d => d != null && d.CanWrite)
+                    .Where(d => d is not null && d.CanWrite)
                     .Select(d => d.WriteAsync(segment).AsTask());
 
                 await Task.WhenAll(tasks);
             }
 
-            foreach (var dest in destinations.Where(d => d != null))
+            foreach (var dest in destinations.Where(d => d is not null))
                 await dest.FlushAsync();
         }
         finally

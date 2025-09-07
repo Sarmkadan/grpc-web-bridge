@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -64,7 +65,7 @@ public class WebhookPublisher : IDisposable
         {
             Id = subscriptionId,
             Url = webhookUrl,
-            EventTypes = eventTypes ?? Array.Empty<string>(),
+            EventTypes = eventTypes ?? [],
             Headers = headers,
             RetryOnFailure = retryOnFailure,
             CreatedAt = DateTime.UtcNow,
@@ -99,7 +100,7 @@ public class WebhookPublisher : IDisposable
     /// </summary>
     public async Task PublishEventAsync(EventBase @event)
     {
-        if (@event == null)
+        if (@event is null)
             throw new ArgumentNullException(nameof(@event));
 
         var eventType = @event.GetType().Name;
@@ -303,11 +304,11 @@ public class WebhookPublisher : IDisposable
 /// <summary>
 /// Webhook subscription record.
 /// </summary>
-public class WebhookSubscription
+public sealed class WebhookSubscription
 {
     public string Id { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
-    public string[] EventTypes { get; set; } = Array.Empty<string>();
+    public string[] EventTypes { get; set; } = [];
     public Dictionary<string, string>? Headers { get; set; }
     public bool RetryOnFailure { get; set; }
     public bool IsActive { get; set; }
@@ -320,7 +321,7 @@ public class WebhookSubscription
 /// <summary>
 /// Internal webhook event.
 /// </summary>
-public class WebhookEvent
+public sealed class WebhookEvent
 {
     public string EventId { get; set; } = string.Empty;
     public string EventType { get; set; } = string.Empty;
@@ -334,7 +335,7 @@ public class WebhookEvent
 /// <summary>
 /// Configuration options for webhook publisher.
 /// </summary>
-public class WebhookPublisherOptions
+public sealed class WebhookPublisherOptions
 {
     public int MaxRetries { get; set; } = 3;
     public int FailureThresholdForDisable { get; set; } = 10;

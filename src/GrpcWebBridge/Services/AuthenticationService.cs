@@ -18,7 +18,7 @@ namespace GrpcWebBridge.Services;
 /// <summary>
 /// Service for authentication and authorization of gRPC requests
 /// </summary>
-public class AuthenticationService
+public sealed class AuthenticationService
 {
     private readonly ILogger<AuthenticationService> _logger;
     private readonly ConcurrentDictionary<string, AuthenticationContext> _contextCache = new();

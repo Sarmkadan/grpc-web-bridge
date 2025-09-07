@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -42,7 +43,7 @@ public class BridgeController : ControllerBase
     [HttpPost("invoke")]
     public async Task<IActionResult> InvokeMethod([FromBody] BridgeRequest request)
     {
-        if (request == null)
+        if (request is null)
             return BadRequest(new { error = "Request body is required" });
 
         try
@@ -53,12 +54,12 @@ public class BridgeController : ControllerBase
             var service = _serviceRegistry.ListServices()
                 .FirstOrDefault(s => s.Id == request.ServiceId || s.Name == request.ServiceId);
 
-            if (service == null)
+            if (service is null)
                 return NotFound(new { error = $"Service '{request.ServiceId}' not found" });
 
             // Locate method in service
             var method = service.Methods.FirstOrDefault(m => m.Name == request.MethodName);
-            if (method == null)
+            if (method is null)
                 return NotFound(new { error = $"Method '{request.MethodName}' not found in service" });
 
             // Build gRPC request and invoke
@@ -133,7 +134,7 @@ public class BridgeController : ControllerBase
     [HttpPost("batch")]
     public async Task<IActionResult> BatchInvoke([FromBody] BatchRequest batchRequest)
     {
-        if (batchRequest?.Operations == null || !batchRequest.Operations.Any())
+        if (batchRequest?.Operations is null || !batchRequest.Operations.Any())
             return BadRequest(new { error = "At least one operation is required" });
 
         try
@@ -149,7 +150,7 @@ public class BridgeController : ControllerBase
                     var service = _serviceRegistry.ListServices()
                         .FirstOrDefault(s => s.Id == op.ServiceId);
 
-                    if (service == null)
+                    if (service is null)
                     {
                         results.Add(new BatchOperationResult
                         {
@@ -161,7 +162,7 @@ public class BridgeController : ControllerBase
                     }
 
                     var method = service.Methods.FirstOrDefault(m => m.Name == op.MethodName);
-                    if (method == null)
+                    if (method is null)
                     {
                         results.Add(new BatchOperationResult
                         {
@@ -231,7 +232,7 @@ public class BridgeController : ControllerBase
 /// <summary>
 /// Request model for bridge method invocation.
 /// </summary>
-public class BridgeRequest
+public sealed class BridgeRequest
 {
     public string ServiceId { get; set; } = string.Empty;
     public string MethodName { get; set; } = string.Empty;
@@ -243,7 +244,7 @@ public class BridgeRequest
 /// <summary>
 /// Request model for streaming operations.
 /// </summary>
-public class StreamRequest
+public sealed class StreamRequest
 {
     public string ServiceId { get; set; } = string.Empty;
     public string MethodName { get; set; } = string.Empty;
@@ -253,7 +254,7 @@ public class StreamRequest
 /// <summary>
 /// Batch request containing multiple operations.
 /// </summary>
-public class BatchRequest
+public sealed class BatchRequest
 {
     public List<BatchOperation> Operations { get; set; } = new();
 }
@@ -261,7 +262,7 @@ public class BatchRequest
 /// <summary>
 /// Individual batch operation.
 /// </summary>
-public class BatchOperation
+public sealed class BatchOperation
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string ServiceId { get; set; } = string.Empty;
@@ -273,7 +274,7 @@ public class BatchOperation
 /// <summary>
 /// Result of a batch operation.
 /// </summary>
-public class BatchOperationResult
+public sealed class BatchOperationResult
 {
     public string OperationId { get; set; } = string.Empty;
     public bool Success { get; set; }

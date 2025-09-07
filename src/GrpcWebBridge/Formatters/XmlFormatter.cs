@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ namespace GrpcWebBridge.Formatters;
 /// XML serialization and formatting utilities.
 /// Provides serialization, deserialization, and validation for XML data.
 /// </summary>
-public class XmlFormatter
+public sealed class XmlFormatter
 {
     private readonly XmlFormatterOptions _options;
 
@@ -28,7 +29,7 @@ public class XmlFormatter
     /// </summary>
     public string ToXml<T>(T obj) where T : class
     {
-        if (obj == null)
+        if (obj is null)
             throw new ArgumentNullException(nameof(obj));
 
         try
@@ -213,7 +214,7 @@ public class XmlFormatter
             var doc2 = XDocument.Parse(xml2);
 
             // Merge root element children
-            if (doc1.Root != null && doc2.Root != null)
+            if (doc1.Root is not null && doc2.Root is not null)
             {
                 foreach (var element in doc2.Root.Elements())
                 {
@@ -291,7 +292,7 @@ public class XmlFormatter
 /// <summary>
 /// Configuration options for XML formatter.
 /// </summary>
-public class XmlFormatterOptions
+public sealed class XmlFormatterOptions
 {
     public bool Indent { get; set; } = true;
     public string IndentChars { get; set; } = "  ";

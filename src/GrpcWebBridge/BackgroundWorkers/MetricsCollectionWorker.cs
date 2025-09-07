@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -213,7 +214,7 @@ public class MetricsCollectionWorker : BackgroundService
 /// <summary>
 /// A single metrics snapshot.
 /// </summary>
-public class MetricsSnapshot
+public sealed class MetricsSnapshot
 {
     public DateTime Timestamp { get; set; }
     public double CpuUsagePercent { get; set; }
@@ -222,7 +223,7 @@ public class MetricsSnapshot
     public object? GcCollections { get; set; }
     public RequestMetricsData? RequestMetrics { get; set; }
 
-    public class RequestMetricsData
+    public sealed class RequestMetricsData
     {
         public long TotalRequests { get; set; }
         public long TotalErrors { get; set; }
@@ -233,7 +234,7 @@ public class MetricsSnapshot
 /// <summary>
 /// Configuration options for metrics collection worker.
 /// </summary>
-public class MetricsCollectionOptions
+public sealed class MetricsCollectionOptions
 {
     public int CollectionIntervalSeconds { get; set; } = 30;
     public int MaxSnapshotsToKeep { get; set; } = 1440; // 12 hours at 30s intervals

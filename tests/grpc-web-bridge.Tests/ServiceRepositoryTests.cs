@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -15,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace GrpcWebBridge.Tests;
 
-public class ServiceRepositoryTests
+public sealed class ServiceRepositoryTests
 {
     private readonly ILogger<ServiceRepository> _logger;
     private readonly ServiceRepository _repository;
@@ -148,7 +149,7 @@ public class ServiceRepositoryTests
     public async Task AddRequestAsync_WithValidRequest_ReturnsTrue()
     {
         // Arrange
-        var request = new GrpcRequest("TestService", "TestMethod", Array.Empty<byte>());
+        var request = new GrpcRequest("TestService", "TestMethod", []);
 
         // Act
         var result = await _repository.AddRequestAsync(request);

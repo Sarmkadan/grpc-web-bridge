@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -174,7 +175,7 @@ public static class ValidationUtility
         IEnumerable<T>? collection,
         string fieldName)
     {
-        if (collection == null || !collection.Any())
+        if (collection is null || !collection.Any())
             return (false, $"{fieldName} cannot be null or empty");
 
         return (true, null);
@@ -188,7 +189,7 @@ public static class ValidationUtility
         string fieldName,
         params string[] requiredKeys)
     {
-        if (dict == null)
+        if (dict is null)
             return (false, $"{fieldName} cannot be null");
 
         var missingKeys = requiredKeys.Where(k => !dict.ContainsKey(k)).ToList();

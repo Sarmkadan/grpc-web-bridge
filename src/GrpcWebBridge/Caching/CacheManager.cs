@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -45,7 +46,7 @@ public class CacheManager : IDisposable
         if (string.IsNullOrEmpty(key))
             throw new ArgumentException("Cache key cannot be null or empty", nameof(key));
 
-        if (value == null)
+        if (value is null)
             throw new ArgumentNullException(nameof(value));
 
         var entry = new CacheEntry
@@ -99,7 +100,7 @@ public class CacheManager : IDisposable
     /// </summary>
     public async Task<T> GetOrSetAsync<T>(string key, Func<Task<T>> factory, TimeSpan? ttl = null)
     {
-        if (TryGet(key, out T? cachedValue) && cachedValue != null)
+        if (TryGet(key, out T? cachedValue) && cachedValue is not null)
             return cachedValue;
 
         var value = await factory();
@@ -112,7 +113,7 @@ public class CacheManager : IDisposable
     /// </summary>
     public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? ttl = null)
     {
-        if (TryGet(key, out T? cachedValue) && cachedValue != null)
+        if (TryGet(key, out T? cachedValue) && cachedValue is not null)
             return cachedValue;
 
         var value = factory();
@@ -270,7 +271,7 @@ public class CacheManager : IDisposable
         long totalSize = 0;
         foreach (var entry in entries)
         {
-            if (entry.Value != null)
+            if (entry.Value is not null)
             {
                 totalSize += System.Runtime.InteropServices.Marshal.SizeOf(entry.Value);
             }
@@ -289,7 +290,7 @@ public class CacheManager : IDisposable
 /// <summary>
 /// Single cache entry with metadata.
 /// </summary>
-public class CacheEntry
+public sealed class CacheEntry
 {
     public object? Value { get; set; }
     public DateTime ExpiresAt { get; set; }
@@ -301,7 +302,7 @@ public class CacheEntry
 /// <summary>
 /// Cache statistics.
 /// </summary>
-public class CacheStatistics
+public sealed class CacheStatistics
 {
     public int EntryCount { get; set; }
     public long TotalHits { get; set; }
@@ -314,7 +315,7 @@ public class CacheStatistics
 /// <summary>
 /// Configuration options for cache manager.
 /// </summary>
-public class CacheManagerOptions
+public sealed class CacheManagerOptions
 {
     public TimeSpan DefaultTtl { get; set; } = TimeSpan.FromMinutes(5);
     public int MaxEntries { get; set; } = 10000;

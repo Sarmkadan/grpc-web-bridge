@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -78,7 +79,7 @@ public class StreamCleanupWorker : BackgroundService
                 try
                 {
                     var stats = _streamingService.GetStreamStatistics(streamId);
-                    if (stats == null)
+                    if (stats is null)
                         continue;
 
                     var lastActivityTime = stats.LastActivityTime;
@@ -156,7 +157,7 @@ public class StreamCleanupWorker : BackgroundService
 /// <summary>
 /// Configuration options for stream cleanup worker.
 /// </summary>
-public class StreamCleanupOptions
+public sealed class StreamCleanupOptions
 {
     public int CleanupIntervalSeconds { get; set; } = 60;
     public TimeSpan IdleTimeoutDuration { get; set; } = TimeSpan.FromMinutes(5);

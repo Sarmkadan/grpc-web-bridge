@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -41,7 +42,7 @@ public static class JsonUtility
     /// </summary>
     public static string Serialize<T>(T obj, bool indented = false)
     {
-        if (obj == null)
+        if (obj is null)
             return "null";
 
         var options = indented ? CreateIndentedOptions() : DefaultOptions;
@@ -53,7 +54,7 @@ public static class JsonUtility
     /// </summary>
     public static string SerializeWithOptions<T>(T obj, JsonSerializerOptions options)
     {
-        return obj == null ? "null" : JsonSerializer.Serialize(obj, options);
+        return obj is null ? "null" : JsonSerializer.Serialize(obj, options);
     }
 
     /// <summary>
@@ -213,10 +214,10 @@ public static class JsonUtility
         try
         {
             var dict = DeserializeToDictionary(json);
-            if (dict == null)
+            if (dict is null)
                 return false;
 
-            return requiredProperties.All(p => dict.ContainsKey(p) && dict[p] != null);
+            return requiredProperties.All(p => dict.ContainsKey(p) && dict[p] is not null);
         }
         catch
         {

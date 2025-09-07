@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ namespace GrpcWebBridge.Configuration;
 /// <summary>
 /// Service for configuring startup services and seed data
 /// </summary>
-public class StartupConfiguration
+public sealed class StartupConfiguration
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<StartupConfiguration> _logger;
@@ -166,7 +167,7 @@ public class StartupConfiguration
 /// <summary>
 /// System information model
 /// </summary>
-public class SystemInfo
+public sealed class SystemInfo
 {
     public string? InstanceId { get; set; }
     public string? InstanceName { get; set; }

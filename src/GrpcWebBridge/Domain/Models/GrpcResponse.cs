@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -8,7 +9,7 @@ namespace GrpcWebBridge.Domain.Models;
 /// <summary>
 /// Represents a gRPC response from the backend service
 /// </summary>
-public class GrpcResponse
+public sealed class GrpcResponse
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string RequestId { get; set; } = string.Empty;

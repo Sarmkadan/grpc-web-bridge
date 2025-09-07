@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -12,7 +13,7 @@ namespace GrpcWebBridge.Formatters;
 /// CSV export and import utilities for tabular data.
 /// Supports RFC 4180 CSV format with proper escaping and quoting.
 /// </summary>
-public class CsvFormatter
+public sealed class CsvFormatter
 {
     private readonly CsvFormatterOptions _options;
 
@@ -26,7 +27,7 @@ public class CsvFormatter
     /// </summary>
     public string ToCsv<T>(IEnumerable<T> items) where T : class
     {
-        if (items == null || !items.Any())
+        if (items is null || !items.Any())
             return string.Empty;
 
         var sb = new StringBuilder();
@@ -168,7 +169,7 @@ public class CsvFormatter
     /// </summary>
     public string DictsToCsv(IEnumerable<Dictionary<string, string>> data)
     {
-        if (data == null || !data.Any())
+        if (data is null || !data.Any())
             return string.Empty;
 
         var sb = new StringBuilder();
@@ -298,7 +299,7 @@ public class CsvFormatter
 /// <summary>
 /// Configuration options for CSV formatter.
 /// </summary>
-public class CsvFormatterOptions
+public sealed class CsvFormatterOptions
 {
     public string Delimiter { get; set; } = ",";
     public Encoding Encoding { get; set; } = Encoding.UTF8;

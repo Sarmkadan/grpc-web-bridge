@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -213,7 +214,7 @@ public static class ServiceExtensions
 /// <summary>
 /// Service health summary
 /// </summary>
-public class ServiceHealthSummary
+public sealed class ServiceHealthSummary
 {
     public int TotalServices { get; set; }
     public int HealthyServices { get; set; }

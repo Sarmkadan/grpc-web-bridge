@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -9,7 +10,7 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
-public class GrpcWebBridgeOptionsTests
+public sealed class GrpcWebBridgeOptionsTests
 {
     [Fact]
     public void Constructor_WithEnvironment_SetsEnvironment()
