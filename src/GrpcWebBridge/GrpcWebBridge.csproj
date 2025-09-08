@@ -8,7 +8,7 @@
     <RootNamespace>GrpcWebBridge</RootNamespace>
     <AssemblyName>GrpcWebBridge</AssemblyName>
     <PackageId>Zaiets.grpc.web.bridge</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.0.2</Version>
     <Authors>Vladyslav Zaiets</Authors>
     <Description>gRPC-Web bridge server for .NET - protocol translation, streaming support, authentication middleware, Swagger docs</Description>
     <PackageTags>grpc grpc-web bridge dot-net middleware</PackageTags>

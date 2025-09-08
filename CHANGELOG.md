@@ -1,4 +1,8 @@
-## [2.0.0] - 2026-07-20
+## [2.0.2] - 2026-05-21
+
+### Fixed
+- Fix deadline propagation in nested gRPC calls causing premature timeouts
+- Added regression test for the fix
 ### Added
 - Add bidirectional streaming with backpressure and flow control
 - Docker support with multi-stage builds

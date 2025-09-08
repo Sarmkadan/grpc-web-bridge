@@ -6,7 +6,7 @@
 
 A production-grade gRPC-Web bridge server for .NET 10 that enables seamless protocol translation between gRPC and gRPC-Web clients, with comprehensive streaming support, authentication middleware, and integrated Swagger documentation.
 
-**Status**: Stable | **License**: MIT | **Latest Version**: 2.0.0
+**Status**: Stable | **License**: MIT | **Latest Version**: 2.0.2
 
 ## Table of Contents
 
