@@ -40,8 +40,8 @@ public class MetricsCollectionWorker : BackgroundService
         {
             try
             {
-                await CollectMetricsAsync(stoppingToken);
-                await Task.Delay(TimeSpan.FromSeconds(_options.CollectionIntervalSeconds), stoppingToken);
+                await CollectMetricsAsync(stoppingToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(_options.CollectionIntervalSeconds), stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -100,7 +100,7 @@ public class MetricsCollectionWorker : BackgroundService
                 snapshot.CpuUsagePercent, Math.Round(snapshot.MemoryUsageMb, 2));
 
             // Check thresholds and trigger alerts
-            await CheckAlertsAsync(snapshot, cancellationToken);
+            await CheckAlertsAsync(snapshot, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

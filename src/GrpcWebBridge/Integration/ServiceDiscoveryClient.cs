@@ -45,7 +45,7 @@ public class ServiceDiscoveryClient : IDisposable
         try
         {
             var url = $"{_options.DiscoveryServiceUrl}/services";
-            var response = await _httpClientFactory.PostJsonAsync(url, instance, "discovery");
+            var response = await _httpClientFactory.PostJsonAsync(url, instance, "discovery").ConfigureAwait(false);
 
             if (response is not null)
             {
@@ -76,7 +76,7 @@ public class ServiceDiscoveryClient : IDisposable
         {
             var url = $"{_options.DiscoveryServiceUrl}/services/{serviceId}";
             var client = _httpClientFactory.GetClient("discovery");
-            var response = await client.DeleteAsync(url);
+            var response = await client.DeleteAsync(url).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -105,7 +105,7 @@ public class ServiceDiscoveryClient : IDisposable
         try
         {
             var url = $"{_options.DiscoveryServiceUrl}/services?name={serviceName}";
-            var response = await _httpClientFactory.GetAsync(url, "discovery");
+            var response = await _httpClientFactory.GetAsync(url, "discovery").ConfigureAwait(false);
 
             var instances = JsonUtility.Deserialize<List<ServiceInstance>>(response);
             return instances ?? new List<ServiceInstance>();
@@ -122,7 +122,7 @@ public class ServiceDiscoveryClient : IDisposable
     /// </summary>
     public async Task<ServiceInstance?> GetHealthyInstanceAsync(string serviceName)
     {
-        var instances = await DiscoverServicesAsync(serviceName);
+        var instances = await DiscoverServicesAsync(serviceName).ConfigureAwait(false);
 
         if (instances.Count == 0)
         {
@@ -155,7 +155,7 @@ public class ServiceDiscoveryClient : IDisposable
         {
             var url = $"{_options.DiscoveryServiceUrl}/services/{serviceId}/health";
             var client = _httpClientFactory.GetClient("discovery");
-            var response = await client.PutAsync(url, null);
+            var response = await client.PutAsync(url, null).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode;
         }
