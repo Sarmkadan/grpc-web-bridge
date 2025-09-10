@@ -131,7 +131,7 @@ public class EventBus : IDisposable
 
         if (tasks.Count > 0)
         {
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Published event: EventType={EventType}, SubscriberCount={Count}", eventName, handlers.Count);

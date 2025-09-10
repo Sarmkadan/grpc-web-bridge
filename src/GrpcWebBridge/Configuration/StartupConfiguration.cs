@@ -36,7 +36,7 @@ public sealed class StartupConfiguration
         try
         {
             // Register sample services
-            await RegisterDefaultServicesAsync();
+            await RegisterDefaultServicesAsync().ConfigureAwait(false);
 
             _logger.LogInformation("Startup configuration completed successfully");
         }
@@ -85,7 +85,7 @@ public sealed class StartupConfiguration
         listUsersMethod.Description = "Streams all users";
         userService.AddMethod(listUsersMethod);
 
-        await repository.AddAsync(userService);
+        await repository.AddAsync(userService).ConfigureAwait(false);
         _logger.LogInformation("Registered default service: {ServiceName}", userService.FullName);
 
         // Sample Service 2: OrderService
@@ -120,7 +120,7 @@ public sealed class StartupConfiguration
         trackOrderMethod.Description = "Streams order status updates";
         orderService.AddMethod(trackOrderMethod);
 
-        await repository.AddAsync(orderService);
+        await repository.AddAsync(orderService).ConfigureAwait(false);
         _logger.LogInformation("Registered default service: {ServiceName}", orderService.FullName);
     }
 

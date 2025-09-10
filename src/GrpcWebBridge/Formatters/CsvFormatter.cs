@@ -134,7 +134,7 @@ public sealed class CsvFormatter
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
 
         var csv = ToCsv(items);
-        await File.WriteAllTextAsync(filePath, csv, Encoding.UTF8);
+        await File.WriteAllTextAsync(filePath, csv, Encoding.UTF8).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -148,7 +148,7 @@ public sealed class CsvFormatter
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
-        var csv = await File.ReadAllTextAsync(filePath, Encoding.UTF8);
+        var csv = await File.ReadAllTextAsync(filePath, Encoding.UTF8).ConfigureAwait(false);
         return FromCsv(csv);
     }
 
@@ -160,7 +160,7 @@ public sealed class CsvFormatter
         if (string.IsNullOrEmpty(filePath))
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
 
-        var csv = await File.ReadAllTextAsync(filePath, Encoding.UTF8);
+        var csv = await File.ReadAllTextAsync(filePath, Encoding.UTF8).ConfigureAwait(false);
         return FromCsv<T>(csv);
     }
 

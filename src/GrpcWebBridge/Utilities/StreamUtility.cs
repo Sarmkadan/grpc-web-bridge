@@ -38,9 +38,9 @@ public static class StreamUtility
         {
             int bytesRead;
             while ((bytesRead = await source.ReadAsync(buffer.AsMemory(0, chunkSize))) > 0)
-                await destination.WriteAsync(buffer.AsMemory(0, bytesRead));
+                await destination.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
 
-            await destination.FlushAsync();
+            await destination.FlushAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -69,7 +69,7 @@ public static class StreamUtility
                 if (ms.Length + bytesRead > maxSizeBytes)
                     throw new InvalidOperationException($"Stream exceeds maximum size of {maxSizeBytes} bytes");
 
-                await ms.WriteAsync(buffer.AsMemory(0, bytesRead));
+                await ms.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
             }
 
             return ms.ToArray();
@@ -134,7 +134,7 @@ public static class StreamUtility
 
         using (var gzip = new System.IO.Compression.GZipStream(destination, System.IO.Compression.CompressionMode.Compress))
         {
-            await source.CopyToAsync(gzip);
+            await source.CopyToAsync(gzip).ConfigureAwait(false);
         }
     }
 
@@ -151,7 +151,7 @@ public static class StreamUtility
 
         using (var gzip = new System.IO.Compression.GZipStream(source, System.IO.Compression.CompressionMode.Decompress))
         {
-            await gzip.CopyToAsync(destination);
+            await gzip.CopyToAsync(destination).ConfigureAwait(false);
         }
     }
 
@@ -183,14 +183,14 @@ public static class StreamUtility
         {
             try
             {
-                await stream.WriteAsync(data.AsMemory());
-                await stream.FlushAsync();
+                await stream.WriteAsync(data.AsMemory()).ConfigureAwait(false);
+                await stream.FlushAsync().ConfigureAwait(false);
                 return;
             }
             catch (IOException) when (retries < maxRetries)
             {
                 retries++;
-                await Task.Delay(delayMs * retries);
+                await Task.Delay(delayMs * retries).ConfigureAwait(false);
             }
         }
     }
@@ -247,7 +247,7 @@ public static class StreamUtility
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
-        var bytes = await ReadStreamToEndAsync(stream);
+        var bytes = await ReadStreamToEndAsync(stream).ConfigureAwait(false);
         return Convert.ToBase64String(bytes);
     }
 
@@ -286,7 +286,7 @@ public static class StreamUtility
 
         try
         {
-            var hash = await algorithm.ComputeHashAsync(stream);
+            var hash = await algorithm.ComputeHashAsync(stream).ConfigureAwait(false);
             return Convert.ToHexString(hash);
         }
         finally
@@ -322,11 +322,11 @@ public static class StreamUtility
                     .Where(d => d is not null && d.CanWrite)
                     .Select(d => d.WriteAsync(segment).AsTask());
 
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
 
             foreach (var dest in destinations.Where(d => d is not null))
-                await dest.FlushAsync();
+                await dest.FlushAsync().ConfigureAwait(false);
         }
         finally
         {
