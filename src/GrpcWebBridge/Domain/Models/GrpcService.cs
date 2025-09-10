@@ -9,25 +9,39 @@ using System.Collections.ObjectModel;
 namespace GrpcWebBridge.Domain.Models;
 
 /// <summary>
-/// Represents a gRPC service with its metadata and methods
+/// Represents a registered gRPC service with its methods, connection details, and metadata.
+/// Provides method management (add/remove/lookup) and validation for service registration.
 /// </summary>
 public sealed class GrpcService
 {
     private readonly List<GrpcMethod> _methods = [];
 
+    /// <summary>Unique service identifier (GUID without hyphens).</summary>
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    /// <summary>Service name as defined in the .proto file (e.g., "Greeter").</summary>
     public string Name { get; set; } = string.Empty;
+    /// <summary>Protobuf package name (e.g., "greet.v1").</summary>
     public string PackageName { get; set; } = Constants.ServiceRegistry.DefaultNamespace;
+    /// <summary>Fully qualified service name: "{PackageName}.{Name}".</summary>
     public string FullName { get; set; } = string.Empty;
+    /// <summary>Optional human-readable description of the service.</summary>
     public string? Description { get; set; }
+    /// <summary>Host or IP address where the gRPC server is listening.</summary>
     public string Endpoint { get; set; } = string.Empty;
+    /// <summary>Port number for the gRPC server. Defaults to 50051.</summary>
     public int Port { get; set; } = 50051;
+    /// <summary>Whether to use TLS for the connection to this service.</summary>
     public bool UseTls { get; set; }
+    /// <summary>Current serving status of the service.</summary>
     public ServiceStatus Status { get; set; } = ServiceStatus.Serving;
+    /// <summary>UTC timestamp when the service was registered.</summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>UTC timestamp of the last modification, or null if never updated.</summary>
     public DateTime? UpdatedAt { get; set; }
+    /// <summary>Arbitrary key-value metadata attached to the service.</summary>
     public Dictionary<string, string> Metadata { get; set; } = [];
 
+    /// <summary>Read-only collection of methods registered on this service.</summary>
     public IReadOnlyCollection<GrpcMethod> Methods => _methods.AsReadOnly();
 
     public GrpcService() { }
@@ -41,6 +55,11 @@ public sealed class GrpcService
         FullName = $"{packageName}.{name}";
     }
 
+    /// <summary>
+    /// Registers a new method on this service. Validates the method and rejects duplicates.
+    /// </summary>
+    /// <param name="method">The method to add.</param>
+    /// <exception cref="InvalidOperationException">Thrown when a method with the same FullName already exists.</exception>
     public void AddMethod(GrpcMethod method)
     {
         if (method is null)
@@ -55,17 +74,28 @@ public sealed class GrpcService
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Finds a method by short name or fully qualified name.
+    /// </summary>
+    /// <param name="methodName">The method name or full name to search for.</param>
+    /// <returns>The matching <see cref="GrpcMethod"/>, or null if not found.</returns>
     public GrpcMethod? GetMethod(string methodName)
     {
         return _methods.FirstOrDefault(m =>
             m.Name == methodName || m.FullName == methodName);
     }
 
+    /// <summary>
+    /// Checks whether a method with the given name exists on this service.
+    /// </summary>
     public bool HasMethod(string methodName)
     {
         return _methods.Any(m => m.Name == methodName || m.FullName == methodName);
     }
 
+    /// <summary>
+    /// Removes a method by short name. No-op if the method does not exist.
+    /// </summary>
     public void RemoveMethod(string methodName)
     {
         var method = _methods.FirstOrDefault(m => m.Name == methodName);

@@ -7,30 +7,53 @@
 namespace GrpcWebBridge.Domain.Models;
 
 /// <summary>
-/// Configuration settings for the gRPC-Web bridge
+/// Central configuration for the gRPC-Web bridge instance. Controls streaming limits,
+/// CORS policy, compression, authentication, and per-service defaults.
+/// Use <see cref="GrpcWebBridge.Configuration.GrpcWebBridgeOptions"/> for fluent configuration.
 /// </summary>
 public sealed class BridgeConfiguration
 {
+    /// <summary>Auto-generated unique identifier for this bridge instance.</summary>
     public string InstanceId { get; set; } = Guid.NewGuid().ToString("N");
+    /// <summary>Optional human-readable name for the bridge instance.</summary>
     public string? InstanceName { get; set; }
+    /// <summary>Deployment environment (Development, Production, Testing).</summary>
     public string Environment { get; set; } = "Production";
+    /// <summary>Enable structured request/response logging.</summary>
     public bool EnableLogging { get; set; } = true;
+    /// <summary>Enable Swagger/OpenAPI documentation endpoint.</summary>
     public bool EnableSwagger { get; set; } = true;
+    /// <summary>Enable Prometheus-compatible metrics collection.</summary>
     public bool EnableMetrics { get; set; } = true;
+    /// <summary>Enable CORS headers on HTTP responses.</summary>
     public bool EnableCors { get; set; } = true;
+    /// <summary>Require authentication for all bridge requests.</summary>
     public bool RequireAuthentication { get; set; }
+    /// <summary>Maximum number of concurrent bidirectional streams.</summary>
     public int MaxStreamCount { get; set; } = Constants.Streaming.MaxStreamCount;
+    /// <summary>Seconds of inactivity before a stream is automatically closed.</summary>
     public int StreamIdleTimeoutSeconds { get; set; } = Constants.Streaming.StreamIdleTimeoutSeconds;
+    /// <summary>Interval in seconds between stream keepalive heartbeats.</summary>
     public int StreamHeartbeatIntervalSeconds { get; set; } = Constants.Streaming.StreamHeartbeatIntervalSeconds;
+    /// <summary>Maximum gRPC message size in bytes.</summary>
     public int MaxMessageSize { get; set; } = Constants.Grpc.MaxMessageSize;
+    /// <summary>Default timeout in milliseconds for unary gRPC calls.</summary>
     public int DefaultTimeoutMilliseconds { get; set; } = Constants.Grpc.DefaultTimeout;
+    /// <summary>Whether to compress HTTP responses (gzip).</summary>
     public bool CompressResponses { get; set; } = true;
+    /// <summary>Gzip compression level (0-9). Higher values yield smaller output but cost more CPU.</summary>
     public int CompressionLevel { get; set; } = 6;
+    /// <summary>CORS allowed origins. Use ["*"] to allow all origins.</summary>
     public List<string> AllowedOrigins { get; set; } = ["*"];
+    /// <summary>HTTP methods allowed in CORS preflight responses.</summary>
     public List<string> AllowedMethods { get; set; } = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
+    /// <summary>Custom HTTP headers injected into all bridge responses.</summary>
     public Dictionary<string, string> CustomHeaders { get; set; } = [];
+    /// <summary>Per-service default configuration overrides, keyed by service name.</summary>
     public Dictionary<string, object> ServiceDefaults { get; set; } = [];
+    /// <summary>UTC timestamp when this configuration was created.</summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>UTC timestamp of the last configuration change.</summary>
     public DateTime? UpdatedAt { get; set; }
 
     public BridgeConfiguration() { }
