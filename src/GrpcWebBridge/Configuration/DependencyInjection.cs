@@ -6,6 +6,7 @@
 
 using GrpcWebBridge.Data;
 using GrpcWebBridge.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GrpcWebBridge.Configuration;
@@ -117,25 +118,61 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Adds authentication configuration
+    /// Adds authentication configuration with customisable JWT bearer options.
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configureJwtBearer">
+    ///   Optional delegate to configure <see cref="JwtBearerOptions"/> — authority, audience,
+    ///   issuer signing key, token validation parameters, etc.  When omitted a minimal default
+    ///   is registered so the pipeline can start; callers <b>must</b> supply an authority or
+    ///   signing-key configuration before the app reaches production.
+    /// </param>
     public static IServiceCollection AddGrpcWebBridgeAuthentication(
+        this IServiceCollection services,
+        Action<JwtBearerOptions>? configureJwtBearer = null)
+    {
+        if (services is null)
+            throw new ArgumentNullException(nameof(services));
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                // Sensible defaults — callers should override Authority / TokenValidationParameters
+                // via the configureJwtBearer delegate.
+                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                {
+                    ValidateAudience = false,
+                    ValidateIssuer = false,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = false,
+                    RequireSignedTokens = false
+                };
+
+                configureJwtBearer?.Invoke(options);
+            });
+
+        services.AddAuthorization();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Prometheus metric definitions for the bridge.
+    /// Call <c>app.MapMetrics()</c> (from prometheus-net.AspNetCore) in the pipeline to expose
+    /// the <c>/metrics</c> scrape endpoint consumed by Prometheus or compatible agents.
+    /// </summary>
+    public static IServiceCollection AddGrpcWebBridgePrometheus(
         this IServiceCollection services)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
 
-        services.AddAuthentication("Bearer")
-            .AddJwtBearer("Bearer", options =>
-            {
-                options.Authority = "https://sarmkadan.com";
-                options.TokenValidationParameters = new()
-                {
-                    ValidateAudience = false
-                };
-            });
-
-        services.AddAuthorization();
+        // Trigger static field initialisation so the metrics are registered with the
+        // default Prometheus registry before any request arrives.
+        _ = BridgePrometheusMetrics.RequestsTotal;
+        _ = BridgePrometheusMetrics.RequestDuration;
+        _ = BridgePrometheusMetrics.ActiveStreams;
+        _ = BridgePrometheusMetrics.StreamErrorsTotal;
 
         return services;
     }
