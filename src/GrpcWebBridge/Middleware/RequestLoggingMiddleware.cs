@@ -55,7 +55,9 @@ public sealed class RequestLoggingMiddleware
                 stopwatch.Stop();
                 await LogResponseAsync(context, stopwatch.ElapsedMilliseconds);
 
-                // Copy captured response to original stream
+                // Reset captured stream position then forward to the original stream
+                if (responseBody.CanSeek)
+                    responseBody.Seek(0, SeekOrigin.Begin);
                 await responseBody.CopyToAsync(originalBodyStream);
             }
         }
