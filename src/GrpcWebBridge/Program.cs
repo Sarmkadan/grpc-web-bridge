@@ -8,6 +8,7 @@ using Grpc.AspNetCore.Web;
 using GrpcWebBridge.Configuration;
 using GrpcWebBridge.Middleware;
 using GrpcWebBridge.Services;
+using OpenTelemetry.Trace;
 using Prometheus;
 using Serilog;
 
@@ -64,6 +65,17 @@ services.AddGrpcWebBridgeAuthentication(jwt =>
 
 // Add Prometheus metrics (opt-in; exposes /metrics for Prometheus scraping)
 services.AddGrpcWebBridgePrometheus();
+
+// Add OpenTelemetry distributed tracing
+services.AddGrpcWebBridgeTracing(
+    serviceName: "grpc-web-bridge",
+    instanceName: builder.Configuration["GrpcWebBridge:InstanceName"],
+    configureBuilder: tracing =>
+    {
+        // Console exporter is useful for development; replace with OTLP/Zipkin in production.
+        if (builder.Environment.IsDevelopment())
+            tracing.AddConsoleExporter();
+    });
 
 // Add controllers for REST endpoints
 services.AddControllers();
