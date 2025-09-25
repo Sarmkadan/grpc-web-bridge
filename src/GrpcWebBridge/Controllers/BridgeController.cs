@@ -45,6 +45,8 @@ public class BridgeController : ControllerBase
     /// Invoke a gRPC method via HTTP protocol translation.
     /// Routes the request to the appropriate gRPC service endpoint.
     /// </summary>
+    /// <param name="request">The bridge request containing service, method, payload, and metadata.</param>
+    /// <returns>An <see cref="IActionResult"/> with the operation result or error details.</returns>
     [HttpPost("invoke")]
     public async Task<IActionResult> InvokeMethod([FromBody] BridgeRequest request)
     {
@@ -115,6 +117,9 @@ public class BridgeController : ControllerBase
     /// Detects client disconnection via the request cancellation token and closes the upstream
     /// stream to prevent resource leaks.
     /// </summary>
+    /// <param name="streamRequest">The stream request containing service and method information.</param>
+    /// <param name="cancellationToken">Token to monitor for client disconnection.</param>
+    /// <returns>A <see cref="Task"/> representing the ongoing streaming operation.</returns>
     [HttpPost("stream")]
     public async Task StreamMessages([FromBody] StreamRequest streamRequest, CancellationToken cancellationToken)
     {
@@ -210,6 +215,8 @@ public class BridgeController : ControllerBase
     /// Batch invoke multiple gRPC methods in a single request.
     /// Useful for reducing network overhead when multiple calls are needed.
     /// </summary>
+    /// <param name="batchRequest">The batch request containing multiple operations.</param>
+    /// <returns>An <see cref="IActionResult"/> with the batch operation results.</returns>
     [HttpPost("batch")]
     public async Task<IActionResult> BatchInvoke([FromBody] BatchRequest batchRequest)
     {
