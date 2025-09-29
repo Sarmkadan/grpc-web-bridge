@@ -30,6 +30,9 @@ public sealed class StreamingService
     /// <summary>
     /// Creates a new stream and registers it
     /// </summary>
+    /// <param name="streamId">Unique identifier for the stream.</param>
+    /// <param name="methodType">The type of gRPC method (e.g., ServerStreaming).</param>
+    /// <returns>The created <see cref="Stream"/> instance.</returns>
     public Stream CreateStream(string streamId, MethodType methodType)
     {
         if (string.IsNullOrWhiteSpace(streamId))
@@ -55,6 +58,8 @@ public sealed class StreamingService
     /// <summary>
     /// Retrieves an active stream
     /// </summary>
+    /// <param name="streamId">Unique identifier for the stream.</param>
+    /// <returns>The <see cref="Stream"/> instance, or null if not found.</returns>
     public Stream? GetStream(string streamId)
     {
         lock (_streamsLock)
@@ -66,6 +71,8 @@ public sealed class StreamingService
     /// <summary>
     /// Adds a message to the stream queue
     /// </summary>
+    /// <param name="streamId">Unique identifier for the stream.</param>
+    /// <param name="message">The <see cref="StreamMessage"/> to enqueue.</param>
     public void EnqueueMessage(string streamId, StreamMessage message)
     {
         if (string.IsNullOrWhiteSpace(streamId))
@@ -87,6 +94,8 @@ public sealed class StreamingService
     /// <summary>
     /// Dequeues the next message from stream
     /// </summary>
+    /// <param name="streamId">Unique identifier for the stream.</param>
+    /// <returns>The next <see cref="StreamMessage"/> from the queue, or null if empty.</returns>
     public StreamMessage? DequeueMessage(string streamId)
     {
         var stream = GetStream(streamId);
@@ -99,6 +108,9 @@ public sealed class StreamingService
     /// <summary>
     /// Closes a stream and releases resources
     /// </summary>
+    /// <param name="streamId">Unique identifier for the stream.</param>
+    /// <param name="statusCode">The gRPC status code indicating completion status.</param>
+    /// <param name="message">Optional message describing the closing status.</param>
     public void CloseStream(string streamId, GrpcStatusCode? statusCode = null, string? message = null)
     {
         if (string.IsNullOrWhiteSpace(streamId))
