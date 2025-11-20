@@ -187,7 +187,7 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
         try
         {
             // Signal write-side completion so the transport reader observes channel EOF.
-            await stream.CompleteWritingAsync();
+            await stream.CompleteWritingAsync().ConfigureAwait(false);
 
             // Give the transport a bounded grace window to drain any queued outbound messages.
             using var graceCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -195,7 +195,7 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
 
             try
             {
-                await entry.OutboundDrained.WaitAsync(graceCts.Token);
+                await entry.OutboundDrained.WaitAsync(graceCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
@@ -210,7 +210,7 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
                 "Stream {StreamId}: close cancelled by caller — aborting with {Status}.",
                 streamId, finalStatus ?? GrpcStatusCode.Cancelled);
 
-            await stream.AbortAsync(finalStatus ?? GrpcStatusCode.Cancelled, "Close was cancelled.");
+            await stream.AbortAsync(finalStatus ?? GrpcStatusCode.Cancelled, "Close was cancelled.").ConfigureAwait(false);
         }
         finally
         {
@@ -224,7 +224,7 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
                 Source = nameof(BidirectionalStreamingEngine)
             });
 
-            await stream.DisposeAsync();
+            await stream.DisposeAsync().ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Closed stream {StreamId} — finalStatus={Status}, durationMs={Duration}, " +

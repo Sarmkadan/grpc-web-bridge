@@ -77,7 +77,7 @@ public static class ReflectionServiceExtensions
             ReflectionService reflection,
             CancellationToken ct) =>
         {
-            var result = await reflection.ListServiceNamesAsync(ct);
+            var result = await reflection.ListServiceNamesAsync(ct).ConfigureAwait(false);
             return result.Success
                 ? Results.Ok(result)
                 : Results.Problem(result.ErrorMessage, statusCode: StatusCodes.Status500InternalServerError);
@@ -91,7 +91,7 @@ public static class ReflectionServiceExtensions
             CancellationToken ct) =>
         {
             var decoded = Uri.UnescapeDataString(fullName);
-            var result = await reflection.GetServiceDescriptorAsync(decoded, ct);
+            var result = await reflection.GetServiceDescriptorAsync(decoded, ct).ConfigureAwait(false);
             return result.Success
                 ? Results.Ok(result)
                 : Results.NotFound(result);
@@ -106,7 +106,7 @@ public static class ReflectionServiceExtensions
             CancellationToken ct) =>
         {
             var decodedService = Uri.UnescapeDataString(fullName);
-            var result = await reflection.GetMethodDescriptorAsync(decodedService, methodName, ct);
+            var result = await reflection.GetMethodDescriptorAsync(decodedService, methodName, ct).ConfigureAwait(false);
             return result.Success
                 ? Results.Ok(result)
                 : Results.NotFound(result);
@@ -118,7 +118,7 @@ public static class ReflectionServiceExtensions
             ReflectionService reflection,
             CancellationToken ct) =>
         {
-            var result = await reflection.GetAllDescriptorsAsync(ct);
+            var result = await reflection.GetAllDescriptorsAsync(ct).ConfigureAwait(false);
             return result.Success
                 ? Results.Ok(result)
                 : Results.Problem(result.ErrorMessage, statusCode: StatusCodes.Status500InternalServerError);

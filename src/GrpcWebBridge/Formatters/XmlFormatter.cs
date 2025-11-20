@@ -179,7 +179,7 @@ public sealed class XmlFormatter
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
 
         var xml = ToXml(obj);
-        await File.WriteAllTextAsync(filePath, xml, _options.Encoding);
+        await File.WriteAllTextAsync(filePath, xml, _options.Encoding).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -193,7 +193,7 @@ public sealed class XmlFormatter
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
-        var xml = await File.ReadAllTextAsync(filePath);
+        var xml = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
         return FromXml<T>(xml);
     }
 
