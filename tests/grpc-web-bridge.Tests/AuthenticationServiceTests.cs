@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -13,7 +14,7 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
-public class AuthenticationServiceTests
+public sealed class AuthenticationServiceTests
 {
     private readonly ILogger<AuthenticationService> _mockLogger;
     private readonly AuthenticationService _service;

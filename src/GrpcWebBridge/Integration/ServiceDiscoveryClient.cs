@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -38,7 +39,7 @@ public class ServiceDiscoveryClient : IDisposable
     /// </summary>
     public async Task<bool> RegisterServiceAsync(ServiceInstance instance)
     {
-        if (instance == null)
+        if (instance is null)
             throw new ArgumentNullException(nameof(instance));
 
         try
@@ -46,7 +47,7 @@ public class ServiceDiscoveryClient : IDisposable
             var url = $"{_options.DiscoveryServiceUrl}/services";
             var response = await _httpClientFactory.PostJsonAsync(url, instance, "discovery");
 
-            if (response != null)
+            if (response is not null)
             {
                 _serviceCache[instance.Id] = instance;
                 _logger.LogInformation("Service registered: ServiceId={Id}, Name={Name}",
@@ -170,7 +171,7 @@ public class ServiceDiscoveryClient : IDisposable
     /// </summary>
     public void StartAutoRefresh(TimeSpan interval)
     {
-        if (_refreshTimer != null)
+        if (_refreshTimer is not null)
             return;
 
         _refreshTimer = new Timer(_ => RefreshServices(), null, interval, interval);
@@ -244,7 +245,7 @@ public class ServiceDiscoveryClient : IDisposable
 /// <summary>
 /// Service instance information.
 /// </summary>
-public class ServiceInstance
+public sealed class ServiceInstance
 {
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
@@ -259,7 +260,7 @@ public class ServiceInstance
 /// <summary>
 /// Configuration options for service discovery.
 /// </summary>
-public class ServiceDiscoveryOptions
+public sealed class ServiceDiscoveryOptions
 {
     public string DiscoveryServiceUrl { get; set; } = "http://localhost:8500";
     public int RegistrationTtlSeconds { get; set; } = 30;

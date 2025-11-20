@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ namespace GrpcWebBridge.Middleware;
 /// Catches unhandled exceptions and converts them to appropriate HTTP responses.
 /// Provides structured error responses with proper status codes and error details.
 /// </summary>
-public class ErrorHandlingMiddleware
+public sealed class ErrorHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ErrorHandlingMiddleware> _logger;
@@ -140,7 +141,7 @@ public class ErrorHandlingMiddleware
 /// <summary>
 /// Standard error response format for all error scenarios.
 /// </summary>
-public class ErrorResponse
+public sealed class ErrorResponse
 {
     public bool Success { get; set; } = false;
     public string? Error { get; set; }

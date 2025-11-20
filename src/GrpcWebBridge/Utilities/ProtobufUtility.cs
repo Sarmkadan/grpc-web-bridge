@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -21,7 +22,7 @@ public static class ProtobufUtility
     /// </summary>
     public static string ToJson(IMessage message)
     {
-        if (message == null)
+        if (message is null)
             throw new ArgumentNullException(nameof(message));
 
         var formatter = new JsonFormatter(JsonFormatter.Settings.Default);
@@ -54,7 +55,7 @@ public static class ProtobufUtility
     /// </summary>
     public static byte[] ToBytes(IMessage message)
     {
-        if (message == null)
+        if (message is null)
             throw new ArgumentNullException(nameof(message));
 
         return message.ToByteArray();
@@ -65,7 +66,7 @@ public static class ProtobufUtility
     /// </summary>
     public static T? FromBytes<T>(byte[] data) where T : IMessage, new()
     {
-        if (data == null || data.Length == 0)
+        if (data is null || data.Length == 0)
             throw new ArgumentException("Data cannot be null or empty", nameof(data));
 
         try
@@ -85,7 +86,7 @@ public static class ProtobufUtility
     /// </summary>
     public static int GetMessageSize(IMessage message)
     {
-        if (message == null)
+        if (message is null)
             throw new ArgumentNullException(nameof(message));
 
         return message.CalculateSize();
@@ -97,7 +98,7 @@ public static class ProtobufUtility
     /// </summary>
     public static Dictionary<string, object?> ToDict(IMessage message)
     {
-        if (message == null)
+        if (message is null)
             throw new ArgumentNullException(nameof(message));
 
         var json = ToJson(message);
@@ -111,7 +112,7 @@ public static class ProtobufUtility
     /// </summary>
     public static T Clone<T>(T message) where T : IMessage, new()
     {
-        if (message == null)
+        if (message is null)
             throw new ArgumentNullException(nameof(message));
 
         var clone = new T();
@@ -125,13 +126,13 @@ public static class ProtobufUtility
     /// </summary>
     public static T Merge<T>(params T[] messages) where T : IMessage, new()
     {
-        if (messages == null || messages.Length == 0)
+        if (messages is null || messages.Length == 0)
             throw new ArgumentException("At least one message is required", nameof(messages));
 
         var result = new T();
         foreach (var message in messages)
         {
-            if (message != null)
+            if (message is not null)
                 result.MergeFrom(message.ToByteArray());
         }
 
@@ -144,10 +145,10 @@ public static class ProtobufUtility
     /// </summary>
     public static bool AreEqual<T>(T message1, T message2) where T : IMessage
     {
-        if (message1 == null && message2 == null)
+        if (message1 is null && message2 is null)
             return true;
 
-        if (message1 == null || message2 == null)
+        if (message1 is null || message2 is null)
             return false;
 
         return message1.Equals(message2);
@@ -161,14 +162,14 @@ public static class ProtobufUtility
     {
         var errors = new List<string>();
 
-        if (message == null)
+        if (message is null)
         {
             errors.Add("Message cannot be null");
             return (false, errors);
         }
 
         var descriptor = message.Descriptor;
-        if (descriptor == null)
+        if (descriptor is null)
         {
             errors.Add("Message descriptor is null");
             return (false, errors);
@@ -180,7 +181,7 @@ public static class ProtobufUtility
             if (field.IsRequired)
             {
                 var value = message.GetType().GetProperty(field.Name)?.GetValue(message);
-                if (value == null || (value is string && string.IsNullOrEmpty((string)value)))
+                if (value is null || (value is string && string.IsNullOrEmpty((string)value)))
                 {
                     errors.Add($"Required field '{field.Name}' is missing or empty");
                 }
@@ -196,7 +197,7 @@ public static class ProtobufUtility
     /// </summary>
     public static string CompressMessage(IMessage message)
     {
-        if (message == null)
+        if (message is null)
             throw new ArgumentNullException(nameof(message));
 
         var messageBytes = message.ToByteArray();
@@ -273,7 +274,7 @@ public static class ProtobufUtility
 /// <summary>
 /// Metadata about a Protobuf message type.
 /// </summary>
-public class MessageMetadata
+public sealed class MessageMetadata
 {
     public string Name { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
@@ -284,7 +285,7 @@ public class MessageMetadata
 /// <summary>
 /// Metadata about a Protobuf field.
 /// </summary>
-public class FieldMetadata
+public sealed class FieldMetadata
 {
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;

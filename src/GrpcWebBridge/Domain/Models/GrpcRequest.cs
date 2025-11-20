@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -8,7 +9,7 @@ namespace GrpcWebBridge.Domain.Models;
 /// <summary>
 /// Represents a gRPC request intercepted or created by the bridge
 /// </summary>
-public class GrpcRequest
+public sealed class GrpcRequest
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string ServiceName { get; set; } = string.Empty;

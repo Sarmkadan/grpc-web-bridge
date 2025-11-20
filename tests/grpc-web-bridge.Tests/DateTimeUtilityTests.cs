@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -9,7 +10,7 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
-public class DateTimeUtilityTests
+public sealed class DateTimeUtilityTests
 {
     private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ namespace GrpcWebBridge.Services;
 /// <summary>
 /// Service for translating between gRPC, gRPC-Web, and other protocol formats
 /// </summary>
-public class ProtocolTranslationService
+public sealed class ProtocolTranslationService
 {
     private static readonly JsonSerializerOptions _jsonWriteOptions = new() { WriteIndented = false };
 

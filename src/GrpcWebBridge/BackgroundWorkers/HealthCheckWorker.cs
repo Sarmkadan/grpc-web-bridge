@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -225,7 +226,7 @@ public class HealthCheckWorker : BackgroundService
 /// <summary>
 /// Configuration options for health check worker.
 /// </summary>
-public class HealthCheckOptions
+public sealed class HealthCheckOptions
 {
     public int CheckIntervalSeconds { get; set; } = 30;
     public int CheckTimeoutMs { get; set; } = 5000;
