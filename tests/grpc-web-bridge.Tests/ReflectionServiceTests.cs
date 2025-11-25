@@ -49,7 +49,7 @@ public sealed class ReflectionServiceTests
         _serviceRegistry.RegisterService(service2);
 
         // Act
-        var result = await _reflectionService.ListServiceNamesAsync();
+        var result = await _reflectionService.ListServiceNamesAsync().ConfigureAwait(false);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -62,7 +62,7 @@ public sealed class ReflectionServiceTests
         // Arrange - No services registered in _serviceRegistry
 
         // Act
-        var result = await _reflectionService.ListServiceNamesAsync();
+        var result = await _reflectionService.ListServiceNamesAsync().ConfigureAwait(false);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -80,7 +80,7 @@ public sealed class ReflectionServiceTests
         _serviceRegistry.RegisterService(service);
 
         // Act
-        var result = await _reflectionService.GetServiceDescriptorAsync("package.a.ServiceA");
+        var result = await _reflectionService.GetServiceDescriptorAsync("package.a.ServiceA").ConfigureAwait(false);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -95,7 +95,7 @@ public sealed class ReflectionServiceTests
         // Arrange - No service registered
 
         // Act
-        var result = await _reflectionService.GetServiceDescriptorAsync("non.existent.Service");
+        var result = await _reflectionService.GetServiceDescriptorAsync("non.existent.Service").ConfigureAwait(false);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -109,7 +109,7 @@ public sealed class ReflectionServiceTests
         // No setup needed
 
         // Act
-        Func<Task> act = async () => await _reflectionService.GetServiceDescriptorAsync(null!);
+        Func<Task> act = async () => await _reflectionService.GetServiceDescriptorAsync(null!).ConfigureAwait(false);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentException>()
@@ -126,7 +126,7 @@ public sealed class ReflectionServiceTests
         _serviceRegistry.RegisterService(service);
 
         // Act
-        var result = await _reflectionService.GetMethodDescriptorAsync("package.a.ServiceA", "Method1");
+        var result = await _reflectionService.GetMethodDescriptorAsync("package.a.ServiceA", "Method1").ConfigureAwait(false);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -143,7 +143,7 @@ public sealed class ReflectionServiceTests
         _serviceRegistry.RegisterService(service);
 
         // Act
-        var result = await _reflectionService.GetMethodDescriptorAsync("package.a.ServiceA", "NonExistentMethod");
+        var result = await _reflectionService.GetMethodDescriptorAsync("package.a.ServiceA", "NonExistentMethod").ConfigureAwait(false);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -157,7 +157,7 @@ public sealed class ReflectionServiceTests
         // No setup needed
 
         // Act
-        Func<Task> act = async () => await _reflectionService.GetMethodDescriptorAsync(null!, "Method");
+        Func<Task> act = async () => await _reflectionService.GetMethodDescriptorAsync(null!, "Method").ConfigureAwait(false);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentException>()
@@ -171,7 +171,7 @@ public sealed class ReflectionServiceTests
         // No setup needed
 
         // Act
-        Func<Task> act = async () => await _reflectionService.GetMethodDescriptorAsync("package.Service", null!);
+        Func<Task> act = async () => await _reflectionService.GetMethodDescriptorAsync("package.Service", null!).ConfigureAwait(false);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentException>()
@@ -194,7 +194,7 @@ public sealed class ReflectionServiceTests
         _serviceRegistry.RegisterService(serviceB);
 
         // Act
-        var result = await _reflectionService.GetAllDescriptorsAsync();
+        var result = await _reflectionService.GetAllDescriptorsAsync().ConfigureAwait(false);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -209,7 +209,7 @@ public sealed class ReflectionServiceTests
         // Arrange - No services registered in _serviceRegistry
 
         // Act
-        var result = await _reflectionService.GetAllDescriptorsAsync();
+        var result = await _reflectionService.GetAllDescriptorsAsync().ConfigureAwait(false);
 
         // Assert
         result.Success.Should().BeTrue();
