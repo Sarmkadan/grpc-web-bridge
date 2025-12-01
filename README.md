@@ -20,6 +20,9 @@ A production-grade gRPC-Web bridge server for .NET 10 that enables seamless prot
 - [Configuration Reference](#configuration-reference)
 - [Authentication](#authentication)
 - [Streaming Guide](#streaming-guide)
+- [Request Logging Middleware](#request-logging-middleware)
+- [Health Check Endpoint](#health-check-endpoint)
+- [OpenTelemetry Tracing](#opentelemetry-tracing)
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
 - [Performance](#performance)
@@ -145,11 +148,12 @@ gRPC-Web Bridge solves this elegantly by:
 
 ### Operations & Observability
 
-- ✅ **Health Checks**: Readiness & liveness probes
+- ✅ **Health Checks**: Readiness & liveness probes — see [Health Check Endpoint](#health-check-endpoint)
 - ✅ **Structured Logging**: Serilog integration
+- ✅ **Request Logging Middleware**: Structured per-request/response logging with header masking and body capture — see [Request Logging Middleware](#request-logging-middleware)
 - ✅ **Metrics Collection**: Performance and usage metrics
 - ✅ **Prometheus Metrics**: `grpcweb_bridge_*` counters, histograms, and gauges for Prometheus scraping
-- ✅ **Request Tracing**: Correlation IDs for debugging
+- ✅ **OpenTelemetry Tracing**: Distributed tracing for gRPC calls, protocol translation, and authentication — see [OpenTelemetry Tracing](#opentelemetry-tracing)
 - ✅ **Stream Management**: Active stream monitoring with disconnect detection
 - ✅ **Webhook Publishing**: Event notifications
 
@@ -1372,6 +1376,197 @@ dotnet analyze
 - Document public APIs with XML comments
 - Write unit tests for new features
 - Keep methods focused and under 50 lines
+
+## Request Logging Middleware
+
+The `RequestLoggingMiddleware` provides structured, per-request and per-response logging via Serilog. It is registered automatically when you call `app.UseRequestLogging()` in `Program.cs`.
+
+### What Gets Logged
+
+| Field | Request | Response |
+|---|---|---|
+| HTTP method | ✅ | ✅ |
+| Path & query string | ✅ | — |
+| Status code | — | ✅ |
+| Content-Type / Content-Length | ✅ | ✅ |
+| Headers (sensitive ones masked) | ✅ | ✅ |
+| Body (JSON/XML/text only, ≤ 1 KB) | ✅ | ✅ |
+| Remote IP | ✅ | — |
+| Elapsed time (ms) | — | ✅ |
+
+### Sensitive Header Masking
+
+The following headers are **never** logged: `Authorization`, `Cookie`, `X-Api-Key`, `X-Auth-Token`, `Token`.
+
+### Excluded Paths
+
+Requests to `/health`, `/swagger`, `/api/metrics`, and `/favicon.ico` are silently passed through without logging to reduce noise.
+
+### Log Levels
+
+| Status Code Range | Log Level |
+|---|---|
+| 2xx / 3xx | `Information` |
+| 4xx | `Warning` |
+| 5xx | `Error` |
+
+### Configuration
+
+No additional configuration is required. The middleware is added to the pipeline in `Program.cs`:
+
+```csharp
+app.UseRequestLogging(); // must be called before UseRouting()
+```
+
+---
+
+## Health Check Endpoint
+
+The bridge exposes multiple health endpoints under `/api/health` via `HealthCheckController`.
+
+### Endpoints
+
+| Endpoint | Description | Use Case |
+|---|---|---|
+| `GET /health` | Minimal status | Simple smoke test |
+| `GET /api/health` | Overall health (80% threshold) | Load balancer probe |
+| `GET /api/health/alive` | Liveness probe | Container orchestration |
+| `GET /api/health/ready` | Readiness probe | Container orchestration |
+| `GET /api/health/detailed` | Full diagnostics | Monitoring dashboards |
+| `GET /api/health/services` | Per-service health | Service mesh |
+| `GET /api/health/resources` | Memory & CPU usage | Performance monitoring |
+
+### Response Examples
+
+**`GET /health`** (always 200 when the process is running):
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-01-01T00:00:00Z",
+  "services": 3,
+  "activeStreams": 12,
+  "version": "1.0.0"
+}
+```
+
+**`GET /api/health/alive`** — used by Kubernetes liveness probes:
+```json
+{ "alive": true, "timestamp": "2025-01-01T00:00:00Z", "uptime": 3600.5 }
+```
+
+**`GET /api/health/ready`** — returns `503` when no healthy services are registered:
+```json
+{ "ready": false, "reason": "Service is not ready - no healthy services available", "servicesAvailable": 0 }
+```
+
+### Kubernetes Integration
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /api/health/alive
+    port: 5000
+  initialDelaySeconds: 10
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /api/health/ready
+    port: 5000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+```
+
+---
+
+## OpenTelemetry Tracing
+
+The bridge ships with first-class OpenTelemetry support. When enabled, every proxied gRPC call, protocol translation step, and authentication check is represented as an OpenTelemetry span that can be exported to any compatible backend (Jaeger, Zipkin, Tempo, Datadog, etc.).
+
+### Enabling Tracing
+
+Call `AddGrpcWebBridgeTracing` in `Program.cs`:
+
+```csharp
+services.AddGrpcWebBridgeTracing(
+    serviceName: "grpc-web-bridge",
+    instanceName: "prod-eu-1",          // optional: identifies the instance in traces
+    configureBuilder: tracing =>
+    {
+        // Development: log traces to console
+        if (builder.Environment.IsDevelopment())
+            tracing.AddConsoleExporter();
+
+        // Production: send to an OTLP-compatible backend
+        // tracing.AddOtlpExporter(opt => opt.Endpoint = new Uri("http://jaeger:4317"));
+
+        // Or Zipkin:
+        // tracing.AddZipkinExporter(opt => opt.Endpoint = new Uri("http://zipkin:9411/api/v2/spans"));
+    });
+```
+
+### Span Structure
+
+All bridge spans are emitted under the `GrpcWebBridge` activity source name. The following operation names are produced:
+
+| Activity Name | Kind | Trigger |
+|---|---|---|
+| `grpc.bridge.call` | `Client` | Unary RPC proxied through the bridge |
+| `grpc.bridge.stream` | `Client` | Streaming RPC (server/client/bidi) |
+| `grpc.bridge.translate` | `Internal` | gRPC-Web → gRPC protocol conversion |
+| `grpc.bridge.auth` | `Internal` | JWT / API key authentication step |
+
+### Span Attributes
+
+| Tag | Example Value | Description |
+|---|---|---|
+| `rpc.system` | `grpc` | Always "grpc" for bridge spans |
+| `rpc.service` | `UserService` | Downstream gRPC service name |
+| `rpc.method` | `GetUser` | gRPC method name |
+| `rpc.grpc.status_code` | `OK` | gRPC status string |
+| `bridge.streaming` | `false` | Whether the call is streaming |
+| `bridge.instance` | `prod-eu-1` | Instance identifier |
+| `auth.scheme` | `Bearer` | Auth scheme (auth spans) |
+
+### Using TracingService Directly
+
+For custom instrumentation within your own middleware or services, inject `TracingService` from DI:
+
+```csharp
+public class MyMiddleware
+{
+    private readonly TracingService _tracing;
+
+    public MyMiddleware(TracingService tracing) { _tracing = tracing; }
+
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        using var span = _tracing.StartGrpcCallActivity("MyService", "MyMethod");
+        try
+        {
+            await next(context);
+            TracingService.SetGrpcStatus(span, "OK");
+        }
+        catch (Exception ex)
+        {
+            TracingService.RecordException(span, ex, "INTERNAL");
+            throw;
+        }
+    }
+}
+```
+
+### Filtering Noisy Spans
+
+Health probe traffic (`/health`, `/metrics`) is excluded from traces by default. To add additional exclusions, use the `configureBuilder` delegate:
+
+```csharp
+services.AddGrpcWebBridgeTracing(configureBuilder: tracing =>
+{
+    tracing.AddAspNetCoreInstrumentation(opt =>
+        opt.Filter = ctx => !ctx.Request.Path.StartsWithSegments("/internal"));
+});
+```
 
 ## License
 

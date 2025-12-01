@@ -6,8 +6,11 @@
 
 using GrpcWebBridge.Data;
 using GrpcWebBridge.Services;
+using GrpcWebBridge.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace GrpcWebBridge.Configuration;
 
@@ -173,6 +176,64 @@ public static class DependencyInjection
         _ = BridgePrometheusMetrics.RequestDuration;
         _ = BridgePrometheusMetrics.ActiveStreams;
         _ = BridgePrometheusMetrics.StreamErrorsTotal;
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds OpenTelemetry distributed tracing for the gRPC-Web bridge.
+    /// Instruments ASP.NET Core request handling and exposes the bridge's own
+    /// <see cref="BridgeActivitySource"/> so that proxy operations (protocol
+    /// translation, authentication, streaming) appear as child spans.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="serviceName">
+    ///   Resource name reported to the tracing backend. Defaults to <c>"grpc-web-bridge"</c>.
+    /// </param>
+    /// <param name="instanceName">
+    ///   Optional instance identifier attached to every span as <c>bridge.instance</c>.
+    ///   Useful in multi-instance deployments.
+    /// </param>
+    /// <param name="configureBuilder">
+    ///   Optional delegate to customise the <see cref="TracerProviderBuilder"/> — for example
+    ///   to add an OTLP or Zipkin exporter instead of the default console one.
+    /// </param>
+    public static IServiceCollection AddGrpcWebBridgeTracing(
+        this IServiceCollection services,
+        string serviceName = "grpc-web-bridge",
+        string? instanceName = null,
+        Action<TracerProviderBuilder>? configureBuilder = null)
+    {
+        if (services is null)
+            throw new ArgumentNullException(nameof(services));
+
+        var resolvedInstance = string.IsNullOrWhiteSpace(instanceName) ? "default" : instanceName;
+
+        services.AddSingleton(sp =>
+            new TracingService(sp.GetRequiredService<ILogger<TracingService>>(), resolvedInstance));
+
+        services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource
+                .AddService(serviceName, serviceVersion: BridgeActivitySource.Version)
+                .AddAttributes(new Dictionary<string, object>
+                {
+                    ["bridge.instance"] = resolvedInstance
+                }))
+            .WithTracing(tracing =>
+            {
+                tracing
+                    .AddSource(BridgeActivitySource.Name)
+                    .AddAspNetCoreInstrumentation(opts =>
+                    {
+                        opts.RecordException = true;
+                        opts.Filter = ctx =>
+                            // Exclude metrics scrapes and health probes from traces to reduce noise
+                            !ctx.Request.Path.StartsWithSegments("/metrics") &&
+                            !ctx.Request.Path.StartsWithSegments("/health");
+                    });
+
+                configureBuilder?.Invoke(tracing);
+            });
 
         return services;
     }
