@@ -72,12 +72,16 @@ var app = builder.Build();
 
 // Configure middleware
 app.UseGrpcWebContentTypeValidation();
+app.UseRequestLogging();
 app.UseRouting();
 app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
 
 app.UseCors("AllowGrpcWeb");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Map controller routes (REST API controllers)
+app.MapControllers();
 
 // Expose /metrics endpoint for Prometheus scraping.
 app.MapMetrics();
