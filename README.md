@@ -32,6 +32,26 @@ Configure the bridge in `appsettings.json`:
 }
 ```
 
+## Usage Examples
+
+The repository includes comprehensive usage examples demonstrating how to integrate with the gRPC-Web Bridge:
+
+- **[Basic Usage](examples/BasicUsage.cs)** - Minimal setup and first call
+- **[Advanced Usage](examples/AdvancedUsage.cs)** - Configuration, custom options, error handling, and resilience patterns
+- **[ASP.NET Core Integration](examples/IntegrationExample.cs)** - Dependency injection and production patterns
+
+
+These examples show:
+- Simple HTTP client integration
+- Resilience and retry patterns with Polly
+- Service registration and discovery
+- Batch operations and streaming
+- ASP.NET Core DI configuration
+- Health monitoring and metrics
+- Error handling and logging
+
+See the `examples/` directory for complete, runnable code snippets.
+
 ## License
 
 MIT License - Copyright (c) 2025 Vladyslav Zaiets
