@@ -55,4 +55,16 @@ public class GrpcWebBridgeException : Exception
 
         return message;
     }
+
+    public GrpcWebBridgeException WithContext(string key, object value)
+    {
+        AddContext(key, value);
+        return this;
+    }
+
+    public GrpcWebBridgeException WithInnerException(Exception innerException)
+    {
+        Data[nameof(innerException)] = innerException;
+        return this;
+    }
 }

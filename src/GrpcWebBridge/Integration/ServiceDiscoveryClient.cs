@@ -4,6 +4,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Utilities;
 
 namespace GrpcWebBridge.Integration;

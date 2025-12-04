@@ -6,6 +6,7 @@
 
 using System.Collections.Concurrent;
 using System.Net;
+using GrpcWebBridge.Domain.Exceptions;
 
 namespace GrpcWebBridge.Integration;
 
@@ -36,7 +37,7 @@ public class HttpClientFactory : IDisposable
     public HttpClient GetClient(string name = "default")
     {
         if (string.IsNullOrEmpty(name))
-            name = "default";
+            throw new ConfigurationException(nameof(name), "HTTP client name cannot be null or empty");
 
         return _clients.GetOrAdd(name, _ =>
         {
@@ -100,15 +101,25 @@ public class HttpClientFactory : IDisposable
     public HttpClient GetClientForUri(string baseUri)
     {
         if (string.IsNullOrEmpty(baseUri))
-            throw new ArgumentException("Base URI cannot be null or empty", nameof(baseUri));
+            throw new ConfigurationException(nameof(baseUri), "Base URI cannot be null or empty");
 
-        var client = GetClient(baseUri);
-        if (client.BaseAddress is null)
+        try
         {
-            client.BaseAddress = new Uri(baseUri);
-        }
+            var uri = new Uri(baseUri);
+            var client = GetClient(baseUri);
+            if (client.BaseAddress is null)
+            {
+                client.BaseAddress = uri;
+            }
 
-        return client;
+            return client;
+        }
+        catch (UriFormatException ex)
+        {
+            throw new ConfigurationException(nameof(baseUri), baseUri, "Invalid URI format")
+                .WithContext("uriFormat", baseUri)
+                .WithInnerException(ex);
+        }
     }
 
     /// <summary>
@@ -117,7 +128,7 @@ public class HttpClientFactory : IDisposable
     public async Task<string> GetAsync(string uri, string? clientName = null)
     {
         if (string.IsNullOrEmpty(uri))
-            throw new ArgumentException("URI cannot be null or empty", nameof(uri));
+            throw new ConfigurationException(nameof(uri), "URI cannot be null or empty");
 
         try
         {
@@ -127,10 +138,17 @@ public class HttpClientFactory : IDisposable
 
             return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP GET request failed: URI={URI}, StatusCode={StatusCode}", uri, ex.StatusCode);
+            throw new ConfigurationException(nameof(uri), uri, $"HTTP GET request failed with status {ex.StatusCode}")
+                .WithInnerException(ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "GET request failed: URI={URI}", uri);
-            throw;
+            throw new GrpcWebBridgeException($"GET request to {uri} failed: {ex.Message}", "HTTP_REQUEST_FAILED")
+                .WithInnerException(ex);
         }
     }
 
@@ -140,10 +158,10 @@ public class HttpClientFactory : IDisposable
     public async Task<string> PostJsonAsync(string uri, object payload, string? clientName = null)
     {
         if (string.IsNullOrEmpty(uri))
-            throw new ArgumentException("URI cannot be null or empty", nameof(uri));
+            throw new ConfigurationException(nameof(uri), "URI cannot be null or empty");
 
         if (payload is null)
-            throw new ArgumentNullException(nameof(payload));
+            throw new ConfigurationException(nameof(payload), "Payload cannot be null");
 
         try
         {
@@ -156,10 +174,17 @@ public class HttpClientFactory : IDisposable
 
             return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP POST request failed: URI={URI}, StatusCode={StatusCode}", uri, ex.StatusCode);
+            throw new ConfigurationException(nameof(uri), uri, $"HTTP POST request failed with status {ex.StatusCode}")
+                .WithInnerException(ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "POST request failed: URI={URI}", uri);
-            throw;
+            throw new GrpcWebBridgeException($"POST request to {uri} failed: {ex.Message}", "HTTP_REQUEST_FAILED")
+                .WithInnerException(ex);
         }
     }
 
@@ -174,7 +199,10 @@ public class HttpClientFactory : IDisposable
         string? clientName = null)
     {
         if (string.IsNullOrEmpty(uri))
-            throw new ArgumentException("URI cannot be null or empty", nameof(uri));
+            throw new ConfigurationException(nameof(uri), "URI cannot be null or empty");
+
+        if (method is null)
+            throw new ConfigurationException(nameof(method), "HTTP method cannot be null");
 
         try
         {
@@ -195,10 +223,17 @@ public class HttpClientFactory : IDisposable
             var response = await client.SendAsync(request).ConfigureAwait(false);
             return response;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed: URI={URI}, Method={Method}, StatusCode={StatusCode}", uri, method, ex.StatusCode);
+            throw new ConfigurationException(nameof(uri), uri, $"HTTP {method} request failed with status {ex.StatusCode}")
+                .WithInnerException(ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Request failed: URI={URI}, Method={Method}", uri, method);
-            throw;
+            throw new GrpcWebBridgeException($"{method} request to {uri} failed: {ex.Message}", "HTTP_REQUEST_FAILED")
+                .WithInnerException(ex);
         }
     }
 
