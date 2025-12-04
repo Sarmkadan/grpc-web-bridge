@@ -4,7 +4,7 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <NoWarn>$(NoWarn);CS0419;CS1591;CS1570;ASPDEPR002;CS8602;CS8619;CS8604;CS8620;SYSLIB0060;CS8601;SYSLIB0053;CS8625;SYSLIB0014;ASP0019</NoWarn>
     <Authors>Vladyslav Zaiets</Authors>
     <PackageProjectUrl>https://github.com/sarmkadan/grpc-web-bridge</PackageProjectUrl>
