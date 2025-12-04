@@ -52,6 +52,50 @@ These examples show:
 
 See the `examples/` directory for complete, runnable code snippets.
 
+## Docker Support
+
+The gRPC-Web Bridge can be run in Docker containers for easy deployment and scaling.
+
+### Building the Docker Image
+
+```bash
+docker build -t grpc-web-bridge .
+```
+
+### Running the Container
+
+```bash
+docker run -d -p 8080:8080 --name grpc-web-bridge grpc-web-bridge
+```
+
+### Using Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+This will start the gRPC-Web Bridge service with the following features:
+- Port 8080 exposed
+- Health check endpoint at `/health`
+- Prometheus metrics at `/metrics`
+- Environment variables configured for production
+- Non-root user for security
+
+### Configuration
+
+Environment variables can be passed to the container:
+
+```bash
+docker run -d -p 8080:8080 \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -e ASPNETCORE_URLS=http://+:8080 \
+  --name grpc-web-bridge \
+  grpc-web-bridge
+```
+
+See `docker-compose.yml` for a complete configuration example.
+
+
 ## License
 
 MIT License - Copyright (c) 2025 Vladyslav Zaiets
