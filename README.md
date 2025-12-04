@@ -96,6 +96,19 @@ docker run -d -p 8080:8080 \
 See `docker-compose.yml` for a complete configuration example.
 
 
-## License
+## Performance Benchmarks
 
-MIT License - Copyright (c) 2025 Vladyslav Zaiets
+The repository includes a benchmark suite built with [BenchmarkDotNet](https://benchmarkdotnet.org/) to monitor the performance of critical components such as authentication, protocol translation, stream processing, and JSON utilities.
+
+### Running Benchmarks
+
+To run the benchmarks, execute the following commands from the root directory:
+
+```bash
+cd benchmarks/grpc-web-bridge.Benchmarks
+dotnet run -c Release -- --filter "*"
+```
+
+The benchmarks will run a series of tests and output a summary table, including execution time and memory allocation diagnostics.
+
+
