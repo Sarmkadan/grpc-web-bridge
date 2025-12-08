@@ -19,7 +19,7 @@ namespace GrpcWebBridge.Controllers;
 [ApiController]
 [Route("api/bridge")]
 [Produces("application/json")]
-public class BridgeController : ControllerBase
+public sealed class BridgeController : ControllerBase
 {
     private readonly ProtocolTranslationService _protocolService;
     private readonly ServiceRegistry _serviceRegistry;

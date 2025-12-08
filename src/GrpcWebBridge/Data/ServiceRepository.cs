@@ -12,7 +12,7 @@ namespace GrpcWebBridge.Data;
 /// <summary>
 /// In-memory implementation of service repository
 /// </summary>
-public class ServiceRepository : IServiceRepository
+public sealed class ServiceRepository : IServiceRepository
 {
     private readonly ILogger<ServiceRepository> _logger;
     private readonly Dictionary<string, GrpcService> _services = [];

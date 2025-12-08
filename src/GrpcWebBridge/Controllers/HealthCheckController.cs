@@ -20,7 +20,7 @@ namespace GrpcWebBridge.Controllers;
 [ApiController]
 [Route("api/health")]
 [Produces("application/json")]
-public class HealthCheckController : ControllerBase
+public sealed class HealthCheckController : ControllerBase
 {
     private readonly ServiceRegistry _serviceRegistry;
     private readonly StreamingService _streamingService;
