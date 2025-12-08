@@ -16,7 +16,7 @@ namespace GrpcWebBridge.Data;
 /// <summary>
 /// Manages gRPC connections to backend services
 /// </summary>
-public class GrpcConnectionManager : IAsyncDisposable
+public sealed class GrpcConnectionManager : IAsyncDisposable
 {
     private readonly ILogger<GrpcConnectionManager> _logger;
     private readonly Dictionary<string, GrpcChannel> _channels = [];

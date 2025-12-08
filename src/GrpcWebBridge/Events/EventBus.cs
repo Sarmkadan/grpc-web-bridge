@@ -13,7 +13,7 @@ namespace GrpcWebBridge.Events;
 /// Enables loose coupling between components through event-driven architecture.
 /// Supports synchronous and asynchronous event handling.
 /// </summary>
-public class EventBus : IDisposable
+public sealed class EventBus : IDisposable
 {
     private readonly ConcurrentDictionary<string, List<Delegate>> _subscribers;
     private readonly ILogger<EventBus> _logger;

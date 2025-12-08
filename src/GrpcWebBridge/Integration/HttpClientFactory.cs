@@ -15,7 +15,7 @@ namespace GrpcWebBridge.Integration;
 /// Provides clients for external service communication with proper configuration.
 /// Implements connection pooling and health monitoring.
 /// </summary>
-public class HttpClientFactory : IDisposable
+public sealed class HttpClientFactory : IDisposable
 {
     private readonly ConcurrentDictionary<string, HttpClient> _clients;
     private readonly ILogger<HttpClientFactory> _logger;

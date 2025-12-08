@@ -13,7 +13,7 @@ namespace GrpcWebBridge.BackgroundWorkers;
 /// Prevents memory leaks from abandoned streaming connections.
 /// Runs at configurable intervals to monitor stream health.
 /// </summary>
-public class StreamCleanupWorker : BackgroundService
+public sealed class StreamCleanupWorker : BackgroundService
 {
     private readonly ILogger<StreamCleanupWorker> _logger;
     private readonly StreamingService _streamingService;

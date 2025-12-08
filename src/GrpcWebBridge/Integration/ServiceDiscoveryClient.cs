@@ -14,7 +14,7 @@ namespace GrpcWebBridge.Integration;
 /// Integrates with external service registries (Consul, Eureka, etc.)
 /// Enables automatic service endpoint discovery and health-aware routing.
 /// </summary>
-public class ServiceDiscoveryClient : IDisposable
+public sealed class ServiceDiscoveryClient : IDisposable
 {
     private readonly HttpClientFactory _httpClientFactory;
     private readonly ILogger<ServiceDiscoveryClient> _logger;

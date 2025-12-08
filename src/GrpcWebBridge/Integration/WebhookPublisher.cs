@@ -16,7 +16,7 @@ namespace GrpcWebBridge.Integration;
 /// Enables integration with external systems and monitoring tools.
 /// Implements retry logic and event filtering.
 /// </summary>
-public class WebhookPublisher : IDisposable
+public sealed class WebhookPublisher : IDisposable
 {
     private readonly ILogger<WebhookPublisher> _logger;
     private readonly HttpClientFactory _httpClientFactory;

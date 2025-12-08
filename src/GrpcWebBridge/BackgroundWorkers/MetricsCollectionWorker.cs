@@ -14,7 +14,7 @@ namespace GrpcWebBridge.BackgroundWorkers;
 /// Aggregates data about requests, responses, errors, and system resources.
 /// Enables performance monitoring, trending, and alerting.
 /// </summary>
-public class MetricsCollectionWorker : BackgroundService
+public sealed class MetricsCollectionWorker : BackgroundService
 {
     private readonly ILogger<MetricsCollectionWorker> _logger;
     private readonly MetricsCollectionOptions _options;

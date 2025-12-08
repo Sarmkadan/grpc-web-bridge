@@ -18,7 +18,7 @@ namespace GrpcWebBridge.Controllers;
 [ApiController]
 [Route("api/metrics")]
 [Produces("application/json")]
-public class MetricsController : ControllerBase
+public sealed class MetricsController : ControllerBase
 {
     private readonly StreamingService _streamingService;
     private readonly ServiceRegistry _serviceRegistry;

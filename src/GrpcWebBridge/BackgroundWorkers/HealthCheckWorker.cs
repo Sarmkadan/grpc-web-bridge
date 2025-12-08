@@ -15,7 +15,7 @@ namespace GrpcWebBridge.BackgroundWorkers;
 /// Performs periodic health checks and updates service status.
 /// Publishes health events for monitoring and alerting.
 /// </summary>
-public class HealthCheckWorker : BackgroundService
+public sealed class HealthCheckWorker : BackgroundService
 {
     private readonly ILogger<HealthCheckWorker> _logger;
     private readonly ServiceRegistry _serviceRegistry;
