@@ -60,3 +60,6 @@ appsettings.Development.json
 *.tmp
 *.temp
 *.log
+
+# aider internal state - never commit
+.aider*
