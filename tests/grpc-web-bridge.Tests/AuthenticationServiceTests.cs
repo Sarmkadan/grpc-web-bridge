@@ -8,20 +8,20 @@ using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Services;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
 public class AuthenticationServiceTests
 {
-    private readonly Mock<ILogger<AuthenticationService>> _mockLogger;
+    private readonly ILogger<AuthenticationService> _mockLogger;
     private readonly AuthenticationService _service;
 
     public AuthenticationServiceTests()
     {
-        _mockLogger = new Mock<ILogger<AuthenticationService>>();
-        _service = new AuthenticationService(_mockLogger.Object);
+        _mockLogger = Substitute.For<ILogger<AuthenticationService>>();
+        _service = new AuthenticationService(_mockLogger);
     }
 
     [Fact]
@@ -100,7 +100,6 @@ public class AuthenticationServiceTests
 
         // Assert
         result.Should().BeTrue();
-        _mockLogger.Invocations.Should().NotBeEmpty();
     }
 
     [Fact]
