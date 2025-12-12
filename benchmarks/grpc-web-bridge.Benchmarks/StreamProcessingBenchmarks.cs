@@ -10,6 +10,9 @@ using GrpcWebBridge.Utilities;
 
 namespace GrpcWebBridge.Benchmarks;
 
+/// <summary>
+/// Provides benchmarks for stream processing operations.
+/// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
@@ -19,6 +22,9 @@ public sealed class StreamProcessingBenchmarks
     private byte[] _payload64KB = null!;
     private byte[] _payload1MB = null!;
 
+    /// <summary>
+    /// Initializes the benchmark by generating random payloads for testing.
+    /// </summary>
     [GlobalSetup]
     public void Setup()
     {
@@ -32,6 +38,10 @@ public sealed class StreamProcessingBenchmarks
         rng.NextBytes(_payload1MB);
     }
 
+    /// <summary>
+    /// Reads the entire stream to the end and returns the contents as a byte array.
+    /// </summary>
+    /// <returns>The contents of the stream as a byte array.</returns>
     [Benchmark(Description = "ReadStreamToEnd — 1 KB")]
     public async Task<byte[]> ReadStreamToEnd_1KB()
     {
@@ -39,6 +49,10 @@ public sealed class StreamProcessingBenchmarks
         return await StreamUtility.ReadStreamToEndAsync(ms).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Reads the entire stream to the end and returns the contents as a byte array.
+    /// </summary>
+    /// <returns>The contents of the stream as a byte array.</returns>
     [Benchmark(Description = "ReadStreamToEnd — 64 KB")]
     public async Task<byte[]> ReadStreamToEnd_64KB()
     {
@@ -46,6 +60,10 @@ public sealed class StreamProcessingBenchmarks
         return await StreamUtility.ReadStreamToEndAsync(ms).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Reads the entire stream to the end and returns the contents as a byte array.
+    /// </summary>
+    /// <returns>The contents of the stream as a byte array.</returns>
     [Benchmark(Description = "ReadStreamToEnd — 1 MB")]
     public async Task<byte[]> ReadStreamToEnd_1MB()
     {
@@ -53,6 +71,9 @@ public sealed class StreamProcessingBenchmarks
         return await StreamUtility.ReadStreamToEndAsync(ms).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Copies the stream in chunked mode and returns the contents as a byte array.
+    /// </summary>
     [Benchmark(Description = "CopyStreamChunked — 1 KB")]
     public async Task CopyStreamChunked_1KB()
     {
@@ -61,6 +82,9 @@ public sealed class StreamProcessingBenchmarks
         await StreamUtility.CopyStreamChunkedAsync(src, dst).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Copies the stream in chunked mode and returns the contents as a byte array.
+    /// </summary>
     [Benchmark(Description = "CopyStreamChunked — 64 KB")]
     public async Task CopyStreamChunked_64KB()
     {
@@ -69,6 +93,9 @@ public sealed class StreamProcessingBenchmarks
         await StreamUtility.CopyStreamChunkedAsync(src, dst).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Copies the stream in chunked mode and returns the contents as a byte array.
+    /// </summary>
     [Benchmark(Description = "CopyStreamChunked — 1 MB")]
     public async Task CopyStreamChunked_1MB()
     {
@@ -77,6 +104,10 @@ public sealed class StreamProcessingBenchmarks
         await StreamUtility.CopyStreamChunkedAsync(src, dst).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Converts the stream to a base64-encoded string.
+    /// </summary>
+    /// <returns>The base64-encoded string representation of the stream.</returns>
     [Benchmark(Description = "StreamToBase64 — 1 KB")]
     public async Task<string> StreamToBase64_1KB()
     {
