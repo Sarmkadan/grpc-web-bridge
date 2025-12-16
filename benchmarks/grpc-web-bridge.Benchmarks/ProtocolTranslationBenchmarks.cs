@@ -13,6 +13,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GrpcWebBridge.Benchmarks;
 
+/// <summary>
+/// Benchmark class for protocol translation operations.
+/// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
@@ -28,6 +31,9 @@ public sealed class ProtocolTranslationBenchmarks
     private GrpcResponse _protobufResponse = null!;
     private GrpcResponse _jsonResponse = null!;
 
+    /// <summary>
+    /// Initializes the benchmark setup.
+    /// </summary>
     [GlobalSetup]
     public void Setup()
     {
@@ -70,26 +76,54 @@ public sealed class ProtocolTranslationBenchmarks
         };
     }
 
+    /// <summary>
+    /// Translates a small metadata dictionary.
+    /// </summary>
+    /// <returns>The translated metadata dictionary.</returns>
     [Benchmark(Description = "TranslateMetadata — 5 headers")]
     public Dictionary<string, string> TranslateMetadata_Small() =>
         _service.TranslateMetadata(_smallMetadata);
 
+    /// <summary>
+    /// Translates a large metadata dictionary.
+    /// </summary>
+    /// <returns>The translated metadata dictionary.</returns>
     [Benchmark(Description = "TranslateMetadata — 50 headers")]
     public Dictionary<string, string> TranslateMetadata_Large() =>
         _service.TranslateMetadata(_largeMetadata);
 
+    /// <summary>
+    /// Converts a Protobuf payload to JSON.
+    /// </summary>
+    /// <returns>The JSON payload.</returns>
     [Benchmark(Description = "ConvertProtobufToJson — 256 B payload")]
     public byte[] ConvertProtobufToJson_256B() =>
         _service.ConvertProtobufToJson(_protobufPayload);
 
+    /// <summary>
+    /// Converts a base64-wrapped JSON payload to Protobuf.
+    /// </summary>
+    /// <returns>The Protobuf payload.</returns>
     [Benchmark(Description = "ConvertJsonToProtobuf — base64-wrapped payload")]
     public byte[] ConvertJsonToProtobuf_Base64() =>
         _service.ConvertJsonToProtobuf(_base64JsonPayload);
 
+    /// <summary>
+    /// Translates a Protobuf response to HTTP.
+    /// </summary>
+    /// <param name="response">The Protobuf response.</param>
+    /// <param name="format">The payload format.</param>
+    /// <returns>The translated HTTP response.</returns>
     [Benchmark(Description = "TranslateGrpcToHttp — Protobuf passthrough")]
     public byte[] TranslateGrpcToHttp_Passthrough() =>
         _service.TranslateGrpcToHttp(_protobufResponse, SerializationFormat.Protobuf);
 
+    /// <summary>
+    /// Translates a Protobuf response to HTTP, converting the payload to JSON.
+    /// </summary>
+    /// <param name="response">The Protobuf response.</param>
+    /// <param name="format">The payload format.</param>
+    /// <returns>The translated HTTP response.</returns>
     [Benchmark(Description = "TranslateGrpcToHttp — Protobuf→Json")]
     public byte[] TranslateGrpcToHttp_Convert() =>
         _service.TranslateGrpcToHttp(_protobufResponse, SerializationFormat.Json);
