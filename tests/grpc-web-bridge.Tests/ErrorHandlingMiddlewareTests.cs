@@ -13,13 +13,23 @@ using System.Text;
 using System.Text.Json;
 using Xunit;
 
-namespace GrpcWebBridge.Tests;
-
+/// <summary>
+/// Tests for the ErrorHandlingMiddleware class.
+/// </summary>
 public sealed class ErrorHandlingMiddlewareTests
 {
+    /// <summary>
+    /// Creates a new instance of the ErrorHandlingMiddleware class.
+    /// </summary>
+    /// <param name="next">The next middleware in the pipeline.</param>
+    /// <returns>A new instance of the ErrorHandlingMiddleware class.</returns>
     private static ErrorHandlingMiddleware CreateMiddleware(RequestDelegate next)
         => new(next, NullLogger<ErrorHandlingMiddleware>.Instance);
 
+    /// <summary>
+    /// Creates a new instance of the DefaultHttpContext class.
+    /// </summary>
+    /// <returns>A new instance of the DefaultHttpContext class.</returns>
     private static DefaultHttpContext CreateContext()
     {
         var context = new DefaultHttpContext();
@@ -29,6 +39,11 @@ public sealed class ErrorHandlingMiddlewareTests
         return context;
     }
 
+    /// <summary>
+    /// Executes the ErrorHandlingMiddleware class and returns the status code and response body.
+    /// </summary>
+    /// <param name="exception">The exception to be thrown.</param>
+    /// <returns>A tuple containing the status code and response body.</returns>
     private static async Task<(int StatusCode, string Body)> ExecuteAsync(Exception exception)
     {
         var context = CreateContext();
@@ -46,6 +61,9 @@ public sealed class ErrorHandlingMiddlewareTests
     // Exception type → HTTP status code mappings
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 400 status code when a ServiceRegistrationException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithServiceRegistrationException_Returns400()
     {
@@ -55,6 +73,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("Service Registration Failed");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 500 status code when a StreamingException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithStreamingException_Returns500()
     {
@@ -64,6 +85,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("Streaming Operation Failed");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 400 status code when a ProtocolException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithProtocolException_Returns400()
     {
@@ -73,6 +97,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("Protocol Translation Failed");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 500 status code when a GrpcWebBridgeException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithGrpcWebBridgeException_Returns500()
     {
@@ -82,6 +109,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("Bridge Operation Failed");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 400 status code when an ArgumentNullException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithArgumentNullException_Returns400()
     {
@@ -92,6 +122,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("myParam");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 400 status code when an ArgumentException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithArgumentException_Returns400()
     {
@@ -101,6 +134,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("Invalid Argument");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 401 status code when an UnauthorizedAccessException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithUnauthorizedAccessException_Returns401()
     {
@@ -110,6 +146,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("Unauthorized");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 504 status code when a TimeoutException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithTimeoutException_Returns504()
     {
@@ -119,6 +158,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("Operation Timeout");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 400 status code when an OperationCanceledException is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithOperationCanceledException_Returns400()
     {
@@ -128,6 +170,9 @@ public sealed class ErrorHandlingMiddlewareTests
         body.Should().Contain("Operation Cancelled");
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns a 500 status code with an internal server error message when an unknown exception is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithUnknownException_Returns500WithInternalServerError()
     {
@@ -141,6 +186,9 @@ public sealed class ErrorHandlingMiddlewareTests
     // Response structure
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class returns an error response with the expected JSON fields.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_ErrorResponse_ContainsExpectedJsonFields()
     {
@@ -164,6 +212,9 @@ public sealed class ErrorHandlingMiddlewareTests
         root.TryGetProperty("path", out _).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class calls the next middleware in the pipeline when no exception is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WhenNoException_CallsNextAndDoesNotModifyResponse()
     {
@@ -181,6 +232,9 @@ public sealed class ErrorHandlingMiddlewareTests
         context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
 
+    /// <summary>
+    /// Tests that the ErrorHandlingMiddleware class sets the content type to JSON.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_SetsContentTypeToJson()
     {
