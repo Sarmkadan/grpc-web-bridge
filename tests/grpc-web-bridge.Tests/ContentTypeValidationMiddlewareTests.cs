@@ -12,13 +12,27 @@ using System.Text;
 using System.Text.Json;
 using Xunit;
 
-namespace GrpcWebBridge.Tests;
-
+/// <summary>
+/// Tests for the <see cref="ContentTypeValidationMiddleware"/>.
+/// </summary>
 public sealed class ContentTypeValidationMiddlewareTests
 {
+    /// <summary>
+    /// Creates a new instance of the <see cref="ContentTypeValidationMiddleware"/>
+    /// with the specified <paramref name="next"/> delegate.
+    /// </summary>
+    /// <param name="next">The next middleware delegate.</param>
+    /// <returns>A new instance of the <see cref="ContentTypeValidationMiddleware"/>.</returns>
     private static ContentTypeValidationMiddleware CreateMiddleware(RequestDelegate next)
         => new(next, NullLogger<ContentTypeValidationMiddleware>.Instance);
 
+    /// <summary>
+    /// Creates a new <see cref="DefaultHttpContext"/> instance with the specified
+    /// <paramref name="path"/> and <paramref name="contentType"/>.
+    /// </summary>
+    /// <param name="path">The request path.</param>
+    /// <param name="contentType">The request content type.</param>
+    /// <returns>A new <see cref="DefaultHttpContext"/> instance.</returns>
     private static DefaultHttpContext CreatePostContext(string path, string? contentType)
     {
         var context = new DefaultHttpContext();
@@ -34,6 +48,11 @@ public sealed class ContentTypeValidationMiddlewareTests
     // Allowed gRPC-Web content types — should pass through
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that the <see cref="ContentTypeValidationMiddleware"/> allows
+    /// gRPC-Web content types to pass through.
+    /// </summary>
+    /// <param name="contentType">The content type to test.</param>
     [Theory]
     [InlineData("application/grpc-web")]
     [InlineData("application/grpc-web+proto")]
@@ -58,6 +77,11 @@ public sealed class ContentTypeValidationMiddlewareTests
     // Invalid content types — should be rejected
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that the <see cref="ContentTypeValidationMiddleware"/> rejects
+    /// invalid content types.
+    /// </summary>
+    /// <param name="contentType">The content type to test.</param>
     [Theory]
     [InlineData("application/json")]
     [InlineData("text/plain")]
@@ -75,6 +99,10 @@ public sealed class ContentTypeValidationMiddlewareTests
         context.Response.StatusCode.Should().Be(StatusCodes.Status415UnsupportedMediaType);
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="ContentTypeValidationMiddleware"/> returns
+    /// a 415 status code when the content type is missing.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithMissingContentType_Returns415()
     {
@@ -92,6 +120,11 @@ public sealed class ContentTypeValidationMiddlewareTests
     // Excluded paths — should bypass validation entirely
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that the <see cref="ContentTypeValidationMiddleware"/> bypasses
+    /// validation for excluded paths.
+    /// </summary>
+    /// <param name="path">The path to test.</param>
     [Theory]
     [InlineData("/api/services")]
     [InlineData("/swagger/index.html")]
@@ -114,6 +147,11 @@ public sealed class ContentTypeValidationMiddlewareTests
     // Non-POST methods — should always pass through
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that the <see cref="ContentTypeValidationMiddleware"/> allows
+    /// non-POST methods to pass through.
+    /// </summary>
+    /// <param name="method">The HTTP method to test.</param>
     [Theory]
     [InlineData("GET")]
     [InlineData("PUT")]
@@ -137,6 +175,10 @@ public sealed class ContentTypeValidationMiddlewareTests
     // Error response body
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that the <see cref="ContentTypeValidationMiddleware"/> writes
+    /// a JSON error response body when the content type is invalid.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithInvalidContentType_WritesJsonErrorBody()
     {
