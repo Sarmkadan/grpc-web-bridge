@@ -11,13 +11,24 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Text;
 using Xunit;
 
-namespace GrpcWebBridge.Tests;
-
+/// <summary>
+/// Tests for the RequestLoggingMiddleware class.
+/// </summary>
 public sealed class RequestLoggingMiddlewareTests
 {
+    /// <summary>
+    /// Creates a new instance of the RequestLoggingMiddleware class.
+    /// </summary>
+    /// <param name="next">The next middleware in the pipeline.</param>
+    /// <returns>A new instance of the RequestLoggingMiddleware class.</returns>
     private static RequestLoggingMiddleware CreateMiddleware(RequestDelegate next)
         => new(next, NullLogger<RequestLoggingMiddleware>.Instance);
 
+    /// <summary>
+    /// Creates a new instance of the DefaultHttpContext class with a GET request.
+    /// </summary>
+    /// <param name="path">The path of the request.</param>
+    /// <returns>A new instance of the DefaultHttpContext class.</returns>
     private static DefaultHttpContext CreateGetContext(string path = "/api/bridge/test")
     {
         var context = new DefaultHttpContext();
@@ -28,6 +39,13 @@ public sealed class RequestLoggingMiddlewareTests
         return context;
     }
 
+    /// <summary>
+    /// Creates a new instance of the DefaultHttpContext class with a POST request.
+    /// </summary>
+    /// <param name="path">The path of the request.</param>
+    /// <param name="body">The body of the request.</param>
+    /// <param name="contentType">The content type of the request.</param>
+    /// <returns>A new instance of the DefaultHttpContext class.</returns>
     private static DefaultHttpContext CreatePostContext(string path, string body, string contentType = "application/json")
     {
         var context = new DefaultHttpContext();
@@ -45,6 +63,9 @@ public sealed class RequestLoggingMiddlewareTests
     // Pass-through behaviour
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that the middleware calls the next middleware in the pipeline when no exception is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WhenNoException_CallsNextMiddleware()
     {
@@ -61,6 +82,9 @@ public sealed class RequestLoggingMiddlewareTests
         nextCalled.Should().BeTrue("the next middleware in the pipeline must be called");
     }
 
+    /// <summary>
+    /// Tests that the middleware forwards the response body to the original stream when no exception is thrown.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WhenNoException_ResponseBodyIsForwardedToOriginalStream()
     {
@@ -84,6 +108,10 @@ public sealed class RequestLoggingMiddlewareTests
     // Excluded paths — middleware must not buffer / alter response
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that the middleware still calls the next middleware in the pipeline for excluded paths.
+    /// </summary>
+    /// <param name="path">The path of the request.</param>
     [Theory]
     [InlineData("/health")]
     [InlineData("/swagger/index.html")]
@@ -108,6 +136,10 @@ public sealed class RequestLoggingMiddlewareTests
     // Status-code-based log levels — pipeline must not throw
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that the middleware does not throw for various status codes.
+    /// </summary>
+    /// <param name="statusCode">The status code of the response.</param>
     [Theory]
     [InlineData(200)]
     [InlineData(400)]
@@ -131,6 +163,9 @@ public sealed class RequestLoggingMiddlewareTests
     // Sensitive-header masking
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that the middleware does not throw when the Authorization header is present.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_DoesNotThrow_WhenAuthorizationHeaderIsPresent()
     {
@@ -147,6 +182,9 @@ public sealed class RequestLoggingMiddlewareTests
     // Request body capture
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that the middleware does not throw when the request body is JSON.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithJsonRequestBody_DoesNotThrowAndCallsNext()
     {
@@ -164,6 +202,9 @@ public sealed class RequestLoggingMiddlewareTests
         nextCalled.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that the middleware does not capture the request body when the content type is binary.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithBinaryContentType_DoesNotCaptureBody()
     {
@@ -186,6 +227,9 @@ public sealed class RequestLoggingMiddlewareTests
     // Constructor wiring
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that the constructor creates an instance of the RequestLoggingMiddleware class with valid arguments.
+    /// </summary>
     [Fact]
     public void Constructor_WithValidArguments_CreatesInstance()
     {
@@ -196,6 +240,9 @@ public sealed class RequestLoggingMiddlewareTests
         instance.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Tests that the middleware logs and passes through when the path is not a gRPC path.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_WithNonGrpcPath_LogsAndPassesThrough()
     {
