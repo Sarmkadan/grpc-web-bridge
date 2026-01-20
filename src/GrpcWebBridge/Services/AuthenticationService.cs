@@ -3,6 +3,8 @@
 // CTO & Software Architect
 // =============================================================================
 
+#nullable enable
+
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
