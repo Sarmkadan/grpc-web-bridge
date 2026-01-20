@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -13,7 +14,7 @@ namespace GrpcWebBridge.Services;
 /// <summary>
 /// Service for managing gRPC streaming operations and stream lifecycle
 /// </summary>
-public class StreamingService
+public sealed class StreamingService
 {
     private readonly ILogger<StreamingService> _logger;
     private readonly Dictionary<string, Stream> _streams = [];
@@ -190,7 +191,7 @@ public class StreamingService
 /// <summary>
 /// Represents an active stream
 /// </summary>
-public class Stream
+public sealed class Stream
 {
     private readonly Queue<StreamMessage> _messageQueue = [];
 
@@ -238,7 +239,7 @@ public class Stream
 /// <summary>
 /// Statistics about an active stream
 /// </summary>
-public class StreamStatistics
+public sealed class StreamStatistics
 {
     public string? StreamId { get; set; }
     public int MessageCount { get; set; }

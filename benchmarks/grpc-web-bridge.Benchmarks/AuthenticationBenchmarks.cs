@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -15,7 +16,7 @@ namespace GrpcWebBridge.Benchmarks;
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
-public class AuthenticationBenchmarks
+public sealed class AuthenticationBenchmarks
 {
     private AuthenticationService _service = null!;
 

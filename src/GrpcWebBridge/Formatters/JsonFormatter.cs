@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -11,7 +12,7 @@ namespace GrpcWebBridge.Formatters;
 /// Specialized JSON formatting with customization options.
 /// Provides formatting, pretty-printing, and schema enforcement.
 /// </summary>
-public class JsonFormatter
+public sealed class JsonFormatter
 {
     private readonly JsonFormatterOptions _options;
 
@@ -37,7 +38,7 @@ public class JsonFormatter
         var json = JsonUtility.Serialize(obj);
         var dict = JsonUtility.DeserializeToDictionary(json);
 
-        if (dict == null)
+        if (dict is null)
             return json;
 
         var sorted = new SortedDictionary<string, object?>(dict, StringComparer.Ordinal);
@@ -108,7 +109,7 @@ public class JsonFormatter
             return (false, errors);
         }
 
-        if (dict == null)
+        if (dict is null)
         {
             errors.Add("Failed to parse JSON");
             return (false, errors);
@@ -116,7 +117,7 @@ public class JsonFormatter
 
         foreach (var field in requiredFields)
         {
-            if (!dict.ContainsKey(field) || dict[field] == null)
+            if (!dict.ContainsKey(field) || dict[field] is null)
             {
                 errors.Add($"Required field missing: {field}");
             }
@@ -152,7 +153,7 @@ public class JsonFormatter
         var result = new Dictionary<string, object?>();
 
         var dict = JsonUtility.DeserializeToDictionary(json);
-        if (dict == null)
+        if (dict is null)
             return result;
 
         foreach (var field in fieldNames)
@@ -211,7 +212,7 @@ public class JsonFormatter
     {
         var descriptions = new Dictionary<string, object>();
 
-        if (obj == null)
+        if (obj is null)
             return descriptions;
 
         var properties = obj.GetType().GetProperties();
@@ -229,10 +230,10 @@ public class JsonFormatter
 
     private bool AreObjectsEqual(object? obj1, object? obj2)
     {
-        if (obj1 == null && obj2 == null)
+        if (obj1 is null && obj2 is null)
             return true;
 
-        if (obj1 == null || obj2 == null)
+        if (obj1 is null || obj2 is null)
             return false;
 
         if (obj1 is Dictionary<string, object?> dict1 && obj2 is Dictionary<string, object?> dict2)
@@ -276,7 +277,7 @@ public class JsonFormatter
 /// <summary>
 /// Configuration options for JSON formatter.
 /// </summary>
-public class JsonFormatterOptions
+public sealed class JsonFormatterOptions
 {
     public bool PrettyPrint { get; set; } = false;
     public bool SortKeys { get; set; } = false;

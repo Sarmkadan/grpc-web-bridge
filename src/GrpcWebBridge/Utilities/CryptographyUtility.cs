@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -250,7 +251,7 @@ public static class CryptographyUtility
     private static bool ConstantTimeComparison(byte[] a, byte[] b)
     {
         // Fix: handle null array edge cases
-        if (a == null || b == null)
+        if (a is null || b is null)
             return false;
 
         if (a.Length != b.Length)

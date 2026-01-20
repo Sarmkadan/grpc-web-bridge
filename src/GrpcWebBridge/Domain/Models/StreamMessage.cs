@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -8,7 +9,7 @@ namespace GrpcWebBridge.Domain.Models;
 /// <summary>
 /// Represents a single message within a gRPC stream
 /// </summary>
-public class StreamMessage
+public sealed class StreamMessage
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string StreamId { get; set; } = string.Empty;

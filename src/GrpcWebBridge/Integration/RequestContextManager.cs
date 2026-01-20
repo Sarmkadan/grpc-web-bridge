@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -12,7 +13,7 @@ namespace GrpcWebBridge.Integration;
 /// Provides ambient context for request-scoped data without explicit parameter passing.
 /// Enables correlation logging and cross-cutting concerns.
 /// </summary>
-public class RequestContextManager
+public sealed class RequestContextManager
 {
     private static readonly AsyncLocal<RequestContext> _context = new();
     private readonly ILogger<RequestContextManager> _logger;
@@ -75,7 +76,7 @@ public class RequestContextManager
     /// </summary>
     public void SetMetadata(string key, string value)
     {
-        if (_context.Value == null)
+        if (_context.Value is null)
         {
             _logger.LogWarning("No request context available for metadata storage");
             return;
@@ -89,7 +90,7 @@ public class RequestContextManager
     /// </summary>
     public string? GetMetadata(string key)
     {
-        if (_context.Value == null)
+        if (_context.Value is null)
             return null;
 
         return _context.Value.Metadata.TryGetValue(key, out var value) ? value : null;
@@ -101,7 +102,7 @@ public class RequestContextManager
     /// </summary>
     public void RecordElapsedTime()
     {
-        if (_context.Value == null)
+        if (_context.Value is null)
             return;
 
         _context.Value.EndTime = DateTime.UtcNow;
@@ -121,7 +122,7 @@ public class RequestContextManager
         var context = _context.Value;
         _context.Value = null;
 
-        if (context != null)
+        if (context is not null)
         {
             _logger.LogDebug("Request context cleared: RequestId={RequestId}", context.RequestId);
         }
@@ -132,14 +133,14 @@ public class RequestContextManager
     /// </summary>
     public bool IsContextActive()
     {
-        return _context.Value != null;
+        return _context.Value is not null;
     }
 }
 
 /// <summary>
 /// Request context information.
 /// </summary>
-public class RequestContext
+public sealed class RequestContext
 {
     public string RequestId { get; set; } = Guid.NewGuid().ToString();
     public string? UserId { get; set; }
@@ -160,7 +161,7 @@ public class RequestContext
 /// <summary>
 /// Middleware to manage request context for all requests.
 /// </summary>
-public class RequestContextMiddleware
+public sealed class RequestContextMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly RequestContextManager _contextManager;

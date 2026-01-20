@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -10,7 +11,7 @@ namespace GrpcWebBridge.Domain.Models;
 /// <summary>
 /// Represents a gRPC service with its metadata and methods
 /// </summary>
-public class GrpcService
+public sealed class GrpcService
 {
     private readonly List<GrpcMethod> _methods = [];
 

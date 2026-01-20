@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -19,11 +20,11 @@ public static class CacheUtility
     /// </summary>
     public static string GenerateKey(params object?[] components)
     {
-        if (components == null || components.Length == 0)
+        if (components is null || components.Length == 0)
             throw new ArgumentException("At least one component is required", nameof(components));
 
         var parts = components
-            .Where(c => c != null)
+            .Where(c => c is not null)
             .Select(c => SanitizeKeyComponent(c!.ToString() ?? string.Empty))
             .ToList();
 
@@ -121,7 +122,7 @@ public static class CacheUtility
     public static string[] ParseKey(string key, string separator = "|")
     {
         if (string.IsNullOrEmpty(key))
-            return Array.Empty<string>();
+            return [];
 
         return key.Split(separator);
     }
@@ -139,7 +140,7 @@ public static class CacheUtility
 
         var baseKey = GenerateKey(serviceId, methodName);
 
-        if (parameters != null)
+        if (parameters is not null)
         {
             var paramsHash = ComputeParametersHash(parameters);
             return $"{baseKey}|{paramsHash}";
@@ -236,7 +237,7 @@ public static class CacheUtility
 /// <summary>
 /// Cache statistics for analysis and optimization.
 /// </summary>
-public class CacheStatistics
+public sealed class CacheStatistics
 {
     public long TotalKeysGenerated { get; set; }
     public long TotalCacheHits { get; set; }
