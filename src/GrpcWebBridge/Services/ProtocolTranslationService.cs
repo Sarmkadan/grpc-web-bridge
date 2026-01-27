@@ -177,6 +177,10 @@ public sealed class ProtocolTranslationService
             var lowered = string.Create(kvp.Key.Length, kvp.Key, static (span, key) =>
                 key.AsSpan().ToLowerInvariant(span));
 
+            // Hotfix: Fix deadline propagation in nested gRPC calls causing premature timeouts
+            if (lowered == "grpc-timeout")
+                continue;
+
             translated[lowered] = kvp.Value ?? "";
         }
 

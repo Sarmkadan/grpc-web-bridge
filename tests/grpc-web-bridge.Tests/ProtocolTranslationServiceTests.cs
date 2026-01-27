@@ -46,7 +46,7 @@ public sealed class ProtocolTranslationServiceTests
     public void ConvertProtobufToJson_WithEmptyArray_ReturnsEmptyJson()
     {
         // Arrange
-        var protobuf = [];
+        byte[] protobuf = [];
 
         // Act
         var json = _service.ConvertProtobufToJson(protobuf);
@@ -59,7 +59,7 @@ public sealed class ProtocolTranslationServiceTests
     public void ConvertJsonToProtobuf_WithEmptyArray_ReturnsEmptyArray()
     {
         // Arrange
-        var json = [];
+        byte[] json = [];
 
         // Act
         var protobuf = _service.ConvertJsonToProtobuf(json);
@@ -95,6 +95,24 @@ public sealed class ProtocolTranslationServiceTests
         // Assert
         translated.Should().ContainKey("auth-token").WhoseValue.Should().Be("abc");
         translated.Should().ContainKey("content-type").WhoseValue.Should().Be("application/grpc");
+    }
+
+    [Fact]
+    public void TranslateMetadata_WithGrpcTimeout_RemovesTimeoutHeader()
+    {
+        // Arrange
+        var meta = new Dictionary<string, string>
+        {
+            ["grpc-timeout"] = "1000m",
+            ["custom-header"] = "value"
+        };
+
+        // Act
+        var translated = _service.TranslateMetadata(meta);
+
+        // Assert
+        translated.Should().NotContainKey("grpc-timeout");
+        translated.Should().ContainKey("custom-header").WhoseValue.Should().Be("value");
     }
 
     [Fact]
