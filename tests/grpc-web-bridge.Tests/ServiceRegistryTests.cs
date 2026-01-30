@@ -25,6 +25,11 @@ public sealed class ServiceRegistryTests
     {
         _mockLogger = Substitute.For<ILogger<ServiceRegistry>>();
         _serviceRegistry = new ServiceRegistry(_mockLogger);
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ServiceRegistryTests"/> class.
+        /// </summary>
+        /// <param name="_mockLogger">Mocked logger instance.</param>
+        /// <param name="_serviceRegistry">Instance of the <see cref="ServiceRegistry"/>.</param>
     }
 
     private GrpcService CreateTestService(string name, string packageName, string endpoint, int port)
