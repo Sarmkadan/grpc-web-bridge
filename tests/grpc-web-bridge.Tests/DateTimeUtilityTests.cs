@@ -8,12 +8,16 @@ using FluentAssertions;
 using GrpcWebBridge.Utilities;
 using Xunit;
 
-namespace GrpcWebBridge.Tests;
-
+/// <summary>
+/// Tests for the DateTimeUtility class.
+/// </summary>
 public sealed class DateTimeUtilityTests
 {
     private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>
+    /// Verifies that ToUnixTimestamp returns 0 for the Unix epoch.
+    /// </summary>
     [Fact]
     public void ToUnixTimestamp_WithUnixEpoch_ReturnsZero()
     {
@@ -24,6 +28,9 @@ public sealed class DateTimeUtilityTests
         timestamp.Should().Be(0L);
     }
 
+    /// <summary>
+    /// Verifies that FromUnixTimestamp returns the Unix epoch for 0.
+    /// </summary>
     [Fact]
     public void FromUnixTimestamp_WithZero_ReturnsUnixEpoch()
     {
@@ -34,6 +41,9 @@ public sealed class DateTimeUtilityTests
         result.Should().Be(UnixEpoch);
     }
 
+    /// <summary>
+    /// Verifies that ToRelativeTime returns "just now" for a time within one minute.
+    /// </summary>
     [Fact]
     public void ToRelativeTime_WithinOneMinute_ReturnsJustNow()
     {
@@ -48,6 +58,11 @@ public sealed class DateTimeUtilityTests
         result.Should().Be("just now");
     }
 
+    /// <summary>
+    /// Verifies that GetBusinessDaysBetween returns the correct number of business days between two dates.
+    /// </summary>
+    /// <param name="start">The start date.</param>
+    /// <param name="end">The end date.</param>
     [Fact]
     public void GetBusinessDaysBetween_MondayToFriday_ReturnsFive()
     {
@@ -62,6 +77,9 @@ public sealed class DateTimeUtilityTests
         days.Should().Be(5);
     }
 
+    /// <summary>
+    /// Verifies that GetBusinessDaysBetween excludes Saturday and Sunday.
+    /// </summary>
     [Fact]
     public void GetBusinessDaysBetween_AcrossWeekend_ExcludesSaturdayAndSunday()
     {
@@ -76,6 +94,9 @@ public sealed class DateTimeUtilityTests
         days.Should().Be(2);
     }
 
+    /// <summary>
+    /// Verifies that IsWeekend returns true for a Saturday.
+    /// </summary>
     [Fact]
     public void IsWeekend_WithSaturday_ReturnsTrue()
     {
