@@ -12,12 +12,19 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Contains unit tests for the <see cref="StreamUtility"/> helper methods.
+/// </summary>
 public sealed class StreamUtilityTests
 {
     // ─────────────────────────────────────────────────────────────────────
     // CopyStreamChunkedAsync
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.CopyStreamChunkedAsync(System.IO.Stream,System.IO.Stream)"/>
+    /// copies all bytes from a source stream containing data to the destination stream.
+    /// </summary>
     [Fact]
     public async Task CopyStreamChunkedAsync_WithData_CopiesAllBytes()
     {
@@ -30,6 +37,9 @@ public sealed class StreamUtilityTests
         destination.ToArray().Should().BeEquivalentTo(data);
     }
 
+    /// <summary>
+    /// Verifies that copying from an empty source stream results in an empty destination stream.
+    /// </summary>
     [Fact]
     public async Task CopyStreamChunkedAsync_WithEmptySource_ProducesEmptyDestination()
     {
@@ -41,6 +51,9 @@ public sealed class StreamUtilityTests
         destination.Length.Should().Be(0);
     }
 
+    /// <summary>
+    /// Ensures that passing a <c>null</c> source stream throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task CopyStreamChunkedAsync_WithNullSource_ThrowsArgumentNullException()
     {
@@ -50,6 +63,9 @@ public sealed class StreamUtilityTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Ensures that passing a <c>null</c> destination stream throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task CopyStreamChunkedAsync_WithNullDestination_ThrowsArgumentNullException()
     {
@@ -59,6 +75,11 @@ public sealed class StreamUtilityTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Verifies that providing an invalid chunk size (zero or negative) results in an
+    /// <see cref="ArgumentOutOfRangeException"/>.
+    /// </summary>
+    /// <param name="chunkSize">The chunk size to pass to the method.</param>
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -75,6 +96,10 @@ public sealed class StreamUtilityTests
     // ReadStreamToEndAsync
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.ReadStreamToEndAsync(System.IO.Stream)"/> returns all bytes
+    /// from a stream containing data.
+    /// </summary>
     [Fact]
     public async Task ReadStreamToEndAsync_WithData_ReturnsAllBytes()
     {
@@ -86,6 +111,9 @@ public sealed class StreamUtilityTests
         result.Should().BeEquivalentTo(data);
     }
 
+    /// <summary>
+    /// Verifies that reading an empty stream returns an empty byte array.
+    /// </summary>
     [Fact]
     public async Task ReadStreamToEndAsync_WithEmptyStream_ReturnsEmptyArray()
     {
@@ -96,6 +124,9 @@ public sealed class StreamUtilityTests
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Ensures that passing a <c>null</c> stream throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task ReadStreamToEndAsync_WithNullStream_ThrowsArgumentNullException()
     {
@@ -103,6 +134,10 @@ public sealed class StreamUtilityTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Verifies that attempting to read more bytes than the allowed maximum size throws an
+    /// <see cref="InvalidOperationException"/> with a message indicating the size limit.
+    /// </summary>
     [Fact]
     public async Task ReadStreamToEndAsync_WhenExceedsMaxSize_ThrowsInvalidOperationException()
     {
@@ -118,6 +153,10 @@ public sealed class StreamUtilityTests
     // CompressStreamAsync / DecompressStreamAsync
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Performs a round‑trip compression and decompression using <see cref="StreamUtility.CompressStreamAsync"/>
+    /// and <see cref="StreamUtility.DecompressStreamAsync"/> and verifies that the original data is recovered.
+    /// </summary>
     [Fact]
     public async Task CompressAndDecompress_RoundTrip_RecoverOriginalData()
     {
@@ -134,6 +173,10 @@ public sealed class StreamUtilityTests
         decompressed.ToArray().Should().BeEquivalentTo(original);
     }
 
+    /// <summary>
+    /// Ensures that passing a <c>null</c> source stream to <see cref="StreamUtility.CompressStreamAsync"/>
+    /// throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task CompressStreamAsync_WithNullSource_ThrowsArgumentNullException()
     {
@@ -142,6 +185,10 @@ public sealed class StreamUtilityTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Ensures that passing a <c>null</c> destination stream to <see cref="StreamUtility.DecompressStreamAsync"/>
+    /// throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task DecompressStreamAsync_WithNullDestination_ThrowsArgumentNullException()
     {
@@ -154,6 +201,10 @@ public sealed class StreamUtilityTests
     // StreamToBase64Async / Base64ToStream
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.StreamToBase64Async"/> returns a non‑empty Base64 string
+    /// that decodes back to the original data.
+    /// </summary>
     [Fact]
     public async Task StreamToBase64Async_WithData_ReturnsValidBase64()
     {
@@ -166,6 +217,10 @@ public sealed class StreamUtilityTests
         Convert.FromBase64String(base64).Should().BeEquivalentTo(data);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.Base64ToStream"/> creates a stream that contains the decoded bytes
+    /// when given a valid Base64 string.
+    /// </summary>
     [Fact]
     public void Base64ToStream_WithValidBase64_ReturnsStream()
     {
@@ -179,6 +234,10 @@ public sealed class StreamUtilityTests
         ms.ToArray().Should().BeEquivalentTo(data);
     }
 
+    /// <summary>
+    /// Ensures that an empty Base64 string causes <see cref="StreamUtility.Base64ToStream"/> to throw an
+    /// <see cref="ArgumentException"/>.
+    /// </summary>
     [Fact]
     public void Base64ToStream_WithEmptyString_ThrowsArgumentException()
     {
@@ -186,6 +245,10 @@ public sealed class StreamUtilityTests
         act.Should().Throw<ArgumentException>();
     }
 
+    /// <summary>
+    /// Ensures that an invalid Base64 string causes <see cref="StreamUtility.Base64ToStream"/> to throw an
+    /// <see cref="InvalidOperationException"/>.
+    /// </summary>
     [Fact]
     public void Base64ToStream_WithInvalidBase64_ThrowsInvalidOperationException()
     {
@@ -197,6 +260,9 @@ public sealed class StreamUtilityTests
     // TeeStreamAsync
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.TeeStreamAsync"/> writes identical data to multiple destination streams.
+    /// </summary>
     [Fact]
     public async Task TeeStreamAsync_WithMultipleDestinations_WritesIdenticalDataToAll()
     {
@@ -211,6 +277,10 @@ public sealed class StreamUtilityTests
         dest2.ToArray().Should().BeEquivalentTo(data);
     }
 
+    /// <summary>
+    /// Ensures that passing a <c>null</c> source stream to <see cref="StreamUtility.TeeStreamAsync"/>
+    /// throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task TeeStreamAsync_WithNullSource_ThrowsArgumentNullException()
     {
@@ -219,6 +289,10 @@ public sealed class StreamUtilityTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Ensures that calling <see cref="StreamUtility.TeeStreamAsync"/> without any destination streams
+    /// throws an <see cref="ArgumentException"/>.
+    /// </summary>
     [Fact]
     public async Task TeeStreamAsync_WithNoDestinations_ThrowsArgumentException()
     {
@@ -231,6 +305,9 @@ public sealed class StreamUtilityTests
     // IsStreamValid / GetStreamLength / SafeSeek
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.IsStreamValid"/> returns <c>true</c> for a readable stream.
+    /// </summary>
     [Fact]
     public void IsStreamValid_WithReadableStream_ReturnsTrue()
     {
@@ -238,12 +315,18 @@ public sealed class StreamUtilityTests
         StreamUtility.IsStreamValid(stream).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.IsStreamValid"/> returns <c>false</c> when the stream argument is <c>null</c>.
+    /// </summary>
     [Fact]
     public void IsStreamValid_WithNullStream_ReturnsFalse()
     {
         StreamUtility.IsStreamValid(null!).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.GetStreamLength"/> returns the correct length for a seekable stream.
+    /// </summary>
     [Fact]
     public void GetStreamLength_WithSeekableStream_ReturnsLength()
     {
@@ -251,12 +334,18 @@ public sealed class StreamUtilityTests
         StreamUtility.GetStreamLength(stream).Should().Be(5);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.GetStreamLength"/> returns <c>null</c> when the stream argument is <c>null</c>.
+    /// </summary>
     [Fact]
     public void GetStreamLength_WithNullStream_ReturnsNull()
     {
         StreamUtility.GetStreamLength(null!).Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.SafeSeek"/> correctly changes the position of a seekable stream.
+    /// </summary>
     [Fact]
     public void SafeSeek_OnSeekableStream_ChangesPosition()
     {
@@ -269,6 +358,10 @@ public sealed class StreamUtilityTests
     // CalculateStreamHashAsync
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.CalculateStreamHashAsync"/> returns a non‑empty hexadecimal hash string
+    /// for a stream containing data.
+    /// </summary>
     [Fact]
     public async Task CalculateStreamHashAsync_WithData_ReturnsHexHash()
     {
@@ -282,6 +375,9 @@ public sealed class StreamUtilityTests
         hash.Should().MatchRegex("^[0-9A-F]+$");
     }
 
+    /// <summary>
+    /// Verifies that hashing the same data with two separate hash algorithm instances produces identical hash strings.
+    /// </summary>
     [Fact]
     public async Task CalculateStreamHashAsync_SameData_ProducesSameHash()
     {
@@ -302,6 +398,10 @@ public sealed class StreamUtilityTests
     // WriteWithRetryAsync
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <see cref="StreamUtility.WriteWithRetryAsync"/> successfully writes the provided byte array
+    /// to the destination stream.
+    /// </summary>
     [Fact]
     public async Task WriteWithRetryAsync_WithValidData_WritesToStream()
     {
@@ -313,6 +413,10 @@ public sealed class StreamUtilityTests
         stream.ToArray().Should().BeEquivalentTo(data);
     }
 
+    /// <summary>
+    /// Ensures that passing a <c>null</c> stream to <see cref="StreamUtility.WriteWithRetryAsync"/> throws an
+    /// <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task WriteWithRetryAsync_WithNullStream_ThrowsArgumentNullException()
     {
@@ -320,6 +424,10 @@ public sealed class StreamUtilityTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Verifies that calling <see cref="StreamUtility.WriteWithRetryAsync"/> with a <c>null</c> or empty byte array
+    /// does not throw an exception.
+    /// </summary>
     [Fact]
     public async Task WriteWithRetryAsync_WithNullOrEmptyData_DoesNotThrow()
     {
