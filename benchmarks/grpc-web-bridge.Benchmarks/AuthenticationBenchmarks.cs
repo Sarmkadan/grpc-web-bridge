@@ -21,7 +21,7 @@ namespace GrpcWebBridge.Benchmarks;
 [RankColumn]
 public sealed class AuthenticationBenchmarks
 {
-    private AuthenticationService _service = null!;
+    internal AuthenticationService _service = null!;
 
     private string _validBearerHeader = null!;
     private string _invalidBearerHeader = null!;
