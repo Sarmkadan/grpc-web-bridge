@@ -6,7 +6,6 @@
 
 using GrpcWebBridge.Events;
 using GrpcWebBridge.Utilities;
-using System.Collections.Concurrent;
 
 namespace GrpcWebBridge.Integration;
 
@@ -19,12 +18,15 @@ public static class WebhookPublisherExtensions
     /// <summary>
     /// Subscribes to specific event types with a callback for matching events.
     /// </summary>
-    /// <param name="publisher">The webhook publisher instance</param>
-    /// <param name="webhookUrl">The URL to receive webhooks</param>
-    /// <param name="eventTypeFilter">Filter function to determine which events to send</param>
-    /// <param name="headers">Optional headers to include in webhook requests</param>
-    /// <param name="retryOnFailure">Whether to retry failed deliveries</param>
-    /// <returns>The subscription ID</returns>
+    /// <param name="publisher">The webhook publisher instance.</param>
+    /// <param name="webhookUrl">The URL to receive webhooks.</param>
+    /// <param name="eventTypeFilter">Filter function to determine which events to send.</param>
+    /// <param name="headers">Optional headers to include in webhook requests.</param>
+    /// <param name="retryOnFailure">Whether to retry failed deliveries.</param>
+    /// <returns>The subscription ID.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="publisher"/> or <paramref name="eventTypeFilter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="webhookUrl"/> is <see langword="null"/>, empty, or consists only of whitespace.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no event types match the provided filter.</exception>
     public static string SubscribeWithFilter(
         this WebhookPublisher publisher,
         string webhookUrl,
@@ -32,11 +34,9 @@ public static class WebhookPublisherExtensions
         Dictionary<string, string>? headers = null,
         bool retryOnFailure = true)
     {
-        if (publisher is null)
-            throw new ArgumentNullException(nameof(publisher));
-
-        if (eventTypeFilter is null)
-            throw new ArgumentNullException(nameof(eventTypeFilter));
+        ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(eventTypeFilter);
+        ArgumentException.ThrowIfNullOrWhiteSpace(webhookUrl);
 
         // Get all known event types from the event bus
         var allEventTypes = new List<string>();
@@ -45,8 +45,8 @@ public static class WebhookPublisherExtensions
         var eventTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(a => a.GetTypes())
             .Where(t => t.Namespace == "GrpcWebBridge.Events" &&
-                       typeof(EventBase).IsAssignableFrom(t) &&
-                       !t.IsAbstract && t != typeof(EventBase))
+                        typeof(EventBase).IsAssignableFrom(t) &&
+                        !t.IsAbstract && t != typeof(EventBase))
             .Select(t => t.Name)
             .ToArray();
 
@@ -69,20 +69,19 @@ public static class WebhookPublisherExtensions
     /// <summary>
     /// Publishes an event to webhooks synchronously (waits for completion).
     /// </summary>
-    /// <param name="publisher">The webhook publisher instance</param>
-    /// <param name="event">The event to publish</param>
-    /// <param name="timeoutMilliseconds">Maximum time to wait for delivery (default: 30 seconds)</param>
-    /// <returns>Task representing the asynchronous operation</returns>
+    /// <param name="publisher">The webhook publisher instance.</param>
+    /// <param name="event">The event to publish.</param>
+    /// <param name="timeoutMilliseconds">Maximum time to wait for delivery (default: 30 seconds).</param>
+    /// <returns>Task representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="publisher"/> or <paramref name="event"/> is <see langword="null"/>.</exception>
+    /// <exception cref="TimeoutException">Thrown when the operation times out before completion.</exception>
     public static async Task PublishEventAsync(
         this WebhookPublisher publisher,
         EventBase @event,
         int timeoutMilliseconds = 30000)
     {
-        if (publisher is null)
-            throw new ArgumentNullException(nameof(publisher));
-
-        if (@event is null)
-            throw new ArgumentNullException(nameof(@event));
+        ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(@event);
 
         // Create a task completion source to await the event processing
         var tcs = new TaskCompletionSource<bool>();
@@ -148,12 +147,12 @@ public static class WebhookPublisherExtensions
     /// <summary>
     /// Gets statistics with strongly-typed result for easier consumption.
     /// </summary>
-    /// <param name="publisher">The webhook publisher instance</param>
-    /// <returns>Strongly-typed statistics object</returns>
+    /// <param name="publisher">The webhook publisher instance.</param>
+    /// <returns>Strongly-typed statistics object.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="publisher"/> is <see langword="null"/>.</exception>
     public static WebhookStatistics GetStatisticsTyped(this WebhookPublisher publisher)
     {
-        if (publisher is null)
-            throw new ArgumentNullException(nameof(publisher));
+        ArgumentNullException.ThrowIfNull(publisher);
 
         var stats = publisher.GetStatistics();
 
@@ -188,33 +187,29 @@ public static class WebhookPublisherExtensions
     /// <summary>
     /// Finds subscriptions by URL pattern or exact match.
     /// </summary>
-    /// <param name="publisher">The webhook publisher instance</param>
-    /// <param name="urlPattern">URL to search for (exact match or substring)</param>
-    /// <param name="isExactMatch">Whether to perform exact match (default: false)</param>
-    /// <returns>List of matching subscriptions</returns>
+    /// <param name="publisher">The webhook publisher instance.</param>
+    /// <param name="urlPattern">URL to search for (exact match or substring).</param>
+    /// <param name="isExactMatch">Whether to perform exact match (default: false).</param>
+    /// <returns>List of matching subscriptions.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="publisher"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="urlPattern"/> is <see langword="null"/>, empty, or consists only of whitespace.</exception>
     public static List<WebhookSubscription> FindSubscriptionsByUrl(
         this WebhookPublisher publisher,
         string urlPattern,
         bool isExactMatch = false)
     {
-        if (publisher is null)
-            throw new ArgumentNullException(nameof(publisher));
-
-        if (string.IsNullOrEmpty(urlPattern))
-            throw new ArgumentException("URL pattern cannot be null or empty", nameof(urlPattern));
+        ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentException.ThrowIfNullOrWhiteSpace(urlPattern);
 
         var allSubscriptions = publisher.GetSubscriptions();
 
-        if (isExactMatch)
-        {
-            return allSubscriptions
+        return isExactMatch
+            ? allSubscriptions
                 .Where(s => s.Url.Equals(urlPattern, StringComparison.OrdinalIgnoreCase))
+                .ToList()
+            : allSubscriptions
+                .Where(s => s.Url.Contains(urlPattern, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-        }
-
-        return allSubscriptions
-            .Where(s => s.Url.Contains(urlPattern, StringComparison.OrdinalIgnoreCase))
-            .ToList();
     }
 
     /// <summary>
@@ -228,11 +223,9 @@ public static class WebhookPublisherExtensions
         public long TotalEventsFailed { get; set; }
         public double AverageFailureRate { get; set; }
 
-        public override string ToString()
-        {
-            return $"Subscriptions: {TotalSubscriptions} (Active: {ActiveSubscriptions}), " +
-                   $"Events: {TotalEventsSent} sent, {TotalEventsFailed} failed, " +
-                   $"Failure rate: {AverageFailureRate:P2}";
-        }
+        public override string ToString() =>
+            $"Subscriptions: {TotalSubscriptions} (Active: {ActiveSubscriptions}), " +
+            $"Events: {TotalEventsSent} sent, {TotalEventsFailed} failed, " +
+            $"Failure rate: {AverageFailureRate:P2}";
     }
 }
