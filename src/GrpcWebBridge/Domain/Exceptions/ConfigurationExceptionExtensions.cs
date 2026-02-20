@@ -19,13 +19,15 @@ public static class ConfigurationExceptionExtensions
     /// <summary>
     /// Creates a new ConfigurationException with the specified message, preserving existing configuration properties
     /// </summary>
-    /// <param name="exception">The source exception</param>
-    /// <param name="message">The new error message</param>
-    /// <returns>A new ConfigurationException instance</returns>
+    /// <param name="exception">The source exception. Cannot be null.</param>
+    /// <param name="message">The new error message. Cannot be null.</param>
+    /// <returns>A new ConfigurationException instance.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="message"/> is null.</exception>
     public static ConfigurationException WithMessage(this ConfigurationException exception, string message)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(message);
 
         var newException = new ConfigurationException(message)
         {
@@ -39,13 +41,15 @@ public static class ConfigurationExceptionExtensions
     /// <summary>
     /// Creates a new ConfigurationException with the specified configuration key, preserving existing message and value
     /// </summary>
-    /// <param name="exception">The source exception</param>
-    /// <param name="configurationKey">The configuration key to set</param>
-    /// <returns>A new ConfigurationException instance</returns>
+    /// <param name="exception">The source exception. Cannot be null.</param>
+    /// <param name="configurationKey">The configuration key to set. Cannot be null.</param>
+    /// <returns>A new ConfigurationException instance.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="configurationKey"/> is null.</exception>
     public static ConfigurationException WithKey(this ConfigurationException exception, string configurationKey)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(configurationKey);
 
         var newException = new ConfigurationException(configurationKey, exception.ConfigurationValue ?? string.Empty, GetInnerMessage(exception))
         {
@@ -58,13 +62,15 @@ public static class ConfigurationExceptionExtensions
     /// <summary>
     /// Creates a new ConfigurationException with the specified configuration value, preserving existing message and key
     /// </summary>
-    /// <param name="exception">The source exception</param>
-    /// <param name="configurationValue">The configuration value to set</param>
-    /// <returns>A new ConfigurationException instance</returns>
+    /// <param name="exception">The source exception. Cannot be null.</param>
+    /// <param name="configurationValue">The configuration value to set. Cannot be null.</param>
+    /// <returns>A new ConfigurationException instance.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="configurationValue"/> is null.</exception>
     public static ConfigurationException WithValue(this ConfigurationException exception, string configurationValue)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(configurationValue);
 
         var newException = new ConfigurationException(exception.ConfigurationKey ?? string.Empty, configurationValue, GetInnerMessage(exception))
         {
@@ -77,14 +83,18 @@ public static class ConfigurationExceptionExtensions
     /// <summary>
     /// Creates a new ConfigurationException with both key and value, preserving the original message
     /// </summary>
-    /// <param name="exception">The source exception</param>
-    /// <param name="configurationKey">The configuration key</param>
-    /// <param name="configurationValue">The configuration value</param>
-    /// <returns>A new ConfigurationException instance</returns>
+    /// <param name="exception">The source exception. Cannot be null.</param>
+    /// <param name="configurationKey">The configuration key. Cannot be null.</param>
+    /// <param name="configurationValue">The configuration value. Cannot be null.</param>
+    /// <returns>A new ConfigurationException instance.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="configurationKey"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="configurationValue"/> is null.</exception>
     public static ConfigurationException WithKeyValue(this ConfigurationException exception, string configurationKey, string configurationValue)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(configurationKey);
+        ArgumentNullException.ThrowIfNull(configurationValue);
 
         var newException = new ConfigurationException(configurationKey, configurationValue, GetInnerMessage(exception))
         {
@@ -97,13 +107,13 @@ public static class ConfigurationExceptionExtensions
     /// <summary>
     /// Checks if the exception contains a configuration key that matches the specified key (case-insensitive)
     /// </summary>
-    /// <param name="exception">The source exception</param>
-    /// <param name="key">The key to check for</param>
-    /// <returns>True if the key matches or is null/empty</returns>
+    /// <param name="exception">The source exception. Cannot be null.</param>
+    /// <param name="key">The key to check for.</param>
+    /// <returns>True if the key matches or is null/empty; otherwise false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
     public static bool HasKey(this ConfigurationException exception, string key)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
+        ArgumentNullException.ThrowIfNull(exception);
 
         if (string.IsNullOrEmpty(key))
             return true;
@@ -114,25 +124,25 @@ public static class ConfigurationExceptionExtensions
     /// <summary>
     /// Gets a formatted error message that includes all configuration details
     /// </summary>
-    /// <param name="exception">The source exception</param>
-    /// <returns>A formatted error message string</returns>
+    /// <param name="exception">The source exception. Cannot be null.</param>
+    /// <returns>A formatted error message string.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
     public static string GetFormattedMessage(this ConfigurationException exception)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
+        ArgumentNullException.ThrowIfNull(exception);
 
         var builder = new StringBuilder();
         builder.AppendLine(exception.Message);
 
         if (!string.IsNullOrEmpty(exception.ConfigurationKey))
         {
-            builder.Append("  Key: ");
+            builder.Append(" Key: ");
             builder.AppendLine(exception.ConfigurationKey);
         }
 
         if (!string.IsNullOrEmpty(exception.ConfigurationValue))
         {
-            builder.Append("  Value: ");
+            builder.Append(" Value: ");
             builder.AppendLine(exception.ConfigurationValue);
         }
 
@@ -142,16 +152,13 @@ public static class ConfigurationExceptionExtensions
     /// <summary>
     /// Safely extracts the inner exception message if available, otherwise returns the outer message
     /// </summary>
-    /// <param name="exception">The source exception</param>
-    /// <returns>The inner exception message or outer message</returns>
+    /// <param name="exception">The source exception.</param>
+    /// <returns>The inner exception message or outer message.</returns>
     private static string GetInnerMessage(ConfigurationException exception)
     {
-        if (exception == null)
+        if (exception is null)
             return string.Empty;
 
-        if (exception.InnerException != null)
-            return exception.InnerException.Message;
-
-        return exception.Message;
+        return exception.InnerException?.Message ?? exception.Message;
     }
 }
