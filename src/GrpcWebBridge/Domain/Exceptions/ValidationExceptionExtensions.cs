@@ -12,12 +12,10 @@ public static class ValidationExceptionExtensions
     /// </summary>
     /// <param name="exception">The validation exception</param>
     /// <returns>A formatted error message suitable for API responses</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
     public static string ToErrorMessage(this ValidationException exception)
     {
-        if (exception == null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
 
         var message = exception.Message;
 
@@ -26,7 +24,7 @@ public static class ValidationExceptionExtensions
             message = $"Validation failed for field '{exception.FieldName}': {message}";
         }
 
-        if (exception.InvalidValue != null)
+        if (exception.InvalidValue is not null)
         {
             message += $" | Provided value: {exception.InvalidValue}";
         }
@@ -45,12 +43,12 @@ public static class ValidationExceptionExtensions
     /// <param name="exception">The validation exception</param>
     /// <param name="fieldName">The field name to check against</param>
     /// <returns>True if the exception is for the specified field, otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="fieldName"/> is null.</exception>
     public static bool IsForField(this ValidationException exception, string fieldName)
     {
-        if (exception == null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(fieldName);
 
         return string.Equals(exception.FieldName, fieldName, StringComparison.Ordinal);
     }
@@ -60,12 +58,10 @@ public static class ValidationExceptionExtensions
     /// </summary>
     /// <param name="exception">The validation exception</param>
     /// <returns>A dictionary containing the validation error details</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
     public static Dictionary<string, object?> ToErrorDetails(this ValidationException exception)
     {
-        if (exception == null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
 
         var details = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -78,7 +74,7 @@ public static class ValidationExceptionExtensions
             details["field"] = exception.FieldName;
         }
 
-        if (exception.InvalidValue != null)
+        if (exception.InvalidValue is not null)
         {
             details["value"] = exception.InvalidValue;
         }
@@ -96,12 +92,11 @@ public static class ValidationExceptionExtensions
     /// </summary>
     /// <param name="exceptions">Collection of validation exceptions</param>
     /// <returns>A new ValidationException containing all validation errors</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exceptions"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when the collection is empty.</exception>
     public static ValidationException Combine(this IEnumerable<ValidationException> exceptions)
     {
-        if (exceptions == null)
-        {
-            throw new ArgumentNullException(nameof(exceptions));
-        }
+        ArgumentNullException.ThrowIfNull(exceptions);
 
         var exceptionList = exceptions.ToList();
 
