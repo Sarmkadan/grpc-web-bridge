@@ -8,6 +8,7 @@ using GrpcWebBridge.Data;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
+using System;
 
 namespace GrpcWebBridge.Extensions;
 
@@ -19,12 +20,16 @@ public static class ServiceExtensions
     /// <summary>
     /// Safely registers a service with error handling
     /// </summary>
+    /// <param name="repository">The service repository to register with</param>
+    /// <param name="service">The service to register</param>
+    /// <returns>True if registration succeeded; false otherwise</returns>
+    /// <exception cref="ArgumentNullException">Thrown when repository or service is null</exception>
     public static async Task<bool> TryRegisterServiceAsync(
         this IServiceRepository repository,
         GrpcService service)
     {
-        if (service is null)
-            throw new ArgumentNullException(nameof(service));
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(service);
 
         try
         {
@@ -40,13 +45,14 @@ public static class ServiceExtensions
     /// <summary>
     /// Validates and registers a method to a service
     /// </summary>
+    /// <param name="service">The service to add the method to</param>
+    /// <param name="method">The method to add</param>
+    /// <returns>True if method was added successfully; false otherwise</returns>
+    /// <exception cref="ArgumentNullException">Thrown when service or method is null</exception>
     public static bool TryAddMethod(this GrpcService service, GrpcMethod method)
     {
-        if (service is null)
-            throw new ArgumentNullException(nameof(service));
-
-        if (method is null)
-            throw new ArgumentNullException(nameof(method));
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(method);
 
         try
         {
@@ -63,16 +69,19 @@ public static class ServiceExtensions
     /// <summary>
     /// Creates an error response from an exception
     /// </summary>
+    /// <param name="exception">The exception to convert to a gRPC response</param>
+    /// <param name="requestId">The request identifier</param>
+    /// <param name="translationService">The protocol translation service</param>
+    /// <returns>A gRPC response representing the error</returns>
+    /// <exception cref="ArgumentNullException">Thrown when exception or translationService is null</exception>
     public static GrpcResponse ToGrpcResponse(
         this Exception exception,
         string requestId,
         ProtocolTranslationService translationService)
     {
-        if (exception is null)
-            throw new ArgumentNullException(nameof(exception));
-
-        if (translationService is null)
-            throw new ArgumentNullException(nameof(translationService));
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(translationService);
+        ArgumentException.ThrowIfNullOrEmpty(requestId);
 
         var statusCode = exception switch
         {
@@ -93,6 +102,8 @@ public static class ServiceExtensions
     /// <summary>
     /// Gets human-readable status message
     /// </summary>
+    /// <param name="statusCode">The gRPC status code</param>
+    /// <returns>Human-readable status message</returns>
     public static string GetStatusMessage(this GrpcStatusCode statusCode)
     {
         return statusCode switch
@@ -121,6 +132,8 @@ public static class ServiceExtensions
     /// <summary>
     /// Converts stream state to human-readable string
     /// </summary>
+    /// <param name="state">The stream state to convert</param>
+    /// <returns>Human-readable display string</returns>
     public static string ToDisplayString(this StreamState state)
     {
         return state switch
@@ -137,6 +150,8 @@ public static class ServiceExtensions
     /// <summary>
     /// Checks if a status code represents an error
     /// </summary>
+    /// <param name="statusCode">The status code to check</param>
+    /// <returns>True if status represents an error; false otherwise</returns>
     public static bool IsError(this GrpcStatusCode statusCode)
     {
         return statusCode != GrpcStatusCode.Ok;
@@ -145,6 +160,8 @@ public static class ServiceExtensions
     /// <summary>
     /// Gets the HTTP status code equivalent
     /// </summary>
+    /// <param name="statusCode">The gRPC status code to convert</param>
+    /// <returns>Equivalent HTTP status code</returns>
     public static int ToHttpStatusCode(this GrpcStatusCode statusCode)
     {
         return statusCode switch
@@ -173,15 +190,16 @@ public static class ServiceExtensions
     /// <summary>
     /// Creates a summary of service health
     /// </summary>
+    /// <param name="registry">The service registry</param>
+    /// <param name="streaming">The streaming service</param>
+    /// <returns>Service health summary</returns>
+    /// <exception cref="ArgumentNullException">Thrown when registry or streaming is null</exception>
     public static ServiceHealthSummary GetHealthSummary(
         this ServiceRegistry registry,
         StreamingService streaming)
     {
-        if (registry is null)
-            throw new ArgumentNullException(nameof(registry));
-
-        if (streaming is null)
-            throw new ArgumentNullException(nameof(streaming));
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(streaming);
 
         var services = registry.ListServices();
 
@@ -198,6 +216,8 @@ public static class ServiceExtensions
     /// <summary>
     /// Converts method type to description
     /// </summary>
+    /// <param name="methodType">The method type to describe</param>
+    /// <returns>Human-readable description</returns>
     public static string ToDescription(this MethodType methodType)
     {
         return methodType switch
@@ -222,8 +242,7 @@ public sealed class ServiceHealthSummary
     public int ActiveStreams { get; set; }
     public DateTime Timestamp { get; set; }
 
-    public double HealthPercentage =>
-        TotalServices > 0 ? (double)HealthyServices / TotalServices * 100 : 0;
+    public double HealthPercentage => TotalServices > 0 ? (double)HealthyServices / TotalServices * 100 : 0;
 
     public bool IsHealthy => UnhealthyServices == 0;
 }
