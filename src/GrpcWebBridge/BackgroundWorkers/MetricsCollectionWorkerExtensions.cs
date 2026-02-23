@@ -15,14 +15,18 @@ public static class MetricsCollectionWorkerExtensions
     /// <summary>
     /// Filters snapshot history by timestamp range.
     /// </summary>
-    /// <param name="worker">The metrics collection worker instance</param>
-    /// <param name="startTime">Start of time range (inclusive)</param>
-    /// <param name="endTime">End of time range (inclusive)</param>
-    /// <returns>Filtered list of snapshots within the specified time range</returns>
+    /// <param name="worker">The metrics collection worker instance.</param>
+    /// <param name="startTime">Start of time range (inclusive).</param>
+    /// <param name="endTime">End of time range (inclusive).</param>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="startTime"/> is after <paramref name="endTime"/>.</exception>
+    /// <returns>Filtered list of snapshots within the specified time range.</returns>
     public static List<MetricsSnapshot> GetSnapshotsInRange(this MetricsCollectionWorker worker, DateTime startTime, DateTime endTime)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
+
+        if (startTime > endTime)
+            throw new ArgumentOutOfRangeException(nameof(startTime), "Start time must be before or equal to end time.");
 
         var history = worker.GetSnapshotHistory();
         return history
@@ -34,21 +38,21 @@ public static class MetricsCollectionWorkerExtensions
     /// <summary>
     /// Calculates peak usage statistics for CPU, memory, and threads.
     /// </summary>
-    /// <param name="worker">The metrics collection worker instance</param>
-    /// <returns>An object containing peak usage values and timestamps</returns>
+    /// <param name="worker">The metrics collection worker instance.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
+    /// <returns>An object containing peak usage values and timestamps.</returns>
     public static object GetPeakUsageStatistics(this MetricsCollectionWorker worker)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
 
         var history = worker.GetSnapshotHistory();
 
         if (history.Count == 0)
             return new { message = "No snapshot history available" };
 
-        var peakCpu = history.OrderByDescending(s => s.CpuUsagePercent).First();
-        var peakMemory = history.OrderByDescending(s => s.MemoryUsageMb).First();
-        var peakThreads = history.OrderByDescending(s => s.ThreadCount).First();
+        var peakCpu = history.MaxBy(s => s.CpuUsagePercent);
+        var peakMemory = history.MaxBy(s => s.MemoryUsageMb);
+        var peakThreads = history.MaxBy(s => s.ThreadCount);
 
         return new
         {
@@ -79,13 +83,17 @@ public static class MetricsCollectionWorkerExtensions
     /// <summary>
     /// Gets trend analysis showing whether metrics are improving or degrading over time.
     /// </summary>
-    /// <param name="worker">The metrics collection worker instance</param>
-    /// <param name="minutes">Time window in minutes to analyze</param>
-    /// <returns>Trend analysis with slopes and direction indicators</returns>
+    /// <param name="worker">The metrics collection worker instance.</param>
+    /// <param name="minutes">Time window in minutes to analyze (must be positive).</param>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="minutes"/> is not positive.</exception>
+    /// <returns>Trend analysis with slopes and direction indicators.</returns>
     public static object GetTrendAnalysis(this MetricsCollectionWorker worker, int minutes = 30)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
+
+        if (minutes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(minutes), "Minutes must be positive.");
 
         var cutoffTime = DateTime.UtcNow.AddMinutes(-minutes);
         var recentHistory = worker.GetSnapshotHistory()
@@ -114,24 +122,24 @@ public static class MetricsCollectionWorkerExtensions
                 slope = Math.Round(cpuSlope, 4),
                 direction = cpuSlope > 0.5 ? "Increasing" : cpuSlope < -0.5 ? "Decreasing" : "Stable",
                 trendDescription = cpuSlope > 0.5 ? "CPU usage is trending upward" :
-                                 cpuSlope < -0.5 ? "CPU usage is trending downward" :
-                                 "CPU usage is stable"
+                                  cpuSlope < -0.5 ? "CPU usage is trending downward" :
+                                  "CPU usage is stable"
             },
             memoryTrend = new
             {
                 slope = Math.Round(memorySlope, 4),
                 direction = memorySlope > 0.5 ? "Increasing" : memorySlope < -0.5 ? "Decreasing" : "Stable",
                 trendDescription = memorySlope > 0.5 ? "Memory usage is trending upward" :
-                                 memorySlope < -0.5 ? "Memory usage is trending downward" :
-                                 "Memory usage is stable"
+                                  memorySlope < -0.5 ? "Memory usage is trending downward" :
+                                  "Memory usage is stable"
             },
             errorRateTrend = new
             {
                 slope = Math.Round(errorSlope, 4),
                 direction = errorSlope > 0.5 ? "Increasing" : errorSlope < -0.5 ? "Decreasing" : "Stable",
                 trendDescription = errorSlope > 0.5 ? "Error rate is trending upward" :
-                                 errorSlope < -0.5 ? "Error rate is trending downward" :
-                                 "Error rate is stable"
+                                  errorSlope < -0.5 ? "Error rate is trending downward" :
+                                  "Error rate is stable"
             }
         };
     }
@@ -139,13 +147,17 @@ public static class MetricsCollectionWorkerExtensions
     /// <summary>
     /// Gets alert summary showing current alert conditions and recent alerts.
     /// </summary>
-    /// <param name="worker">The metrics collection worker instance</param>
-    /// <param name="lookbackMinutes">How far back to check for alerts</param>
-    /// <returns>Summary of alert conditions and recent alerts</returns>
+    /// <param name="worker">The metrics collection worker instance.</param>
+    /// <param name="lookbackMinutes">How far back to check for alerts (must be positive).</param>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lookbackMinutes"/> is not positive.</exception>
+    /// <returns>Summary of alert conditions and recent alerts.</returns>
     public static object GetAlertSummary(this MetricsCollectionWorker worker, int lookbackMinutes = 60)
     {
-        if (worker == null)
-            throw new ArgumentNullException(nameof(worker));
+        ArgumentNullException.ThrowIfNull(worker);
+
+        if (lookbackMinutes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(lookbackMinutes), "Lookback minutes must be positive.");
 
         var cutoffTime = DateTime.UtcNow.AddMinutes(-lookbackMinutes);
         var history = worker.GetSnapshotHistory()
@@ -159,15 +171,15 @@ public static class MetricsCollectionWorkerExtensions
         int errorRateAlerts = 0;
 
         // Get alert thresholds from options
-        double cpuThreshold = worker.GetAggregatedMetrics(60) is var thresholds && thresholds is not string
-            ? Convert.ToDouble(((dynamic)thresholds).cpuAlertThresholdPercent)
+        double cpuThreshold = worker.GetAggregatedMetrics(60) is var cpuMetrics && cpuMetrics is not string
+            ? Convert.ToDouble(((dynamic)cpuMetrics).cpu.average)
             : 80.0;
-        double memoryThreshold = worker.GetAggregatedMetrics(60) is var memThresholds && memThresholds is not string
-            ? Convert.ToDouble(((dynamic)memThresholds).memoryAlertThresholdMb)
+
+        double memoryThreshold = worker.GetAggregatedMetrics(60) is var memMetrics && memMetrics is not string
+            ? Convert.ToDouble(((dynamic)memMetrics).memory.average)
             : 1024.0;
-        double errorRateThreshold = worker.GetAggregatedMetrics(60) is var errThresholds && errThresholds is not string
-            ? Convert.ToDouble(((dynamic)errThresholds).errorRateAlertThresholdPercent)
-            : 5.0;
+
+        double errorRateThreshold = 5.0;
 
         foreach (var snapshot in history)
         {
@@ -222,7 +234,7 @@ public static class MetricsCollectionWorkerExtensions
                 memoryAlerts,
                 errorRateAlerts
             },
-            recentAlerts = alerts.OrderByDescending(a => (DateTime)((dynamic)a).timestamp).Take(10).ToList(),
+            recentAlerts = alerts.OrderByDescending(a => ((dynamic)a).timestamp).Take(10).ToList(),
             isHealthy = alerts.Count == 0
         };
     }
