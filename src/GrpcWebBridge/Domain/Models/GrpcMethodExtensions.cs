@@ -21,10 +21,10 @@ public static class GrpcMethodExtensions
     /// <param name="includeAsync">Whether to include async modifier</param>
     /// <param name="includeCancellationToken">Whether to include CancellationToken parameter</param>
     /// <returns>C# method signature as string</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="method"/> is null</exception>
     public static string ToCSharpSignature(this GrpcMethod method, bool includeAsync = true, bool includeCancellationToken = true)
     {
-        if (method is null)
-            throw new ArgumentNullException(nameof(method));
+        ArgumentNullException.ThrowIfNull(method);
 
         var builder = new StringBuilder();
 
@@ -36,7 +36,7 @@ public static class GrpcMethodExtensions
             builder.Append("async ");
 
         // Return type
-        if (method.Type == MethodType.ServerStreaming || method.Type == MethodType.BidirectionalStreaming)
+        if (method.Type is MethodType.ServerStreaming or MethodType.BidirectionalStreaming)
             builder.Append("IAsyncEnumerable<");
         else
             builder.Append("Task<");
@@ -54,6 +54,13 @@ public static class GrpcMethodExtensions
         // Input message parameter
         builder.Append(method.InputMessageType);
         builder.Append(" request");
+
+        // Input parameters
+        if (method.InputParameters.Count > 0)
+        {
+            builder.Append(", ");
+            builder.AppendJoin(", ", method.InputParameters.Select(p => $"{p.TypeName} {p.Name}"));
+        }
 
         // CancellationToken parameter
         if (includeCancellationToken)
@@ -73,12 +80,12 @@ public static class GrpcMethodExtensions
     /// </summary>
     /// <param name="method">The gRPC method</param>
     /// <returns>True if method is streaming, false otherwise</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="method"/> is null</exception>
     public static bool IsStreaming(this GrpcMethod method)
     {
-        if (method is null)
-            throw new ArgumentNullException(nameof(method));
+        ArgumentNullException.ThrowIfNull(method);
 
-        return method.Type == MethodType.ServerStreaming || method.Type == MethodType.BidirectionalStreaming;
+        return method.Type is MethodType.ServerStreaming or MethodType.BidirectionalStreaming;
     }
 
     /// <summary>
@@ -86,23 +93,23 @@ public static class GrpcMethodExtensions
     /// </summary>
     /// <param name="method">The gRPC method</param>
     /// <returns>Total parameter count</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="method"/> is null</exception>
     public static int GetTotalParameterCount(this GrpcMethod method)
     {
-        if (method is null)
-            throw new ArgumentNullException(nameof(method));
+        ArgumentNullException.ThrowIfNull(method);
 
         return method.InputParameters.Count + method.OutputParameters.Count;
     }
 
     /// <summary>
-    /// Generates a summary comment for this gRPC method based on its properties
+    /// Generates XML documentation comment for this gRPC method based on its properties
     /// </summary>
     /// <param name="method">The gRPC method</param>
     /// <returns>XML documentation comment as string</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="method"/> is null</exception>
     public static string ToXmlDocumentation(this GrpcMethod method)
     {
-        if (method is null)
-            throw new ArgumentNullException(nameof(method));
+        ArgumentNullException.ThrowIfNull(method);
 
         var builder = new StringBuilder();
         builder.AppendLine("/// <summary>");
@@ -120,7 +127,10 @@ public static class GrpcMethodExtensions
 
         if (method.InputParameters.Count > 0)
         {
-            builder.AppendLine("/// <param name=\"request\">Request message</param>");
+            foreach (var parameter in method.InputParameters)
+            {
+                builder.AppendLine($"/// <param name=\"{parameter.Name}\">{parameter.Description ?? $"{parameter.TypeName} parameter"}</param>");
+            }
         }
 
         builder.AppendLine("/// <returns>Response message</returns>");
