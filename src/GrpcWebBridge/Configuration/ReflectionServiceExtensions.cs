@@ -12,10 +12,15 @@ using Microsoft.AspNetCore.Routing;
 namespace GrpcWebBridge.Configuration;
 
 /// <summary>
-/// Dependency-injection and endpoint-routing extensions for the gRPC reflection service.
+/// Provides extension methods for configuring gRPC reflection services in the ASP.NET Core pipeline.
 /// </summary>
 public static class ReflectionServiceExtensions
 {
+    /// <summary>
+    /// Seals the class to prevent inheritance, as this is a pure utility class with extension methods.
+    /// </summary>
+    static ReflectionServiceExtensions() {}
+
     /// <summary>
     /// Registers <see cref="ReflectionService"/> as a singleton in the service container.
     /// Call this after <see cref="DependencyInjection.AddGrpcWebBridge"/> to enable
@@ -27,8 +32,7 @@ public static class ReflectionServiceExtensions
     public static IServiceCollection AddGrpcWebBridgeReflection(
         this IServiceCollection services)
     {
-        if (services is null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton<ReflectionService>();
 
@@ -37,26 +41,27 @@ public static class ReflectionServiceExtensions
 
     /// <summary>
     /// Maps the reflection REST endpoints under <c>/api/reflection</c>.
+    /// </summary>
     /// <list type="table">
-    ///   <listheader>
-    ///     <term>Route</term><description>Description</description>
-    ///   </listheader>
-    ///   <item>
-    ///     <term>GET /api/reflection/services</term>
-    ///     <description>Returns the full names of all registered services.</description>
-    ///   </item>
-    ///   <item>
-    ///     <term>GET /api/reflection/services/{fullName}</term>
-    ///     <description>Returns the descriptor for a single service.</description>
-    ///   </item>
-    ///   <item>
-    ///     <term>GET /api/reflection/services/{fullName}/methods/{methodName}</term>
-    ///     <description>Returns the descriptor for a single method on a service.</description>
-    ///   </item>
-    ///   <item>
-    ///     <term>GET /api/reflection/descriptors</term>
-    ///     <description>Returns descriptors for all registered services in one call.</description>
-    ///   </item>
+    /// <listheader>
+    /// <term>Route</term><description>Description</description>
+    /// </listheader>
+    /// <item>
+    /// <term>GET /api/reflection/services</term>
+    /// <description>Returns the full names of all registered services.</description>
+    /// </item>
+    /// <item>
+    /// <term>GET /api/reflection/services/{fullName}</term>
+    /// <description>Returns the descriptor for a single service.</description>
+    /// </item>
+    /// <item>
+    /// <term>GET /api/reflection/services/{fullName}/methods/{methodName}</term>
+    /// <description>Returns the descriptor for a single method on a service.</description>
+    /// </item>
+    /// <item>
+    /// <term>GET /api/reflection/descriptors</term>
+    /// <description>Returns descriptors for all registered services in one call.</description>
+    /// </item>
     /// </list>
     /// </summary>
     /// <param name="endpoints">The endpoint route builder.</param>
@@ -65,8 +70,7 @@ public static class ReflectionServiceExtensions
     public static IEndpointRouteBuilder MapGrpcReflectionEndpoints(
         this IEndpointRouteBuilder endpoints)
     {
-        if (endpoints is null)
-            throw new ArgumentNullException(nameof(endpoints));
+        ArgumentNullException.ThrowIfNull(endpoints);
 
         var group = endpoints
             .MapGroup("/api/reflection")
