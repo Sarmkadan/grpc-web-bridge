@@ -23,7 +23,8 @@ public static class BidirectionalStreamingEngineExtensions
     /// <param name="engine">The streaming engine instance.</param>
     /// <param name="streamId">The unique identifier of the stream.</param>
     /// <returns>The metrics for the specified stream, or null if the stream doesn't exist.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when engine is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="engine"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="streamId"/> is null or whitespace.</exception>
     public static StreamThroughputMetrics? GetStreamMetrics(
         this BidirectionalStreamingEngine engine,
         string streamId)
@@ -43,7 +44,7 @@ public static class BidirectionalStreamingEngineExtensions
     /// <param name="engine">The streaming engine instance.</param>
     /// <param name="methodType">The gRPC method type to filter by.</param>
     /// <returns>An enumerable of active streams matching the method type.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when engine is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="engine"/> is null.</exception>
     public static IEnumerable<IFlowControlledStream> GetStreamsByMethodType(
         this BidirectionalStreamingEngine engine,
         MethodType methodType)
@@ -51,9 +52,11 @@ public static class BidirectionalStreamingEngineExtensions
         ArgumentNullException.ThrowIfNull(engine);
 
         return engine.GetAllMetrics()
-            .Select(kvp => kvp.Key)
+            .Select(static kvp => kvp.Key)
             .Select(streamId => engine.GetStream(streamId))
-            .Where(stream => stream is not null && stream.MethodType == methodType)!
+            .Where(static stream => stream is not null)
+            .Select(static stream => stream!)
+            .Where(stream => stream.MethodType == methodType)
             .ToList();
     }
 
@@ -62,13 +65,13 @@ public static class BidirectionalStreamingEngineExtensions
     /// </summary>
     /// <param name="engine">The streaming engine instance.</param>
     /// <returns>The total message count across all active streams.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when engine is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="engine"/> is null.</exception>
     public static long GetTotalMessageCount(this BidirectionalStreamingEngine engine)
     {
         ArgumentNullException.ThrowIfNull(engine);
 
         return engine.GetAllMetrics()
-            .Sum(kvp => kvp.Value.MessagesIn + kvp.Value.MessagesOut);
+            .Sum(static kvp => kvp.Value.MessagesIn + kvp.Value.MessagesOut);
     }
 
     /// <summary>
@@ -76,12 +79,12 @@ public static class BidirectionalStreamingEngineExtensions
     /// </summary>
     /// <param name="engine">The streaming engine instance.</param>
     /// <returns>The total bytes transferred across all active streams.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when engine is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="engine"/> is null.</exception>
     public static long GetTotalBytesTransferred(this BidirectionalStreamingEngine engine)
     {
         ArgumentNullException.ThrowIfNull(engine);
 
         return engine.GetAllMetrics()
-            .Sum(kvp => kvp.Value.BytesIn + kvp.Value.BytesOut);
+            .Sum(static kvp => kvp.Value.BytesIn + kvp.Value.BytesOut);
     }
 }
