@@ -22,10 +22,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Collection of metrics for all active connections</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static IEnumerable<ConnectionMetrics> GetAllMetrics(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -38,10 +38,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Count of active connections</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static int GetActiveConnectionCount(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         return manager.ActiveConnectionCount;
     }
@@ -51,10 +51,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Total request count</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static long GetTotalRequestCount(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -67,10 +67,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Total bytes sent</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static long GetTotalBytesSent(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -83,10 +83,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Total bytes received</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static long GetTotalBytesReceived(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -99,18 +99,17 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Average connection duration</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static TimeSpan GetAverageConnectionDuration(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
             var metrics = manager.GetMetricsDictionary().Values.ToList();
-            if (metrics.Count == 0)
-                return TimeSpan.Zero;
-
-            return TimeSpan.FromTicks((long)metrics.Average(m => m.GetConnectionDuration().Ticks));
+            return metrics.Count == 0
+                ? TimeSpan.Zero
+                : TimeSpan.FromTicks((long)metrics.Average(m => m.GetConnectionDuration().Ticks));
         }
     }
 
@@ -119,10 +118,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Metrics for the most recently used connection, or null if no connections</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static ConnectionMetrics? GetMostRecentlyUsed(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -137,10 +136,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Metrics for the oldest connection, or null if no connections</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static ConnectionMetrics? GetOldestConnection(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -155,10 +154,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Metrics for the connection with highest request count, or null if no connections</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static ConnectionMetrics? GetMostActiveConnection(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -173,10 +172,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Metrics for the connection with highest throughput, or null if no connections</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static ConnectionMetrics? GetHighestThroughputConnection(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -191,17 +190,16 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Collection of connection addresses</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static IEnumerable<string> GetAllConnectionAddresses(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
             return manager.GetMetricsDictionary().Values
                 .Select(m => m.Address)
-                .Where(a => !string.IsNullOrEmpty(a))!
-                .ToList();
+                .Where(a => !string.IsNullOrEmpty(a))!;
         }
     }
 
@@ -210,17 +208,16 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Collection of service names</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static IEnumerable<string> GetAllServiceNames(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
             return manager.GetMetricsDictionary().Values
                 .Select(m => m.ServiceName)
-                .Where(s => !string.IsNullOrEmpty(s))!
-                .ToList();
+                .Where(s => !string.IsNullOrEmpty(s))!;
         }
     }
 
@@ -229,10 +226,10 @@ public static class GrpcConnectionManagerExtensions
     /// </summary>
     /// <param name="manager">The connection manager instance</param>
     /// <returns>Dictionary mapping service names to their metrics</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static IReadOnlyDictionary<string, ConnectionMetrics> GetMetricsByService(this GrpcConnectionManager manager)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         lock (manager.GetLock())
         {
@@ -247,13 +244,12 @@ public static class GrpcConnectionManagerExtensions
     /// <param name="manager">The connection manager instance</param>
     /// <param name="serviceFullName">The service name to look up</param>
     /// <returns>Connection duration for the specified service</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentException"><paramref name="serviceFullName"/> is null or whitespace</exception>
     public static TimeSpan GetConnectionDuration(this GrpcConnectionManager manager, string serviceFullName)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
-
-        if (string.IsNullOrWhiteSpace(serviceFullName))
-            throw new ArgumentException("Service name cannot be null or empty", nameof(serviceFullName));
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceFullName);
 
         lock (manager.GetLock())
         {
@@ -269,13 +265,12 @@ public static class GrpcConnectionManagerExtensions
     /// <param name="manager">The connection manager instance</param>
     /// <param name="serviceFullName">The service name to look up</param>
     /// <returns>Request count for the specified service</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentException"><paramref name="serviceFullName"/> is null or whitespace</exception>
     public static int GetRequestCount(this GrpcConnectionManager manager, string serviceFullName)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
-
-        if (string.IsNullOrWhiteSpace(serviceFullName))
-            throw new ArgumentException("Service name cannot be null or empty", nameof(serviceFullName));
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceFullName);
 
         lock (manager.GetLock())
         {
@@ -291,13 +286,12 @@ public static class GrpcConnectionManagerExtensions
     /// <param name="manager">The connection manager instance</param>
     /// <param name="serviceFullName">The service name to look up</param>
     /// <returns>Bytes sent for the specified service</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentException"><paramref name="serviceFullName"/> is null or whitespace</exception>
     public static long GetBytesSent(this GrpcConnectionManager manager, string serviceFullName)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
-
-        if (string.IsNullOrWhiteSpace(serviceFullName))
-            throw new ArgumentException("Service name cannot be null or empty", nameof(serviceFullName));
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceFullName);
 
         lock (manager.GetLock())
         {
@@ -313,13 +307,12 @@ public static class GrpcConnectionManagerExtensions
     /// <param name="manager">The connection manager instance</param>
     /// <param name="serviceFullName">The service name to look up</param>
     /// <returns>Bytes received for the specified service</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentException"><paramref name="serviceFullName"/> is null or whitespace</exception>
     public static long GetBytesReceived(this GrpcConnectionManager manager, string serviceFullName)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
-
-        if (string.IsNullOrWhiteSpace(serviceFullName))
-            throw new ArgumentException("Service name cannot be null or empty", nameof(serviceFullName));
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceFullName);
 
         lock (manager.GetLock())
         {
@@ -335,13 +328,12 @@ public static class GrpcConnectionManagerExtensions
     /// <param name="manager">The connection manager instance</param>
     /// <param name="serviceFullName">The service name to look up</param>
     /// <returns>Last used timestamp for the specified service</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentException"><paramref name="serviceFullName"/> is null or whitespace</exception>
     public static DateTime GetLastUsedAt(this GrpcConnectionManager manager, string serviceFullName)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
-
-        if (string.IsNullOrWhiteSpace(serviceFullName))
-            throw new ArgumentException("Service name cannot be null or empty", nameof(serviceFullName));
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceFullName);
 
         lock (manager.GetLock())
         {
@@ -357,13 +349,12 @@ public static class GrpcConnectionManagerExtensions
     /// <param name="manager">The connection manager instance</param>
     /// <param name="serviceFullName">The service name to look up</param>
     /// <returns>Creation timestamp for the specified service</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentException"><paramref name="serviceFullName"/> is null or whitespace</exception>
     public static DateTime GetCreatedAt(this GrpcConnectionManager manager, string serviceFullName)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
-
-        if (string.IsNullOrWhiteSpace(serviceFullName))
-            throw new ArgumentException("Service name cannot be null or empty", nameof(serviceFullName));
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceFullName);
 
         lock (manager.GetLock())
         {
@@ -379,10 +370,10 @@ public static class GrpcConnectionManagerExtensions
     /// <param name="manager">The connection manager instance</param>
     /// <param name="serviceFullName">The service name to check</param>
     /// <returns>True if the service is connected, false otherwise</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static bool IsServiceConnected(this GrpcConnectionManager manager, string serviceFullName)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         if (string.IsNullOrWhiteSpace(serviceFullName))
             return false;
@@ -400,28 +391,48 @@ public static class GrpcConnectionManagerExtensions
     /// <param name="manager">The connection manager instance</param>
     /// <param name="serviceFullName">The service name to look up</param>
     /// <returns>The channel if found, null otherwise</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
     public static GrpcChannel? GetChannel(this GrpcConnectionManager manager, string serviceFullName)
     {
-        if (manager is null)
-            throw new ArgumentNullException(nameof(manager));
+        ArgumentNullException.ThrowIfNull(manager);
 
         if (string.IsNullOrWhiteSpace(serviceFullName))
             return null;
 
-        return manager.GetChannel(serviceFullName);
+            return manager.GetChannel(serviceFullName);
     }
 
     // Helper method to access the private _metrics dictionary through reflection
+    /// <summary>
+    /// Gets the metrics dictionary from the connection manager using reflection
+    /// </summary>
+    /// <param name="manager">The connection manager instance</param>
+    /// <returns>The metrics dictionary</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
+    /// <exception cref="InvalidOperationException">Reflection failed to access the metrics dictionary</exception>
     private static Dictionary<string, ConnectionMetrics> GetMetricsDictionary(this GrpcConnectionManager manager)
     {
+        ArgumentNullException.ThrowIfNull(manager);
+
         var field = typeof(GrpcConnectionManager).GetField("_metrics", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        return (Dictionary<string, ConnectionMetrics>)field!.GetValue(manager)!;
+        return (Dictionary<string, ConnectionMetrics>)field!.GetValue(manager)!
+            ?? throw new InvalidOperationException("Failed to access metrics dictionary via reflection");
     }
 
     // Helper method to access the private _lock object
+    /// <summary>
+    /// Gets the synchronization lock from the connection manager using reflection
+    /// </summary>
+    /// <param name="manager">The connection manager instance</param>
+    /// <returns>The synchronization lock object</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="manager"/> is <see langword="null"/></exception>
+    /// <exception cref="InvalidOperationException">Reflection failed to access the lock object</exception>
     private static object GetLock(this GrpcConnectionManager manager)
     {
+        ArgumentNullException.ThrowIfNull(manager);
+
         var field = typeof(GrpcConnectionManager).GetField("_lock", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        return (object)field!.GetValue(manager)!;
+        return field!.GetValue(manager)!
+            ?? throw new InvalidOperationException("Failed to access lock object via reflection");
     }
 }
