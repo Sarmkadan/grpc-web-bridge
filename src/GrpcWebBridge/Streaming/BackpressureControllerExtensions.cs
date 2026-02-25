@@ -25,6 +25,8 @@ public static class BackpressureControllerExtensions
     /// <c>true</c> if all credits were successfully consumed;
     /// <c>false</c> if any credits could not be acquired (backpressure applied).
     /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is not positive.</exception>
     public static bool TryConsumeCredits(this BackpressureController controller, int count)
     {
         ArgumentNullException.ThrowIfNull(controller);
@@ -61,6 +63,8 @@ public static class BackpressureControllerExtensions
     /// <param name="count">Number of credits to consume.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is not positive.</exception>
     public static async ValueTask ConsumeCreditsAsync(
         this BackpressureController controller,
         int count,
@@ -89,6 +93,7 @@ public static class BackpressureControllerExtensions
     /// </summary>
     /// <param name="controller">The backpressure controller.</param>
     /// <param name="count">Number of credits to release.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> is <c>null</c>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if count is not positive.</exception>
     public static void ReleaseCredits(this BackpressureController controller, int count)
     {
@@ -115,6 +120,7 @@ public static class BackpressureControllerExtensions
     /// </summary>
     /// <param name="controller">The backpressure controller.</param>
     /// <returns>A formatted percentage string (e.g., "75.5%" or "100.0%").</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> is <c>null</c>.</exception>
     public static string GetUtilizationPercentString(this BackpressureController controller)
     {
         ArgumentNullException.ThrowIfNull(controller);
@@ -126,6 +132,7 @@ public static class BackpressureControllerExtensions
     /// </summary>
     /// <param name="controller">The backpressure controller.</param>
     /// <returns>A formatted status string.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> is <c>null</c>.</exception>
     public static string GetStatusString(this BackpressureController controller)
     {
         ArgumentNullException.ThrowIfNull(controller);
