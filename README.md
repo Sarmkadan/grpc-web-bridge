@@ -173,3 +173,36 @@ dotnet run -c Release -- --filter "*"
 
 The benchmarks will run a series of tests and output a summary table, including execution time and memory allocation diagnostics.
 
+## ProtocolTranslationBenchmarksExtensions
+
+The `ProtocolTranslationBenchmarksExtensions` class provides extension methods for the `ProtocolTranslationBenchmarks` class to simplify common benchmarking scenarios for gRPC protocol translation. It offers utilities for setting up test data, translating metadata, converting between protobuf and JSON formats, and creating test responses.
+
+Example usage:
+
+```csharp
+// Create a benchmark instance
+var benchmarks = new ProtocolTranslationBenchmarks();
+
+// Configure with pre-configured test data
+benchmarks.WithPreconfiguredData();
+
+// Translate metadata with small headers (5 headers)
+var smallMetadataResults = benchmarks.TranslateAllMetadata(smallHeaders: true);
+Console.WriteLine($"Small metadata translation completed: {smallMetadataResults.Count} benchmarks");
+
+// Convert protobuf to JSON string
+var protobufData = Encoding.UTF8.GetBytes("test protobuf data");
+var jsonString = benchmarks.ConvertProtobufToJsonString(protobufData);
+Console.WriteLine($"Converted to JSON: {jsonString}");
+
+// Convert base64 JSON to protobuf
+var base64Json = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"test\":\"value\"}"));
+var protobufBytes = benchmarks.ConvertBase64JsonToProtobuf(Encoding.UTF8.GetBytes(base64Json));
+Console.WriteLine($"Converted back to protobuf: {protobufBytes.Length} bytes");
+
+// Translate gRPC response to HTTP with automatic format detection
+var testResponse = benchmarks.CreateTestResponse(protobufData, SerializationFormat.Protobuf);
+var httpPayload = benchmarks.TranslateGrpcToHttpAuto(testResponse);
+Console.WriteLine($"HTTP payload translated: {httpPayload.Length} bytes");
+```
+
