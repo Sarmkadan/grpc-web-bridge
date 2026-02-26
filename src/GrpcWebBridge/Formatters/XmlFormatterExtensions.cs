@@ -9,42 +9,42 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace GrpcWebBridge.Formatters;
 
 /// <summary>
-/// Extension methods for XmlFormatter providing additional XML processing capabilities.
+/// Extension methods for <see cref="XmlFormatter"/> providing additional XML processing capabilities.
 /// </summary>
 public static class XmlFormatterExtensions
 {
     /// <summary>
-    /// Creates a deep copy of the XmlFormatter with new options.
+    /// Creates a deep copy of the <see cref="XmlFormatter"/> with new options.
     /// </summary>
-    /// <param name="formatter">The source formatter</param>
-    /// <param name="options">New options to apply</param>
-    /// <returns>A new XmlFormatter instance</returns>
+    /// <param name="formatter">The source formatter.</param>
+    /// <param name="options">New options to apply.</param>
+    /// <returns>A new <see cref="XmlFormatter"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> or <paramref name="options"/> is <see langword="null"/>.</exception>
     public static XmlFormatter WithOptions(this XmlFormatter formatter, XmlFormatterOptions options)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
-
-        if (options is null)
-            throw new ArgumentNullException(nameof(options));
+        ArgumentNullException.ThrowIfNull(formatter);
+        ArgumentNullException.ThrowIfNull(options);
 
         return new XmlFormatter(options);
     }
 
     /// <summary>
-    /// Creates a deep copy of the XmlFormatter with new options.
+    /// Creates a deep copy of the <see cref="XmlFormatter"/> with new options.
     /// </summary>
-    /// <param name="formatter">The source formatter</param>
-    /// <param name="indent">Whether to indent the XML output</param>
-    /// <param name="indentChars">Characters to use for indentation</param>
-    /// <param name="omitXmlDeclaration">Whether to omit XML declaration</param>
-    /// <returns>A new XmlFormatter instance</returns>
+    /// <param name="formatter">The source formatter.</param>
+    /// <param name="indent">Whether to indent the XML output.</param>
+    /// <param name="indentChars">Characters to use for indentation. Defaults to a single space.</param>
+    /// <param name="omitXmlDeclaration">Whether to omit XML declaration.</param>
+    /// <returns>A new <see cref="XmlFormatter"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> is <see langword="null"/>.</exception>
     public static XmlFormatter WithIndent(this XmlFormatter formatter, bool indent, string indentChars = " ", bool omitXmlDeclaration = false)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
+        ArgumentNullException.ThrowIfNull(formatter);
 
         var options = new XmlFormatterOptions
         {
@@ -59,15 +59,15 @@ public static class XmlFormatterExtensions
     }
 
     /// <summary>
-    /// Creates a deep copy of the XmlFormatter with modified namespace handling.
+    /// Creates a deep copy of the <see cref="XmlFormatter"/> with modified namespace handling.
     /// </summary>
-    /// <param name="formatter">The source formatter</param>
-    /// <param name="omitNamespaces">Whether to omit XML namespaces</param>
-    /// <returns>A new XmlFormatter instance</returns>
+    /// <param name="formatter">The source formatter.</param>
+    /// <param name="omitNamespaces">Whether to omit XML namespaces.</param>
+    /// <returns>A new <see cref="XmlFormatter"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> is <see langword="null"/>.</exception>
     public static XmlFormatter WithOmittedNamespaces(this XmlFormatter formatter, bool omitNamespaces)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
+        ArgumentNullException.ThrowIfNull(formatter);
 
         // Create new formatter with default options and override namespace behavior
         var options = new XmlFormatterOptions
@@ -83,48 +83,46 @@ public static class XmlFormatterExtensions
     }
 
     /// <summary>
-    /// Converts XML string to XDocument for LINQ-to-XML operations.
+    /// Converts XML string to <see cref="XDocument"/> for LINQ-to-XML operations.
     /// </summary>
-    /// <param name="formatter">The formatter instance</param>
-    /// <param name="xml">The XML string to parse</param>
-    /// <returns>XDocument instance or null if parsing fails</returns>
+    /// <param name="formatter">The formatter instance.</param>
+    /// <param name="xml">The XML string to parse.</param>
+    /// <returns><see cref="XDocument"/> instance or <see langword="null"/> if parsing fails.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="xml"/> is <see langword="null"/> or empty.</exception>
     public static XDocument? ToXDocument(this XmlFormatter formatter, string xml)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
-
-        if (string.IsNullOrEmpty(xml))
-            return null;
+        ArgumentNullException.ThrowIfNull(formatter);
+        ArgumentException.ThrowIfNullOrEmpty(xml);
 
         try
         {
-            return XDocument.Parse(xml);
+            return XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
         }
-        catch
+        catch (XmlException)
         {
             return null;
         }
     }
 
     /// <summary>
-    /// Converts XML string to XElement for LINQ-to-XML operations.
+    /// Converts XML string to <see cref="XElement"/> for LINQ-to-XML operations.
     /// </summary>
-    /// <param name="formatter">The formatter instance</param>
-    /// <param name="xml">The XML string to parse</param>
-    /// <returns>XElement instance or null if parsing fails</returns>
+    /// <param name="formatter">The formatter instance.</param>
+    /// <param name="xml">The XML string to parse.</param>
+    /// <returns><see cref="XElement"/> instance or <see langword="null"/> if parsing fails.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="xml"/> is <see langword="null"/> or empty.</exception>
     public static XElement? ToXElement(this XmlFormatter formatter, string xml)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
-
-        if (string.IsNullOrEmpty(xml))
-            return null;
+        ArgumentNullException.ThrowIfNull(formatter);
+        ArgumentException.ThrowIfNullOrEmpty(xml);
 
         try
         {
-            return XElement.Parse(xml);
+            return XElement.Parse(xml, LoadOptions.PreserveWhitespace);
         }
-        catch
+        catch (XmlException)
         {
             return null;
         }
@@ -133,23 +131,22 @@ public static class XmlFormatterExtensions
     /// <summary>
     /// Checks if XML string is valid XML without throwing exceptions.
     /// </summary>
-    /// <param name="formatter">The formatter instance</param>
-    /// <param name="xml">The XML string to validate</param>
-    /// <returns>True if valid XML, false otherwise</returns>
+    /// <param name="formatter">The formatter instance.</param>
+    /// <param name="xml">The XML string to validate.</param>
+    /// <returns>True if valid XML, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="xml"/> is <see langword="null"/> or empty.</exception>
     public static bool IsValidXml(this XmlFormatter formatter, string xml)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
-
-        if (string.IsNullOrEmpty(xml))
-            return false;
+        ArgumentNullException.ThrowIfNull(formatter);
+        ArgumentException.ThrowIfNullOrEmpty(xml);
 
         try
         {
-            XDocument.Parse(xml);
+            XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             return true;
         }
-        catch
+        catch (XmlException)
         {
             return false;
         }
@@ -158,23 +155,22 @@ public static class XmlFormatterExtensions
     /// <summary>
     /// Gets the root element name from XML string.
     /// </summary>
-    /// <param name="formatter">The formatter instance</param>
-    /// <param name="xml">The XML string</param>
-    /// <returns>Root element name or null if not found</returns>
+    /// <param name="formatter">The formatter instance.</param>
+    /// <param name="xml">The XML string.</param>
+    /// <returns>Root element name or <see langword="null"/> if not found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="xml"/> is <see langword="null"/> or empty.</exception>
     public static string? GetRootElementName(this XmlFormatter formatter, string xml)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
-
-        if (string.IsNullOrEmpty(xml))
-            return null;
+        ArgumentNullException.ThrowIfNull(formatter);
+        ArgumentException.ThrowIfNullOrEmpty(xml);
 
         try
         {
-            var doc = XDocument.Parse(xml);
+            var doc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             return doc.Root?.Name.LocalName;
         }
-        catch
+        catch (XmlException)
         {
             return null;
         }
@@ -183,25 +179,25 @@ public static class XmlFormatterExtensions
     /// <summary>
     /// Counts the number of elements matching the XPath expression.
     /// </summary>
-    /// <param name="formatter">The formatter instance</param>
-    /// <param name="xml">The XML string to search</param>
-    /// <param name="xpathExpression">XPath expression to match elements</param>
-    /// <returns>Number of matching elements</returns>
+    /// <param name="formatter">The formatter instance.</param>
+    /// <param name="xml">The XML string to search.</param>
+    /// <param name="xpathExpression">XPath expression to match elements.</param>
+    /// <returns>Number of matching elements.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="xml"/> or <paramref name="xpathExpression"/> is <see langword="null"/> or empty.</exception>
     public static int CountElementsByXPath(this XmlFormatter formatter, string xml, string xpathExpression)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
-
-        if (string.IsNullOrEmpty(xml) || string.IsNullOrEmpty(xpathExpression))
-            return 0;
+        ArgumentNullException.ThrowIfNull(formatter);
+        ArgumentException.ThrowIfNullOrEmpty(xml);
+        ArgumentException.ThrowIfNullOrEmpty(xpathExpression);
 
         try
         {
-            var doc = XDocument.Parse(xml);
+            var doc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             var elements = doc.XPathSelectElements(xpathExpression);
             return elements.Count();
         }
-        catch
+        catch (XmlException)
         {
             return 0;
         }
@@ -210,27 +206,27 @@ public static class XmlFormatterExtensions
     /// <summary>
     /// Gets all element values matching the XPath expression as a list.
     /// </summary>
-    /// <param name="formatter">The formatter instance</param>
-    /// <param name="xml">The XML string to search</param>
-    /// <param name="xpathExpression">XPath expression to match elements</param>
-    /// <returns>List of matching element values</returns>
+    /// <param name="formatter">The formatter instance.</param>
+    /// <param name="xml">The XML string to search.</param>
+    /// <param name="xpathExpression">XPath expression to match elements.</param>
+    /// <returns>List of matching element values.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="formatter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="xml"/> or <paramref name="xpathExpression"/> is <see langword="null"/> or empty.</exception>
     public static List<string> GetElementValuesByXPath(this XmlFormatter formatter, string xml, string xpathExpression)
     {
-        if (formatter is null)
-            throw new ArgumentNullException(nameof(formatter));
+        ArgumentNullException.ThrowIfNull(formatter);
+        ArgumentException.ThrowIfNullOrEmpty(xml);
+        ArgumentException.ThrowIfNullOrEmpty(xpathExpression);
 
         var result = new List<string>();
 
-        if (string.IsNullOrEmpty(xml) || string.IsNullOrEmpty(xpathExpression))
-            return result;
-
         try
         {
-            var doc = XDocument.Parse(xml);
+            var doc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             var elements = doc.XPathSelectElements(xpathExpression);
             result.AddRange(elements.Select(e => e.Value));
         }
-        catch
+        catch (XmlException)
         {
             // Return empty list on error
         }
