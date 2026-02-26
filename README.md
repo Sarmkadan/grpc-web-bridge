@@ -52,6 +52,37 @@ These examples show:
 
 See the `examples/` directory for complete, runnable code snippets.
 
+## CorrelationIdManagerExtensions
+
+The `CorrelationIdManagerExtensions` class provides utilities for managing distributed tracing correlation IDs and tracking request lifecycles. It supports trace creation, status inspection, and cleanup of expired traces.
+
+Example usage:
+```csharp
+// Start a new trace with auto-generated correlation ID
+var trace = CorrelationIdManagerExtensions.StartTraceWithAutoCorrelation("MyTrace");
+
+// Check if any traces exist
+if (CorrelationIdManagerExtensions.HasTraces)
+{
+    // Get most recent trace
+    var recentTrace = CorrelationIdManagerExtensions.GetMostRecentTrace();
+    
+    // Check trace status
+    if (CorrelationIdManagerExtensions.IsTraceSuccessful(recentTrace.Id))
+    {
+        Console.WriteLine($"Trace duration: {CorrelationIdManagerExtensions.GetTraceDuration(recentTrace.Id)}");
+    }
+    else
+    {
+        Console.WriteLine($"Error: {CorrelationIdManagerExtensions.GetTraceError(recentTrace.Id)}");
+    }
+    
+    // Clean up old traces
+    int cleaned = CorrelationIdManagerExtensions.CleanupOldTraces(TimeSpan.FromMinutes(5));
+    Console.WriteLine($"Cleaned {cleaned} old traces");
+}
+```
+
 ## Docker Support
 
 The gRPC-Web Bridge can be run in Docker containers for easy deployment and scaling.
@@ -110,5 +141,4 @@ dotnet run -c Release -- --filter "*"
 ```
 
 The benchmarks will run a series of tests and output a summary table, including execution time and memory allocation diagnostics.
-
 
