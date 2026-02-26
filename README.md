@@ -83,6 +83,37 @@ if (CorrelationIdManagerExtensions.HasTraces)
 }
 ```
 
+## BackpressureControllerExtensions
+
+The `BackpressureControllerExtensions` class provides extension methods for managing credit-based flow control in streaming scenarios. It enables efficient backpressure handling by allowing atomic consumption and release of credits, monitoring window utilization, and generating formatted status strings for observability.
+
+Example usage:
+```csharp
+// Create a backpressure controller with a credit limit
+var controller = new BackpressureController(streamId: "stream-123", maxCredits: 100);
+
+// Consume credits for sending messages
+bool creditsAcquired = controller.TryConsumeCredits(5);
+if (creditsAcquired)
+{
+Console.WriteLine($"Successfully acquired credits. Available: {controller.AvailableCredits}");
+}
+
+// Consume credits asynchronously with cancellation support
+await controller.ConsumeCreditsAsync(3, cancellationToken);
+
+// Release credits when processing completes
+controller.ReleaseCredits(2);
+
+// Get formatted utilization percentage
+string utilization = controller.GetUtilizationPercentString();
+Console.WriteLine($"Current utilization: {utilization}");
+
+// Get detailed status string for monitoring
+string status = controller.GetStatusString();
+Console.WriteLine(status);
+```
+
 ## Docker Support
 
 The gRPC-Web Bridge can be run in Docker containers for easy deployment and scaling.
