@@ -83,6 +83,48 @@ if (CorrelationIdManagerExtensions.HasTraces)
 }
 ```
 
+## ConfigurationExceptionExtensions
+
+The `ConfigurationExceptionExtensions` class provides extension methods for `ConfigurationException` that enable fluent validation and common operations for configuration-related errors. It allows you to chain configuration properties, check for specific keys, and format detailed error messages.
+
+Example usage:
+
+```csharp
+// Create a configuration exception with key and value
+var configException = new ConfigurationException(
+    "ConnectionString",
+    "server=localhost;user=admin",
+    "Failed to connect to database"
+);
+
+// Check if the exception contains a specific key
+bool hasKey = configException.HasKey("ConnectionString");
+Console.WriteLine($"Has connection string key: {hasKey}");
+
+// Get a formatted error message with all configuration details
+string formattedMessage = configException.GetFormattedMessage();
+Console.WriteLine(formattedMessage);
+
+// Create a new exception with updated message while preserving configuration
+var updatedException = configException.WithMessage("Database connection timeout occurred");
+Console.WriteLine(updatedException.Message);
+
+// Create a new exception with updated key while preserving message and value
+var keyUpdatedException = configException.WithKey("DatabaseConnectionString");
+Console.WriteLine(keyUpdatedException.ConfigurationKey);
+
+// Create a new exception with updated value while preserving message and key
+var valueUpdatedException = configException.WithValue("server=prod-db;user=admin");
+Console.WriteLine(valueUpdatedException.ConfigurationValue);
+
+// Create a new exception with both updated key and value
+var keyValueUpdatedException = configException.WithKeyValue(
+    "DatabaseConnectionString",
+    "server=prod-db;user=admin;timeout=30"
+);
+Console.WriteLine(keyValueUpdatedException.GetFormattedMessage());
+```
+
 ## BackpressureControllerExtensions
 
 The `BackpressureControllerExtensions` class provides extension methods for managing credit-based flow control in streaming scenarios. It enables efficient backpressure handling by allowing atomic consumption and release of credits, monitoring window utilization, and generating formatted status strings for observability.
