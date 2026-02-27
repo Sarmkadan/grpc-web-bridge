@@ -206,3 +206,64 @@ var httpPayload = benchmarks.TranslateGrpcToHttpAuto(testResponse);
 Console.WriteLine($"HTTP payload translated: {httpPayload.Length} bytes");
 ```
 
+## WebhookPublisherExtensions
+
+The `WebhookPublisherExtensions` class provides extension methods for the `WebhookPublisher` class to simplify webhook management, event filtering, and subscription operations. It includes utilities for subscribing with event type filters, publishing events with timeout support, retrieving strongly-typed statistics, and finding subscriptions by URL.
+
+Example usage:
+
+```csharp
+// Create a webhook publisher with default options
+var publisher = new WebhookPublisher(new WebhookPublisherOptions
+{
+    MaxConcurrentDeliveries = 10,
+    RetryPolicy = RetryPolicy.ExponentialBackoff,
+    MaxRetryAttempts = 3
+});
+
+// Subscribe with an event type filter (e.g., only "UserCreated" and "UserUpdated" events)
+var subscriptionId = publisher.SubscribeWithFilter(
+    webhookUrl: "https://api.example.com/webhooks/events",
+    eventTypeFilter: eventType => eventType.StartsWith("User"),
+    headers: new Dictionary<string, string>
+    {
+        { "X-API-Key", "your-secret-key" },
+        { "Content-Type", "application/json" }
+    },
+    retryOnFailure: true
+);
+
+Console.WriteLine($"Subscription created with ID: {subscriptionId}");
+
+// Publish an event with timeout (waits for delivery completion)
+var userCreatedEvent = new UserCreatedEvent
+{
+    UserId = Guid.NewGuid(),
+    Username = "john_doe",
+    Email = "john@example.com",
+    Timestamp = DateTime.UtcNow
+};
+
+await publisher.PublishEventAsync(userCreatedEvent, timeoutMilliseconds: 15000);
+Console.WriteLine("Event published successfully");
+
+// Get strongly-typed statistics
+var stats = publisher.GetStatisticsTyped();
+Console.WriteLine(stats.ToString());
+// Output: Subscriptions: 1 (Active: 1), Events: 1 sent, 0 failed, Failure rate: 0.00%
+
+// Find subscriptions by URL (substring search)
+var matchingSubscriptions = publisher.FindSubscriptionsByUrl("example.com/webhooks");
+foreach (var sub in matchingSubscriptions)
+{
+    Console.WriteLine($"Found subscription: {sub.Id} -> {sub.Url}");
+}
+
+// Access statistics properties directly
+Console.WriteLine($"Total subscriptions: {stats.TotalSubscriptions}");
+Console.WriteLine($"Active subscriptions: {stats.ActiveSubscriptions}");
+Console.WriteLine($"Total events sent: {stats.TotalEventsSent}");
+Console.WriteLine($"Total events failed: {stats.TotalEventsFailed}");
+Console.WriteLine($"Average failure rate: {stats.AverageFailureRate:P2}");
+```
+
