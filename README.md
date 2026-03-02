@@ -296,60 +296,60 @@ if (alertSummary.recentAlerts.Count > 0)
 
 The `WebhookPublisherExtensions` class provides extension methods for the `WebhookPublisher` class to simplify webhook management, event filtering, and subscription operations. It includes utilities for subscribing with event type filters, publishing events with timeout support, retrieving strongly-typed statistics, and finding subscriptions by URL.
 
+## GrpcConnectionManagerExtensions
+
+The `GrpcConnectionManagerExtensions` class provides extension methods for `GrpcConnectionManager` that enable comprehensive monitoring and analysis of gRPC connection metrics. It offers utilities for retrieving connection statistics, analyzing connection patterns, filtering by service, and generating observability data for monitoring and debugging purposes.
+
 Example usage:
 
 ```csharp
-// Create a webhook publisher with default options
-var publisher = new WebhookPublisher(new WebhookPublisherOptions
-{
-    MaxConcurrentDeliveries = 10,
-    RetryPolicy = RetryPolicy.ExponentialBackoff,
-    MaxRetryAttempts = 3
-});
+// Create a connection manager instance (typically injected via DI)
+var connectionManager = new GrpcConnectionManager();
 
-// Subscribe with an event type filter (e.g., only "UserCreated" and "UserUpdated" events)
-var subscriptionId = publisher.SubscribeWithFilter(
-    webhookUrl: "https://api.example.com/webhooks/events",
-    eventTypeFilter: eventType => eventType.StartsWith("User"),
-    headers: new Dictionary<string, string>
+// Get basic connection statistics
+int activeConnections = connectionManager.GetActiveConnectionCount();
+long totalRequests = connectionManager.GetTotalRequestCount();
+long totalBytesSent = connectionManager.GetTotalBytesSent();
+long totalBytesReceived = connectionManager.GetTotalBytesReceived();
+
+// Get average connection duration across all active connections
+TimeSpan avgDuration = connectionManager.GetAverageConnectionDuration();
+Console.WriteLine($"Average connection duration: {avgDuration.TotalSeconds:F2}s");
+
+// Get metrics for specific services
+bool isUserServiceConnected = connectionManager.IsServiceConnected("UserService");
+int userServiceRequests = connectionManager.GetRequestCount("UserService");
+long userServiceBytesSent = connectionManager.GetBytesSent("UserService");
+long userServiceBytesReceived = connectionManager.GetBytesReceived("UserService");
+DateTime userServiceLastUsed = connectionManager.GetLastUsedAt("UserService");
+
+// Get all connection metrics for detailed analysis
+var allMetrics = connectionManager.GetAllMetrics();
+Console.WriteLine($"Total connections: {allMetrics.Count()}");
+
+// Find the most active connection
+var mostActive = connectionManager.GetMostActiveConnection();
+    if (mostActive != null)
     {
-        { "X-API-Key", "your-secret-key" },
-        { "Content-Type", "application/json" }
-    },
-    retryOnFailure: true
-);
+        Console.WriteLine($"Most active: {mostActive.ServiceName} with {mostActive.RequestCount} requests");
+    }
 
-Console.WriteLine($"Subscription created with ID: {subscriptionId}");
+// Find the connection with highest throughput
+var highestThroughput = connectionManager.GetHighestThroughputConnection();
+    if (highestThroughput != null)
+    {
+        Console.WriteLine($"Highest throughput: {highestThroughput.ServiceName} ({highestThroughput.BytesSent + highestThroughput.BytesReceived} bytes)");
+    }
 
-// Publish an event with timeout (waits for delivery completion)
-var userCreatedEvent = new UserCreatedEvent
-{
-    UserId = Guid.NewGuid(),
-    Username = "john_doe",
-    Email = "john@example.com",
-    Timestamp = DateTime.UtcNow
-};
+// Get metrics grouped by service
+var metricsByService = connectionManager.GetMetricsByService();
+    foreach (var kvp in metricsByService)
+    {
+        Console.WriteLine($"{kvp.Key}: {kvp.Value.RequestCount} requests, {kvp.Value.BytesSent} bytes sent");
+    }
 
-await publisher.PublishEventAsync(userCreatedEvent, timeoutMilliseconds: 15000);
-Console.WriteLine("Event published successfully");
-
-// Get strongly-typed statistics
-var stats = publisher.GetStatisticsTyped();
-Console.WriteLine(stats.ToString());
-// Output: Subscriptions: 1 (Active: 1), Events: 1 sent, 0 failed, Failure rate: 0.00%
-
-// Find subscriptions by URL (substring search)
-var matchingSubscriptions = publisher.FindSubscriptionsByUrl("example.com/webhooks");
-foreach (var sub in matchingSubscriptions)
-{
-    Console.WriteLine($"Found subscription: {sub.Id} -> {sub.Url}");
-}
-
-// Access statistics properties directly
-Console.WriteLine($"Total subscriptions: {stats.TotalSubscriptions}");
-Console.WriteLine($"Active subscriptions: {stats.ActiveSubscriptions}");
-Console.WriteLine($"Total events sent: {stats.TotalEventsSent}");
-Console.WriteLine($"Total events failed: {stats.TotalEventsFailed}");
-Console.WriteLine($"Average failure rate: {stats.AverageFailureRate:P2}");
+// Get all connection addresses and service names
+var addresses = connectionManager.GetAllConnectionAddresses();
+var serviceNames = connectionManager.GetAllServiceNames();
 ```
 
