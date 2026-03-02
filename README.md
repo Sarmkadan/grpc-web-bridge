@@ -104,6 +104,74 @@ Console.WriteLine($"Has connection string key: {hasKey}");
 // Get a formatted error message with all configuration details
 string formattedMessage = configException.GetFormattedMessage();
 Console.WriteLine(formattedMessage);
+```
+
+## CsvFormatterExtensions
+
+The `CsvFormatterExtensions` class provides extension methods for `CsvFormatter` that enable advanced CSV processing capabilities including file operations, streaming, and batch processing. It supports appending data to existing files, converting collections to CSV streams, merging multiple CSV files, and splitting large CSV files into smaller chunks.
+
+Example usage:
+
+```csharp
+// Create a CSV formatter instance
+var csvFormatter = new CsvFormatter();
+
+// Example data model
+public class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+// Convert a collection to CSV stream for HTTP response
+var users = new List<User>
+{
+    new User { Id = 1, Name = "Alice", Email = "alice@example.com", CreatedAt = DateTime.UtcNow },
+    new User { Id = 2, Name = "Bob", Email = "bob@example.com", CreatedAt = DateTime.UtcNow }
+};
+
+using var csvStream = csvFormatter.ToCsvStream(users);
+// Stream can be returned from ASP.NET Core controller or used in other scenarios
+
+// Append data to an existing CSV file
+await csvFormatter.AppendToFileAsync(users, "users.csv");
+
+// Merge multiple CSV files into one
+await csvFormatter.MergeFilesAsync(
+    "merged_users.csv",
+    "users_part1.csv",
+    "users_part2.csv"
+);
+
+// Split a large CSV file into smaller files (e.g., 1000 rows per file)
+await csvFormatter.SplitFileAsync<User>(
+    "large_users.csv",
+    "split_output",
+    rowsPerFile: 1000
+);
+```
+
+## ConfigurationExceptionExtensions
+
+Example usage:
+
+```csharp
+// Create a configuration exception with key and value
+var configException = new ConfigurationException(
+    "ConnectionString",
+    "server=localhost;user=admin",
+    "Failed to connect to database"
+);
+
+// Check if the exception contains a specific key
+bool hasKey = configException.HasKey("ConnectionString");
+Console.WriteLine($"Has connection string key: {hasKey}");
+
+// Get a formatted error message with all configuration details
+string formattedMessage = configException.GetFormattedMessage();
+Console.WriteLine(formattedMessage);
 
 // Create a new exception with updated message while preserving configuration
 var updatedException = configException.WithMessage("Database connection timeout occurred");
