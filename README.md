@@ -248,6 +248,50 @@ var httpPayload = benchmarks.TranslateGrpcToHttpAuto(testResponse);
 Console.WriteLine($"HTTP payload translated: {httpPayload.Length} bytes");
 ```
 
+## MetricsCollectionWorkerExtensions
+
+The `MetricsCollectionWorkerExtensions` class provides extension methods for `MetricsCollectionWorker` that enable advanced metrics analysis, filtering, and reporting capabilities. It includes utilities for filtering snapshots by time range, calculating peak usage statistics, analyzing trends over time windows, and generating alert summaries based on configurable thresholds.
+
+Example usage:
+
+```csharp
+// Create a metrics collection worker instance
+var worker = new MetricsCollectionWorker();
+
+// Get snapshots within a specific time range
+var startTime = DateTime.UtcNow.AddHours(-1);
+var endTime = DateTime.UtcNow;
+var filteredSnapshots = worker.GetSnapshotsInRange(startTime, endTime);
+Console.WriteLine($"Found {filteredSnapshots.Count} snapshots in range");
+
+// Get peak usage statistics across all metrics
+var peakStats = worker.GetPeakUsageStatistics();
+Console.WriteLine($"Peak CPU: {peakStats.peakCpu.value}% at {peakStats.peakCpu.timestamp}");
+Console.WriteLine($"Peak Memory: {peakStats.peakMemory.value}MB at {peakStats.peakMemory.timestamp}");
+Console.WriteLine($"Peak Threads: {peakStats.peakThreads.value} at {peakStats.peakThreads.timestamp}");
+
+// Get trend analysis for the last 30 minutes
+var trendAnalysis = worker.GetTrendAnalysis(minutes: 30);
+Console.WriteLine($"CPU trend: {trendAnalysis.cpuTrend.direction} (slope: {trendAnalysis.cpuTrend.slope})");
+Console.WriteLine($"Memory trend: {trendAnalysis.memoryTrend.direction} (slope: {trendAnalysis.memoryTrend.slope})");
+Console.WriteLine($"Error rate trend: {trendAnalysis.errorRateTrend.direction} (slope: {trendAnalysis.errorRateTrend.slope})");
+
+// Get alert summary for the last hour
+var alertSummary = worker.GetAlertSummary(lookbackMinutes: 60);
+Console.WriteLine($"Healthy: {alertSummary.isHealthy}");
+Console.WriteLine($"Total alerts: {alertSummary.alertsFound}");
+Console.WriteLine($"Alert breakdown: CPU={alertSummary.alertBreakdown.cpuAlerts}, Memory={alertSummary.alertBreakdown.memoryAlerts}, ErrorRate={alertSummary.alertBreakdown.errorRateAlerts}");
+
+if (alertSummary.recentAlerts.Count > 0)
+{
+    Console.WriteLine("Recent alerts:");
+    foreach (var alert in alertSummary.recentAlerts)
+    {
+        Console.WriteLine($"  - [{alert.timestamp}] {alert.type}: {alert.value} (threshold: {alert.threshold})");
+    }
+}
+```
+
 ## WebhookPublisherExtensions
 
 The `WebhookPublisherExtensions` class provides extension methods for the `WebhookPublisher` class to simplify webhook management, event filtering, and subscription operations. It includes utilities for subscribing with event type filters, publishing events with timeout support, retrieving strongly-typed statistics, and finding subscriptions by URL.
