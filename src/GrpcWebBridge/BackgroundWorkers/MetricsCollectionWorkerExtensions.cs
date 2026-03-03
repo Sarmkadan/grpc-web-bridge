@@ -171,13 +171,8 @@ public static class MetricsCollectionWorkerExtensions
         int errorRateAlerts = 0;
 
         // Get alert thresholds from options
-        double cpuThreshold = worker.GetAggregatedMetrics(60) is var cpuMetrics && cpuMetrics is not string
-            ? Convert.ToDouble(((dynamic)cpuMetrics).cpu.average)
-            : 80.0;
-
-        double memoryThreshold = worker.GetAggregatedMetrics(60) is var memMetrics && memMetrics is not string
-            ? Convert.ToDouble(((dynamic)memMetrics).memory.average)
-            : 1024.0;
+        double cpuThreshold = GetNestedAverage(worker.GetAggregatedMetrics(60), "cpu") ?? 80.0;
+        double memoryThreshold = GetNestedAverage(worker.GetAggregatedMetrics(60), "memory") ?? 1024.0;
 
         double errorRateThreshold = 5.0;
 
@@ -237,6 +232,24 @@ public static class MetricsCollectionWorkerExtensions
             recentAlerts = alerts.OrderByDescending(a => ((dynamic)a).timestamp).Take(10).ToList(),
             isHealthy = alerts.Count == 0
         };
+    }
+
+    /// <summary>
+    /// Safely reads a nested "average" value (e.g. metrics.cpu.average) from an
+    /// aggregated metrics result without throwing when the expected shape is absent.
+    /// </summary>
+    private static double? GetNestedAverage(object metrics, string categoryName)
+    {
+        var categoryProperty = metrics.GetType().GetProperty(categoryName);
+        var categoryValue = categoryProperty?.GetValue(metrics);
+        if (categoryValue is null)
+            return null;
+
+        var averageProperty = categoryValue.GetType().GetProperty("average");
+        var averageValue = averageProperty?.GetValue(categoryValue);
+        return averageValue is null
+            ? null
+            : Convert.ToDouble(averageValue, System.Globalization.CultureInfo.InvariantCulture);
     }
 }
 
