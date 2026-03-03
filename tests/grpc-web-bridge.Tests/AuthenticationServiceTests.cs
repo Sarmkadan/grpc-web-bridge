@@ -14,17 +14,27 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Tests for the AuthenticationService class.
+/// </summary>
 public sealed class AuthenticationServiceTests
 {
     private readonly ILogger<AuthenticationService> _mockLogger;
     private readonly AuthenticationService _service;
 
+    /// <summary>
+    /// Initializes a new instance of the AuthenticationServiceTests class.
+    /// </summary>
     public AuthenticationServiceTests()
     {
         _mockLogger = Substitute.For<ILogger<AuthenticationService>>();
         _service = new AuthenticationService(_mockLogger);
     }
 
+    /// <summary>
+    /// Tests the AuthenticateApiKey method with valid credentials.
+    /// </summary>
+    /// <returns>No return value.</returns>
     [Fact]
     public void AuthenticateApiKey_WithValidCredentials_ReturnsAuthenticatedContext()
     {
@@ -38,6 +48,10 @@ public sealed class AuthenticationServiceTests
         context.IsExpired.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the AuthenticateApiKey method with an empty API key.
+    /// </summary>
+    /// <returns>No return value.</returns>
     [Fact]
     public void AuthenticateApiKey_WithEmptyKey_ThrowsGrpcWebBridgeException()
     {
@@ -49,6 +63,10 @@ public sealed class AuthenticationServiceTests
            .Which.ErrorCode.Should().Be("INVALID_API_KEY");
     }
 
+    /// <summary>
+    /// Tests the AuthenticateCustom method with credentials.
+    /// </summary>
+    /// <returns>No return value.</returns>
     [Fact]
     public void AuthenticateCustom_WithCredentials_AddsClaimsToContext()
     {
@@ -68,6 +86,10 @@ public sealed class AuthenticationServiceTests
         context.GetClaim("region").Should().Be("us-east-1");
     }
 
+    /// <summary>
+    /// Tests the AuthenticateCustom method with empty credentials.
+    /// </summary>
+    /// <returns>No return value.</returns>
     [Fact]
     public void AuthenticateCustom_WithEmptyCredentials_ThrowsGrpcWebBridgeException()
     {
@@ -79,6 +101,10 @@ public sealed class AuthenticationServiceTests
            .Which.ErrorCode.Should().Be("INVALID_CREDENTIALS");
     }
 
+    /// <summary>
+    /// Tests the ValidateContext method with a null context.
+    /// </summary>
+    /// <returns>No return value.</returns>
     [Fact]
     public void ValidateContext_WithNullContext_ReturnsFalse()
     {
@@ -89,6 +115,10 @@ public sealed class AuthenticationServiceTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the AuthorizeRole method with a context holding a matching role.
+    /// </summary>
+    /// <returns>No return value.</returns>
     [Fact]
     public void AuthorizeRole_WithContextHoldingMatchingRole_ReturnsTrue()
     {
@@ -103,6 +133,10 @@ public sealed class AuthenticationServiceTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests the ExtractBearerToken method with a header containing a bearer token.
+    /// </summary>
+    /// <returns>No return value.</returns>
     [Fact]
     public void ExtractBearerToken_WithBearerPrefix_ReturnsRawToken()
     {
@@ -116,6 +150,10 @@ public sealed class AuthenticationServiceTests
         token.Should().Be("eyJhbGciOiJIUzI1NiJ9");
     }
 
+    /// <summary>
+    /// Tests the ExtractBearerToken method with a null header.
+    /// </summary>
+    /// <returns>No return value.</returns>
     [Fact]
     public void ExtractBearerToken_WithNullHeader_ReturnsNull()
     {
