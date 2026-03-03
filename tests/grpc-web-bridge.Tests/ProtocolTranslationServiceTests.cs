@@ -14,17 +14,33 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Contains unit tests for <see cref="ProtocolTranslationService"/> ensuring that
+/// HTTP‑to‑gRPC translation, protobuf/JSON conversion, metadata handling, and error
+/// response creation behave as expected.
+/// </summary>
 public sealed class ProtocolTranslationServiceTests
 {
     private readonly ILogger<ProtocolTranslationService> _logger;
     private readonly ProtocolTranslationService _service;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="ProtocolTranslationServiceTests"/>.
+    /// Sets up a mock <see cref="ILogger{ProtocolTranslationService}"/> and creates the
+    /// <see cref="ProtocolTranslationService"/> instance under test.
+    /// </summary>
     public ProtocolTranslationServiceTests()
     {
         _logger = Substitute.For<ILogger<ProtocolTranslationService>>();
         _service = new ProtocolTranslationService(_logger);
     }
 
+    /// <summary>
+    /// Verifies that translating a valid HTTP request to a gRPC request produces a
+    /// <see cref="GrpcRequest"/> with the expected service name, method name,
+    /// payload, and payload format.
+    /// </summary>
+    /// <returns>Nothing.</returns>
     [Fact]
     public void TranslateHttpToGrpc_WithValidInput_ReturnsGrpcRequest()
     {
@@ -42,6 +58,11 @@ public sealed class ProtocolTranslationServiceTests
         request.PayloadFormat.Should().Be(SerializationFormat.Json);
     }
 
+    /// <summary>
+    /// Ensures that converting an empty protobuf byte array to JSON yields an empty JSON
+    /// object (i.e., <c>{}</c>).
+    /// </summary>
+    /// <returns>Nothing.</returns>
     [Fact]
     public void ConvertProtobufToJson_WithEmptyArray_ReturnsEmptyJson()
     {
@@ -55,6 +76,11 @@ public sealed class ProtocolTranslationServiceTests
         System.Text.Encoding.UTF8.GetString(json).Should().Be("{}");
     }
 
+    /// <summary>
+    /// Ensures that converting an empty JSON byte array to protobuf returns an empty
+    /// protobuf byte array.
+    /// </summary>
+    /// <returns>Nothing.</returns>
     [Fact]
     public void ConvertJsonToProtobuf_WithEmptyArray_ReturnsEmptyArray()
     {
@@ -68,6 +94,11 @@ public sealed class ProtocolTranslationServiceTests
         protobuf.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that translating a <c>null</c> metadata dictionary results in an empty,
+    /// non‑null dictionary.
+    /// </summary>
+    /// <returns>Nothing.</returns>
     [Fact]
     public void TranslateMetadata_WithNullMetadata_ReturnsEmptyDictionary()
     {
@@ -79,6 +110,11 @@ public sealed class ProtocolTranslationServiceTests
         translated.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Confirms that metadata keys are lower‑cased during translation while preserving
+    /// their associated values.
+    /// </summary>
+    /// <returns>Nothing.</returns>
     [Fact]
     public void TranslateMetadata_WithMixedCaseKeys_ReturnsLowercasedKeys()
     {
@@ -97,6 +133,11 @@ public sealed class ProtocolTranslationServiceTests
         translated.Should().ContainKey("content-type").WhoseValue.Should().Be("application/grpc");
     }
 
+    /// <summary>
+    /// Checks that the <c>grpc-timeout</c> header is removed during metadata translation,
+    /// while other headers remain unchanged.
+    /// </summary>
+    /// <returns>Nothing.</returns>
     [Fact]
     public void TranslateMetadata_WithGrpcTimeout_RemovesTimeoutHeader()
     {
@@ -115,6 +156,11 @@ public sealed class ProtocolTranslationServiceTests
         translated.Should().ContainKey("custom-header").WhoseValue.Should().Be("value");
     }
 
+    /// <summary>
+    /// Validates that creating an error response produces a <see cref="GrpcResponse"/>
+    /// containing the supplied request identifier, status code, and status message.
+    /// </summary>
+    /// <returns>Nothing.</returns>
     [Fact]
     public void CreateErrorResponse_WithValidInput_ReturnsGrpcResponseWithError()
     {
@@ -130,6 +176,11 @@ public sealed class ProtocolTranslationServiceTests
         response.StatusMessage.Should().Be("Service not found");
     }
 
+    /// <summary>
+    /// Tests the <c>AsBytes</c> extension method, confirming that a string is correctly
+    /// encoded to a UTF‑8 byte array.
+    /// </summary>
+    /// <returns>Nothing.</returns>
     [Fact]
     public void AsBytes_ExtensionMethod_ConvertsStringToByteArray()
     {
