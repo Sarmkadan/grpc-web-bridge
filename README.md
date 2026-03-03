@@ -153,6 +153,81 @@ await csvFormatter.SplitFileAsync<User>(
 );
 ```
 
+## XmlFormatterExtensions
+
+The `XmlFormatterExtensions` class provides extension methods for `XmlFormatter` that enable advanced XML processing capabilities including validation, LINQ-to-XML conversion, and XPath querying. It supports creating formatted XML strings with various options, validating XML content, extracting data using XPath expressions, and converting between XML formats and LINQ-to-XML objects.
+
+Example usage:
+
+```csharp
+// Create an XML formatter instance
+var xmlFormatter = new XmlFormatter();
+
+// Example XML data
+string xmlData = @"
+<root>
+  <person id="1">
+    <name>Alice</name>
+    <email>alice@example.com</email>
+    <age>30</age>
+  </person>
+  <person id="2">
+    <name>Bob</name>
+    <email>bob@example.com</email>
+    <age>25</age>
+  </person>
+</root>
+";
+
+// Validate XML content
+bool isValid = xmlFormatter.IsValidXml(xmlData);
+Console.WriteLine($"Is valid XML: {isValid}");
+
+// Get root element name
+string? rootName = xmlFormatter.GetRootElementName(xmlData);
+Console.WriteLine($"Root element: {rootName}");
+
+// Convert XML to XDocument for LINQ operations
+var xDoc = xmlFormatter.ToXDocument(xmlData);
+if (xDoc != null)
+{
+  Console.WriteLine($"Document has {xDoc.Descendants().Count()} total elements");
+}
+
+// Convert XML to XElement for LINQ operations
+var xElement = xmlFormatter.ToXElement(xmlData);
+if (xElement != null)
+{
+  Console.WriteLine($"Element name: {xElement.Name.LocalName}");
+}
+
+// Count elements matching XPath expression
+int personCount = xmlFormatter.CountElementsByXPath(xmlData, "//person");
+Console.WriteLine($"Found {personCount} person elements");
+
+// Get all person names using XPath
+var names = xmlFormatter.GetElementValuesByXPath(xmlData, "//person/name");
+Console.WriteLine("Person names:");
+foreach (var name in names)
+{
+  Console.WriteLine($" - {name}");
+}
+
+// Create formatter with custom options
+var formattedXmlFormatter = new XmlFormatter(new XmlFormatterOptions
+{
+  Indent = true,
+  IndentChars = "  ",
+  OmitXmlDeclaration = false,
+  OmitNamespaces = false,
+  Encoding = Encoding.UTF8
+});
+
+// Format XML with indentation
+string formattedXml = formattedXmlFormatter.Format(xmlData);
+Console.WriteLine(formattedXml);
+```
+
 ## ConfigurationExceptionExtensions
 
 Example usage:
