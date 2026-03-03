@@ -9,6 +9,7 @@ using GrpcWebBridge.Configuration;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
+using System.Globalization;
 
 namespace GrpcWebBridge.Controllers;
 
@@ -107,12 +108,12 @@ public class ConfigurationController : ControllerBase
                         break;
 
                     case "compressionlevel":
-                        if (int.TryParse(setting.Value?.ToString(), out var level) && level >= 0 && level <= 9)
+                        if (int.TryParse(setting.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var level) && level >= 0 && level <= 9)
                             updates["CompressionLevel"] = level;
                         break;
 
                     case "requestspersecond":
-                        if (int.TryParse(setting.Value?.ToString(), out var rps) && rps > 0)
+                        if (int.TryParse(setting.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var rps) && rps > 0)
                         {
                             updates["RequestsPerSecond"] = rps;
                             _runtimeConfig["RequestsPerSecond"] = rps;
@@ -120,7 +121,7 @@ public class ConfigurationController : ControllerBase
                         break;
 
                     case "streamidletimeoutseconds":
-                        if (int.TryParse(setting.Value?.ToString(), out var timeout) && timeout > 0)
+                        if (int.TryParse(setting.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var timeout) && timeout > 0)
                             updates["StreamIdleTimeoutSeconds"] = timeout;
                         break;
 
