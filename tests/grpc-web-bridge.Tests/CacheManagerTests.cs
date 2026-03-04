@@ -11,10 +11,20 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="CacheManager"/> class that verify cache operations including set/get, TTL management,
+/// pattern-based removal, statistics tracking, and async operations.
+/// </summary>
 public sealed class CacheManagerTests : IDisposable
 {
+    /// <summary>
+    /// The cache manager instance used for testing with a 5-minute default TTL.
+    /// </summary>
     private readonly CacheManager _cache;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CacheManagerTests"/> class.
+    /// </summary>
     public CacheManagerTests()
     {
         _cache = new CacheManager(NullLogger<CacheManager>.Instance, new CacheManagerOptions
@@ -23,12 +33,18 @@ public sealed class CacheManagerTests : IDisposable
         });
     }
 
+    /// <summary>
+    /// Disposes the cache manager after test execution.
+    /// </summary>
     public void Dispose() => _cache.Dispose();
 
     // ─────────────────────────────────────────────────────────────────────
     // Set / TryGet
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that a value can be stored and retrieved from the cache using the same key.
+    /// </summary>
     [Fact]
     public void Set_AndTryGet_WithSameKey_ReturnsCachedValue()
     {
@@ -40,6 +56,9 @@ public sealed class CacheManagerTests : IDisposable
         value.Should().Be("value1");
     }
 
+    /// <summary>
+    /// Tests that attempting to retrieve a non-existent key returns false and null.
+    /// </summary>
     [Fact]
     public void TryGet_WithNonExistentKey_ReturnsFalse()
     {
@@ -49,6 +68,9 @@ public sealed class CacheManagerTests : IDisposable
         value.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that setting a value with an existing key overwrites the previous value.
+    /// </summary>
     [Fact]
     public void Set_OverwritesExistingKey()
     {
@@ -59,6 +81,9 @@ public sealed class CacheManagerTests : IDisposable
         value.Should().Be("updated");
     }
 
+    /// <summary>
+    /// Tests that setting a null value throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public void Set_WithNullValue_ThrowsArgumentNullException()
     {
@@ -66,6 +91,9 @@ public sealed class CacheManagerTests : IDisposable
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that setting a value with an empty key throws an ArgumentException.
+    /// </summary>
     [Fact]
     public void Set_WithEmptyKey_ThrowsArgumentException()
     {
@@ -77,6 +105,9 @@ public sealed class CacheManagerTests : IDisposable
     // TTL / Expiry
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that a cache entry expires after the specified TTL and can no longer be retrieved.
+    /// </summary>
     [Fact]
     public void TryGet_AfterExpiry_ReturnsFalse()
     {
@@ -88,6 +119,9 @@ public sealed class CacheManagerTests : IDisposable
         found.Should().BeFalse("entry should have expired");
     }
 
+    /// <summary>
+    /// Tests that Contains returns false for an entry that has expired.
+    /// </summary>
     [Fact]
     public void Contains_AfterExpiry_ReturnsFalse()
     {
@@ -97,6 +131,9 @@ public sealed class CacheManagerTests : IDisposable
         _cache.Contains("c-key").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that GetTimeToLive returns a positive duration for a fresh cache entry.
+    /// </summary>
     [Fact]
     public void GetTimeToLive_ForFreshEntry_ReturnsPositiveDuration()
     {
@@ -109,12 +146,18 @@ public sealed class CacheManagerTests : IDisposable
         ttl.Value.Should().BeLessThanOrEqualTo(TimeSpan.FromSeconds(10));
     }
 
+    /// <summary>
+    /// Tests that GetTimeToLive returns null for a missing key.
+    /// </summary>
     [Fact]
     public void GetTimeToLive_ForMissingKey_ReturnsNull()
     {
         _cache.GetTimeToLive("nonexistent").Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that GetTimeToLive returns null for an empty key.
+    /// </summary>
     [Fact]
     public void GetTimeToLive_ForEmptyKey_ReturnsNull()
     {
@@ -125,6 +168,9 @@ public sealed class CacheManagerTests : IDisposable
     // Contains / Remove
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that Contains returns true when checking for an existing key.
+    /// </summary>
     [Fact]
     public void Contains_WithExistingKey_ReturnsTrue()
     {
@@ -132,18 +178,27 @@ public sealed class CacheManagerTests : IDisposable
         _cache.Contains("present").Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that Contains returns false when checking for a missing key.
+    /// </summary>
     [Fact]
     public void Contains_WithMissingKey_ReturnsFalse()
     {
         _cache.Contains("absent").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that Contains returns false when checking for an empty key.
+    /// </summary>
     [Fact]
     public void Contains_WithEmptyKey_ReturnsFalse()
     {
         _cache.Contains(string.Empty).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that Remove successfully removes an existing key and returns true.
+    /// </summary>
     [Fact]
     public void Remove_ExistingKey_ReturnsTrueAndKeyIsGone()
     {
@@ -155,12 +210,18 @@ public sealed class CacheManagerTests : IDisposable
         _cache.Contains("remove-me").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that Remove returns false when attempting to remove a non-existent key.
+    /// </summary>
     [Fact]
     public void Remove_NonExistentKey_ReturnsFalse()
     {
         _cache.Remove("ghost").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that Remove returns false when attempting to remove with an empty key.
+    /// </summary>
     [Fact]
     public void Remove_WithEmptyKey_ReturnsFalse()
     {
@@ -171,6 +232,9 @@ public sealed class CacheManagerTests : IDisposable
     // Clear
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that Clear removes all entries from the cache.
+    /// </summary>
     [Fact]
     public void Clear_RemovesAllEntries()
     {
@@ -189,6 +253,9 @@ public sealed class CacheManagerTests : IDisposable
     // RemovePattern
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that RemovePattern removes all entries matching the specified pattern.
+    /// </summary>
     [Fact]
     public void RemovePattern_WithMatchingPrefix_RemovesMatchingEntries()
     {
@@ -204,6 +271,9 @@ public sealed class CacheManagerTests : IDisposable
         _cache.Contains("product:1").Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that RemovePattern returns 0 and does not remove any entries when no matches are found.
+    /// </summary>
     [Fact]
     public void RemovePattern_WithNoMatch_ReturnsZero()
     {
@@ -219,6 +289,10 @@ public sealed class CacheManagerTests : IDisposable
     // GetOrSet / GetOrSetAsync
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that GetOrSet calls the factory function when the key is missing,
+    /// caches the result, and returns the cached value on subsequent calls.
+    /// </summary>
     [Fact]
     public void GetOrSet_WithMissingKey_CallsFactoryAndCachesResult()
     {
@@ -242,6 +316,10 @@ public sealed class CacheManagerTests : IDisposable
         callCount.Should().Be(1);
     }
 
+    /// <summary>
+    /// Tests that GetOrSetAsync calls the async factory function when the key is missing,
+    /// caches the result, and returns the cached value on subsequent calls.
+    /// </summary>
     [Fact]
     public async Task GetOrSetAsync_WithMissingKey_CallsFactoryAndCachesResult()
     {
@@ -269,6 +347,10 @@ public sealed class CacheManagerTests : IDisposable
     // SetExpiration
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that SetExpiration updates the expiration time for an existing key
+    /// and the entry eventually expires based on the new TTL.
+    /// </summary>
     [Fact]
     public void SetExpiration_ForExistingKey_UpdatesExpiryAndEntryEventuallyExpires()
     {
@@ -281,12 +363,18 @@ public sealed class CacheManagerTests : IDisposable
         _cache.Contains("exp-key").Should().BeFalse("expiration was shortened to 50 ms");
     }
 
+    /// <summary>
+    /// Tests that SetExpiration returns false when attempting to update expiration for a missing key.
+    /// </summary>
     [Fact]
     public void SetExpiration_ForMissingKey_ReturnsFalse()
     {
         _cache.SetExpiration("nonexistent", TimeSpan.FromSeconds(10)).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that SetExpiration returns false when attempting to update expiration with an empty key.
+    /// </summary>
     [Fact]
     public void SetExpiration_WithEmptyKey_ReturnsFalse()
     {
@@ -297,6 +385,9 @@ public sealed class CacheManagerTests : IDisposable
     // GetStatistics
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that GetStatistics returns the correct counts after multiple cache operations.
+    /// </summary>
     [Fact]
     public void GetStatistics_AfterMultipleHits_ReflectsCorrectCounts()
     {
@@ -311,6 +402,9 @@ public sealed class CacheManagerTests : IDisposable
         stats.TotalHits.Should().BeGreaterThanOrEqualTo(2);
     }
 
+    /// <summary>
+    /// Tests that GetStatistics returns zero counts for an empty cache.
+    /// </summary>
     [Fact]
     public void GetStatistics_OnEmptyCache_ReturnsZeroEntries()
     {
