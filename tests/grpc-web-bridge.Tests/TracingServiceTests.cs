@@ -16,6 +16,12 @@ namespace GrpcWebBridge.Tests;
 
 public sealed class TracingServiceTests : IDisposable
 {
+/// <summary>
+/// Contains unit tests for the <see cref="TracingService"/> class.
+/// Tests verify the tracing functionality for gRPC calls, protocol translation,
+/// authentication, and error handling within the gRPC web bridge.
+/// </summary>
+
     private readonly TracerProvider _tracerProvider;
     private readonly List<Activity> _exported = [];
     private readonly TracingService _sut;
@@ -30,19 +36,28 @@ public sealed class TracingServiceTests : IDisposable
         _sut = new TracingService(NullLogger<TracingService>.Instance, "test-instance");
     }
 
-    public void Dispose() => _tracerProvider.Dispose();
+    	/// <summary>
+	/// Disposes the tracer provider and cleans up resources.
+	/// </summary>
+	public void Dispose() => _tracerProvider.Dispose();
 
     // ─────────────────────────────────────────────────────────────────────
     // BridgeActivitySource constants
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
+	/// <summary>
+	/// Tests that the <see cref="BridgeActivitySource.Name"/> constant has the expected value.
+	/// </summary>
     public void BridgeActivitySource_Name_IsGrpcWebBridge()
     {
         BridgeActivitySource.Name.Should().Be("GrpcWebBridge");
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that the <see cref="BridgeActivitySource.Source"/> has the expected name.
+	/// </summary>
     public void BridgeActivitySource_Source_HasExpectedName()
     {
         BridgeActivitySource.Source.Name.Should().Be("GrpcWebBridge");
@@ -53,6 +68,9 @@ public sealed class TracingServiceTests : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
+	/// <summary>
+	/// Tests that the constructor throws when passed a null logger.
+	/// </summary>
     public void Constructor_WithNullLogger_Throws()
     {
         Action act = () => _ = new TracingService(null!);
@@ -62,6 +80,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that the constructor creates an instance when passed a valid logger.
+	/// </summary>
     public void Constructor_WithValidLogger_CreatesInstance()
     {
         var svc = new TracingService(NullLogger<TracingService>.Instance);
@@ -73,6 +94,9 @@ public sealed class TracingServiceTests : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartGrpcCallActivity"/> returns a non-null activity when the listener is active.
+	/// </summary>
     public void StartGrpcCallActivity_WhenListenerActive_ReturnsNonNullActivity()
     {
         using var activity = _sut.StartGrpcCallActivity("UserService", "GetUser");
@@ -81,6 +105,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartGrpcCallActivity"/> sets the RPC service tag correctly.
+	/// </summary>
     public void StartGrpcCallActivity_SetsRpcServiceTag()
     {
         using var activity = _sut.StartGrpcCallActivity("OrderService", "CreateOrder");
@@ -90,6 +117,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartGrpcCallActivity"/> sets the RPC method tag correctly.
+	/// </summary>
     public void StartGrpcCallActivity_SetsRpcMethodTag()
     {
         using var activity = _sut.StartGrpcCallActivity("OrderService", "CreateOrder");
@@ -98,6 +128,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartGrpcCallActivity"/> sets the RPC system tag to "grpc".
+	/// </summary>
     public void StartGrpcCallActivity_SetsRpcSystemToGrpc()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method");
@@ -106,6 +139,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartGrpcCallActivity"/> sets the instance tag correctly.
+	/// </summary>
     public void StartGrpcCallActivity_SetsInstanceTag()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method");
@@ -114,6 +150,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartGrpcCallActivity"/> sets the activity kind to Client for unary calls.
+	/// </summary>
     public void StartGrpcCallActivity_UnaryCall_HasClientKind()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method", isStreaming: false);
@@ -122,6 +161,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartGrpcCallActivity"/> sets the streaming tag to true for streaming calls.
+	/// </summary>
     public void StartGrpcCallActivity_StreamingCall_SetsStreamingTag()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Stream", isStreaming: true);
@@ -130,6 +172,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartGrpcCallActivity"/> sets the streaming tag to false for unary calls.
+	/// </summary>
     public void StartGrpcCallActivity_UnaryCall_SetsStreamingTagFalse()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method", isStreaming: false);
@@ -142,6 +187,9 @@ public sealed class TracingServiceTests : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartProtocolTranslationActivity"/> returns a non-null activity.
+	/// </summary>
     public void StartProtocolTranslationActivity_ReturnsNonNullActivity()
     {
         using var activity = _sut.StartProtocolTranslationActivity("grpc-web", "grpc");
@@ -150,6 +198,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartProtocolTranslationActivity"/> sets the source protocol tag correctly.
+	/// </summary>
     public void StartProtocolTranslationActivity_SetsSourceProtocolTag()
     {
         using var activity = _sut.StartProtocolTranslationActivity("grpc-web", "grpc");
@@ -158,6 +209,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartProtocolTranslationActivity"/> sets the target protocol tag correctly.
+	/// </summary>
     public void StartProtocolTranslationActivity_SetsTargetProtocolTag()
     {
         using var activity = _sut.StartProtocolTranslationActivity("grpc-web", "grpc");
@@ -170,6 +224,9 @@ public sealed class TracingServiceTests : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartAuthenticationActivity"/> returns a non-null activity.
+	/// </summary>
     public void StartAuthenticationActivity_ReturnsNonNullActivity()
     {
         using var activity = _sut.StartAuthenticationActivity("Bearer");
@@ -178,6 +235,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.StartAuthenticationActivity"/> sets the scheme tag correctly.
+	/// </summary>
     public void StartAuthenticationActivity_SetsSchemeTag()
     {
         using var activity = _sut.StartAuthenticationActivity("ApiKey");
@@ -190,6 +250,9 @@ public sealed class TracingServiceTests : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.SetGrpcStatus"/> sets the activity status to Ok when the status is "OK".
+	/// </summary>
     public void SetGrpcStatus_WithOkStatus_SetsOkStatusCode()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method");
@@ -199,6 +262,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.SetGrpcStatus"/> sets the activity status to Error when the status is an error code.
+	/// </summary>
     public void SetGrpcStatus_WithErrorStatus_SetsErrorStatusCode()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method");
@@ -208,6 +274,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.SetGrpcStatus"/> sets the gRPC status tag correctly.
+	/// </summary>
     public void SetGrpcStatus_WithNonOkStatus_SetsGrpcStatusTag()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method");
@@ -217,6 +286,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.SetGrpcStatus"/> does not throw when passed a null activity.
+	/// </summary>
     public void SetGrpcStatus_WhenActivityIsNull_DoesNotThrow()
     {
         Action act = () => TracingService.SetGrpcStatus(null, "OK");
@@ -229,6 +301,9 @@ public sealed class TracingServiceTests : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.RecordException"/> does not throw when passed a null activity.
+	/// </summary>
     public void RecordException_WhenActivityIsNull_DoesNotThrow()
     {
         Action act = () => TracingService.RecordException(null, new InvalidOperationException("test"));
@@ -237,6 +312,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.RecordException"/> sets the activity status to Error.
+	/// </summary>
     public void RecordException_SetsErrorStatus()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method");
@@ -246,6 +324,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that <see cref="TracingService.RecordException"/> sets the gRPC status tag when provided.
+	/// </summary>
     public void RecordException_WithGrpcStatus_SetsStatusTag()
     {
         using var activity = _sut.StartGrpcCallActivity("Svc", "Method");
@@ -259,6 +340,9 @@ public sealed class TracingServiceTests : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
+	/// <summary>
+	/// Tests that completed gRPC call activities are exported to the tracer provider.
+	/// </summary>
     public void StartGrpcCallActivity_CompletedSpan_IsExported()
     {
         using (var activity = _sut.StartGrpcCallActivity("UserService", "GetUser"))
@@ -271,6 +355,9 @@ public sealed class TracingServiceTests : IDisposable
     }
 
     [Fact]
+	/// <summary>
+	/// Tests that completed protocol translation activities are exported to the tracer provider.
+	/// </summary>
     public void StartProtocolTranslationActivity_CompletedSpan_IsExported()
     {
         using (_sut.StartProtocolTranslationActivity("grpc-web", "grpc")) { }
