@@ -16,17 +16,31 @@ using System.Threading.Tasks;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Tests for the ServiceRepository class.
+/// </summary>
 public sealed class ServiceRepositoryTests
 {
     private readonly ILogger<ServiceRepository> _logger;
     private readonly ServiceRepository _repository;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ServiceRepositoryTests"/> class.
+    /// </summary>
     public ServiceRepositoryTests()
     {
         _logger = Substitute.For<ILogger<ServiceRepository>>();
         _repository = new ServiceRepository(_logger);
     }
 
+    /// <summary>
+    /// Creates a valid GrpcService instance with the specified name, package name, endpoint, and port.
+    /// </summary>
+    /// <param name="name">The name of the service.</param>
+    /// <param name="packageName">The package name of the service.</param>
+    /// <param name="endpoint">The endpoint of the service.</param>
+    /// <param name="port">The port of the service.</param>
+    /// <returns>A valid GrpcService instance.</returns>
     private GrpcService CreateValidGrpcService(string name, string packageName, string endpoint, int port)
     {
         var service = new GrpcService(name, packageName, endpoint, port);
@@ -34,6 +48,10 @@ public sealed class ServiceRepositoryTests
         return service;
     }
 
+    /// <summary>
+    /// Tests that adding a new service returns true and stores the service.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task AddAsync_WithNewService_ReturnsTrueAndStoresService()
     {
@@ -51,6 +69,10 @@ public sealed class ServiceRepositoryTests
         retrieved.Name.Should().Be("TestService");
     }
 
+    /// <summary>
+    /// Tests that adding a service with a duplicate ID returns false.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task AddAsync_WithDuplicateServiceId_ReturnsFalse()
     {
@@ -68,6 +90,10 @@ public sealed class ServiceRepositoryTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that getting a service by full name returns the service.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task GetByFullNameAsync_WithExistingService_ReturnsService()
     {
@@ -83,6 +109,10 @@ public sealed class ServiceRepositoryTests
         result!.Id.Should().Be(service.Id);
     }
 
+    /// <summary>
+    /// Tests that deleting a service returns true and removes the service.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task DeleteAsync_WithExistingService_ReturnsTrueAndRemoves()
     {
@@ -99,6 +129,10 @@ public sealed class ServiceRepositoryTests
         getResult.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that counting services returns the correct count.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task CountAsync_ReturnsCorrectCount()
     {
@@ -113,6 +147,10 @@ public sealed class ServiceRepositoryTests
         count.Should().Be(2);
     }
 
+    /// <summary>
+    /// Tests that updating a service returns true and updates the service.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task UpdateAsync_WithExistingService_UpdatesAndReturnsTrue()
     {
@@ -135,6 +173,10 @@ public sealed class ServiceRepositoryTests
         updated.UpdatedAt.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Tests that checking if a service exists by full name returns false for a non-existent service.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task ExistsAsync_WithNonExistentFullName_ReturnsFalse()
     {
@@ -145,6 +187,10 @@ public sealed class ServiceRepositoryTests
         exists.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that adding a request returns true.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task AddRequestAsync_WithValidRequest_ReturnsTrue()
     {
@@ -161,6 +207,10 @@ public sealed class ServiceRepositoryTests
         stored!.ServiceName.Should().Be("TestService");
     }
 
+    /// <summary>
+    /// Tests that getting a service by ID returns null for a non-existent ID.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task GetByIdAsync_WithNonExistentId_ReturnsNull()
     {
@@ -171,6 +221,10 @@ public sealed class ServiceRepositoryTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that getting services by package returns the services for the specified package.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     [Fact]
     public async Task GetByPackageAsync_ReturnsServicesForPackage()
     {
