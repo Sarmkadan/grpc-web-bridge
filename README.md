@@ -343,6 +343,48 @@ docker run -d -p 8080:8080 \
 See `docker-compose.yml` for a complete configuration example.
 
 
+## StreamProcessingBenchmarks
+
+The `StreamProcessingBenchmarks` class provides performance benchmarks for stream processing operations in the gRPC-Web Bridge, including reading streams to end, chunked copying, and base64 conversion. It uses BenchmarkDotNet to measure execution time and memory allocation for various stream sizes.
+
+Example usage:
+
+```csharp
+// Create a benchmark instance
+var benchmarks = new StreamProcessingBenchmarks();
+
+// Setup the benchmark (required before running benchmarks)
+benchmarks.Setup();
+
+// Benchmark reading a 1KB stream to end
+byte[] stream1KB = await benchmarks.ReadStreamToEnd_1KB();
+Console.WriteLine($"Read 1KB stream: {stream1KB.Length} bytes");
+
+// Benchmark reading a 64KB stream to end
+byte[] stream64KB = await benchmarks.ReadStreamToEnd_64KB();
+Console.WriteLine($"Read 64KB stream: {stream64KB.Length} bytes");
+
+// Benchmark reading a 1MB stream to end
+byte[] stream1MB = await benchmarks.ReadStreamToEnd_1MB();
+Console.WriteLine($"Read 1MB stream: {stream1MB.Length} bytes");
+
+// Benchmark chunked copying of a 1KB stream
+await benchmarks.CopyStreamChunked_1KB();
+Console.WriteLine("Completed chunked copy of 1KB stream");
+
+// Benchmark chunked copying of a 64KB stream
+await benchmarks.CopyStreamChunked_64KB();
+Console.WriteLine("Completed chunked copy of 64KB stream");
+
+// Benchmark chunked copying of a 1MB stream
+await benchmarks.CopyStreamChunked_1MB();
+Console.WriteLine("Completed chunked copy of 1MB stream");
+
+// Benchmark converting a 1KB stream to base64
+string base64String = await benchmarks.StreamToBase64_1KB();
+Console.WriteLine($"Base64 encoded 1KB stream: {base64String.Length} characters");
+```
+
 ## Performance Benchmarks
 
 The repository includes a benchmark suite built with [BenchmarkDotNet](https://benchmarkdotnet.org/) to monitor the performance of critical components such as authentication, protocol translation, stream processing, and JSON utilities.
