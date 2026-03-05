@@ -10,6 +10,9 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Tests for the <see cref="ConfigurationController"/>.
+/// </summary>
 public sealed class ConfigurationControllerTests
 {
     private static ServiceRegistry CreateRegistry()
@@ -26,6 +29,10 @@ public sealed class ConfigurationControllerTests
             NullLogger<ConfigurationController>.Instance);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ConfigurationController.GetConfiguration"/> returns an
+    /// <see cref="OkObjectResult"/> with status code 200.
+    /// </summary>
     [Fact]
     public void GetConfiguration_ReturnsOk()
     {
@@ -37,6 +44,11 @@ public sealed class ConfigurationControllerTests
             .Which.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
 
+    /// <summary>
+    /// Verifies that the configuration returned by
+    /// <see cref="ConfigurationController.GetConfiguration"/> contains the expected
+    /// properties, specifically the <c>Environment</c> property.
+    /// </summary>
     [Fact]
     public void GetConfiguration_ContainsExpectedProperties()
     {
@@ -57,6 +69,10 @@ public sealed class ConfigurationControllerTests
         envProperty!.GetValue(data).Should().Be("Testing");
     }
 
+    /// <summary>
+    /// Verifies that updating the configuration with valid settings returns an
+    /// <see cref="OkObjectResult"/> with status code 200.
+    /// </summary>
     [Fact]
     public void UpdateConfiguration_WithValidSettings_ReturnsOk()
     {
@@ -76,6 +92,10 @@ public sealed class ConfigurationControllerTests
             .Which.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
 
+    /// <summary>
+    /// Verifies that updating the configuration with no settings returns a
+    /// <see cref="BadRequestObjectResult"/>.
+    /// </summary>
     [Fact]
     public void UpdateConfiguration_WithNoSettings_ReturnsBadRequest()
     {
