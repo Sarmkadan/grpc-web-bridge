@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using FluentAssertions;
 using GrpcWebBridge.Utilities;
@@ -10,12 +10,19 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Provides unit tests for the <see cref="JsonUtility"/> class, which offers JSON serialization,
+/// deserialization, merging, and validation utilities for gRPC web bridge operations.
+/// </summary>
 public sealed class JsonUtilityTests
 {
     // ─────────────────────────────────────────────────────────────────────
     // Serialize
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.Serialize"/> converts an anonymous object to camelCase JSON string.
+    /// </summary>
     [Fact]
     public void Serialize_WithSimpleObject_ReturnsCamelCaseJson()
     {
@@ -29,6 +36,9 @@ public sealed class JsonUtilityTests
         json.Should().Contain("\"John\"");
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.Serialize"/> returns "null" literal when serializing a null object.
+    /// </summary>
     [Fact]
     public void Serialize_WithNullObject_ReturnsNullLiteral()
     {
@@ -37,6 +47,9 @@ public sealed class JsonUtilityTests
         json.Should().Be("null");
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.Serialize"/> with indented parameter returns formatted JSON with newlines.
+    /// </summary>
     [Fact]
     public void Serialize_WithIndented_ReturnsFormattedJson()
     {
@@ -45,6 +58,9 @@ public sealed class JsonUtilityTests
         json.Should().Contain("\n");
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.Serialize"/> omits null properties from the resulting JSON string.
+    /// </summary>
     [Fact]
     public void Serialize_WithNullProperty_OmitsNullProperty()
     {
@@ -57,6 +73,9 @@ public sealed class JsonUtilityTests
     // Deserialize
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.Deserialize{T}"/> successfully deserializes valid JSON into the specified type.
+    /// </summary>
     [Fact]
     public void Deserialize_WithValidJson_ReturnsMappedObject()
     {
@@ -69,6 +88,9 @@ public sealed class JsonUtilityTests
         result.Score.Should().Be(99);
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.Deserialize{T}"/> returns null when deserializing whitespace or empty string.
+    /// </summary>
     [Fact]
     public void Deserialize_WithNullWhitespace_ReturnsDefault()
     {
@@ -76,6 +98,9 @@ public sealed class JsonUtilityTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.Deserialize{T}"/> throws <see cref="InvalidOperationException"/> when provided with invalid JSON.
+    /// </summary>
     [Fact]
     public void Deserialize_WithInvalidJson_ThrowsInvalidOperationException()
     {
@@ -87,6 +112,9 @@ public sealed class JsonUtilityTests
     // TryDeserialize
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.TryDeserialize{T}"/> successfully deserializes valid JSON and returns true with the result.
+    /// </summary>
     [Fact]
     public void TryDeserialize_WithValidJson_ReturnsTrueAndResult()
     {
@@ -98,6 +126,9 @@ public sealed class JsonUtilityTests
         result!.Name.Should().Be("Bob");
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.TryDeserialize{T}"/> returns false with an error message when provided with invalid JSON.
+    /// </summary>
     [Fact]
     public void TryDeserialize_WithInvalidJson_ReturnsFalseWithError()
     {
@@ -109,6 +140,9 @@ public sealed class JsonUtilityTests
         error.Should().NotBeNullOrEmpty();
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.TryDeserialize{T}"/> returns false when provided with an empty string.
+    /// </summary>
     [Fact]
     public void TryDeserialize_WithEmptyString_ReturnsFalse()
     {
@@ -123,6 +157,9 @@ public sealed class JsonUtilityTests
     // MergeJson
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.MergeJson"/> merges two JSON strings, with source properties overriding target properties.
+    /// </summary>
     [Fact]
     public void MergeJson_SourceOverridesTargetProperty()
     {
@@ -138,6 +175,9 @@ public sealed class JsonUtilityTests
         dict.Should().ContainKey("c");
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.MergeJson"/> returns the target JSON unchanged when the source is an empty object.
+    /// </summary>
     [Fact]
     public void MergeJson_WithEmptySource_ReturnsTarget()
     {
@@ -152,6 +192,9 @@ public sealed class JsonUtilityTests
     // GetPropertyValue
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.GetPropertyValue"/> retrieves a property value from JSON using a simple property path.
+    /// </summary>
     [Fact]
     public void GetPropertyValue_WithSimplePath_ReturnsValue()
     {
@@ -162,6 +205,9 @@ public sealed class JsonUtilityTests
         value!.ToString().Should().Contain("test");
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.GetPropertyValue"/> returns null when the specified property key does not exist in the JSON.
+    /// </summary>
     [Fact]
     public void GetPropertyValue_WithMissingKey_ReturnsNull()
     {
@@ -169,6 +215,9 @@ public sealed class JsonUtilityTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.GetPropertyValue"/> retrieves a nested property value from JSON using a dot-separated path.
+    /// </summary>
     [Fact]
     public void GetPropertyValue_WithNestedPath_ReturnsNestedValue()
     {
@@ -183,6 +232,9 @@ public sealed class JsonUtilityTests
     // ValidateRequired
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.ValidateRequired"/> returns true when all specified required properties are present in the JSON.
+    /// </summary>
     [Fact]
     public void ValidateRequired_WithAllRequiredPresent_ReturnsTrue()
     {
@@ -191,6 +243,9 @@ public sealed class JsonUtilityTests
         valid.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.ValidateRequired"/> returns false when any of the specified required properties are missing from the JSON.
+    /// </summary>
     [Fact]
     public void ValidateRequired_WithMissingRequiredProperty_ReturnsFalse()
     {
@@ -199,6 +254,9 @@ public sealed class JsonUtilityTests
         valid.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.ValidateRequired"/> returns false when the JSON string is null, empty, or whitespace.
+    /// </summary>
     [Fact]
     public void ValidateRequired_WithNullOrEmptyJson_ReturnsFalse()
     {
@@ -210,6 +268,9 @@ public sealed class JsonUtilityTests
     // DeserializeToDictionary
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.DeserializeToDictionary"/> successfully deserializes valid JSON into a dictionary.
+    /// </summary>
     [Fact]
     public void DeserializeToDictionary_WithValidJson_ReturnsDict()
     {
@@ -221,10 +282,13 @@ public sealed class JsonUtilityTests
         dict.Should().ContainKey("y");
     }
 
+    /// <summary>
+    /// Tests that <see cref="JsonUtility.DeserializeToDictionary"/> returns null when deserializing whitespace or empty JSON.
+    /// </summary>
     [Fact]
     public void DeserializeToDictionary_WithEmptyJson_ReturnsNull()
     {
-        var dict = JsonUtility.DeserializeToDictionary("  ");
+        var dict = JsonUtility.DeserializeToDictionary(" ");
         dict.Should().BeNull();
     }
 
