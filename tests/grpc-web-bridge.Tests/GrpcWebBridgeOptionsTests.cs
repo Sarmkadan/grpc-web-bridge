@@ -10,8 +10,14 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Test suite for the <see cref="GrpcWebBridgeOptions"/> configuration builder.
+/// </summary>
 public sealed class GrpcWebBridgeOptionsTests
 {
+    /// <summary>
+    /// Verifies that the constructor correctly assigns the provided environment string.
+    /// </summary>
     [Fact]
     public void Constructor_WithEnvironment_SetsEnvironment()
     {
@@ -22,6 +28,10 @@ public sealed class GrpcWebBridgeOptionsTests
         options.Configuration.Environment.Should().Be("Staging");
     }
 
+    /// <summary>
+    /// Ensures that calling <c>WithDevelopment</c> applies the development defaults
+    /// (environment, Swagger, logging, and allowed origins).
+    /// </summary>
     [Fact]
     public void WithDevelopment_SetsDevelopmentDefaults()
     {
@@ -38,6 +48,10 @@ public sealed class GrpcWebBridgeOptionsTests
         options.Configuration.AllowedOrigins.Should().Contain("*");
     }
 
+    /// <summary>
+    /// Ensures that calling <c>WithProduction</c> applies the production defaults
+    /// (environment, authentication, compression, and allowed origins).
+    /// </summary>
     [Fact]
     public void WithProduction_SetsProductionDefaults()
     {
@@ -54,6 +68,10 @@ public sealed class GrpcWebBridgeOptionsTests
         options.Configuration.AllowedOrigins.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Ensures that calling <c>WithTesting</c> applies the testing defaults
+    /// (environment, Swagger, metrics, and compression settings).
+    /// </summary>
     [Fact]
     public void WithTesting_SetsTestingDefaults()
     {
@@ -70,6 +88,10 @@ public sealed class GrpcWebBridgeOptionsTests
         options.Configuration.CompressResponses.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <c>WithMaxStreamCount</c> accepts a positive value and sets the
+    /// <see cref="GrpcWebBridgeOptions.Configuration.MaxStreamCount"/> property.
+    /// </summary>
     [Fact]
     public void WithMaxStreamCount_ValidValue_SetsCount()
     {
@@ -83,6 +105,10 @@ public sealed class GrpcWebBridgeOptionsTests
         options.Configuration.MaxStreamCount.Should().Be(500);
     }
 
+    /// <summary>
+    /// Verifies that <c>WithMaxStreamCount</c> throws an <see cref="ArgumentException"/>
+    /// when the supplied count is zero.
+    /// </summary>
     [Fact]
     public void WithMaxStreamCount_Zero_ThrowsArgumentException()
     {
@@ -96,6 +122,10 @@ public sealed class GrpcWebBridgeOptionsTests
         act.Should().Throw<ArgumentException>().WithParameterName("maxCount");
     }
 
+    /// <summary>
+    /// Verifies that <c>AddAllowedOrigins</c> correctly appends the provided origins
+    /// to the configuration's <see cref="GrpcWebBridgeOptions.Configuration.AllowedOrigins"/> collection.
+    /// </summary>
     [Fact]
     public void AddAllowedOrigins_WithValidOrigins_AddsToConfiguration()
     {
@@ -110,6 +140,10 @@ public sealed class GrpcWebBridgeOptionsTests
         options.Configuration.AllowedOrigins.Should().Contain("https://app.example.com");
     }
 
+    /// <summary>
+    /// Verifies that <c>WithCompression</c> enables compression and sets the
+    /// compression level when called with valid arguments.
+    /// </summary>
     [Fact]
     public void WithCompression_ValidLevel_EnablesCompression()
     {
