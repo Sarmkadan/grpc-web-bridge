@@ -358,6 +358,48 @@ dotnet run -c Release -- --filter "*"
 
 The benchmarks will run a series of tests and output a summary table, including execution time and memory allocation diagnostics.
 
+## AuthenticationBenchmarks
+
+The `AuthenticationBenchmarks` class provides performance benchmarks for authentication-related operations in the gRPC-Web Bridge, including JWT token extraction, context caching, and API key authentication. It uses BenchmarkDotNet to measure execution time and memory allocation for critical authentication paths.
+
+Example usage:
+
+```csharp
+// Create a benchmark instance
+var benchmarks = new AuthenticationBenchmarks();
+
+// Setup the benchmark (required before running benchmarks)
+benchmarks.Setup();
+
+// Benchmark extracting a valid Bearer token from a properly formatted header
+string? validToken = benchmarks.ExtractBearerToken_Valid();
+Console.WriteLine($"Extracted valid token: {validToken != null}");
+
+// Benchmark extracting a token from an invalid header (e.g., Basic auth)
+string? invalidToken = benchmarks.ExtractBearerToken_Invalid();
+Console.WriteLine($"Extracted from invalid header: {invalidToken}");
+
+// Benchmark extracting a token from a null header
+string? nullToken = benchmarks.ExtractBearerToken_Null();
+Console.WriteLine($"Extracted from null header: {nullToken}");
+
+// Benchmark retrieving a cached authentication context (cache hit scenario)
+AuthenticationContext? cachedContext = benchmarks.GetCachedContext_Hit();
+Console.WriteLine($"Retrieved cached context: {cachedContext != null}");
+
+// Benchmark retrieving a non-existent authentication context (cache miss scenario)
+AuthenticationContext? missingContext = benchmarks.GetCachedContext_Miss();
+Console.WriteLine($"Retrieved missing context: {missingContext}");
+
+// Benchmark authenticating with an API key
+AuthenticationContext apiKeyContext = benchmarks.AuthenticateApiKey();
+Console.WriteLine($"Authenticated with API key: {apiKeyContext.Id}");
+
+// Benchmark validating an authenticated context
+bool isValid = benchmarks.ValidateContext();
+Console.WriteLine($"Context validation result: {isValid}");
+```
+
 ## ProtocolTranslationBenchmarksExtensions
 
 The `ProtocolTranslationBenchmarksExtensions` class provides extension methods for the `ProtocolTranslationBenchmarks` class to simplify common benchmarking scenarios for gRPC protocol translation. It offers utilities for setting up test data, translating metadata, converting between protobuf and JSON formats, and creating test responses.
