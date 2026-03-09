@@ -52,6 +52,47 @@ These examples show:
 
 See the `examples/` directory for complete, runnable code snippets.
 
+## RequestContextManager
+
+The `RequestContextManager` class provides ambient request context management for tracking request-scoped data across async operations. It enables correlation logging, cross-cutting concerns, and request lifecycle tracking without explicit parameter passing. The manager uses `AsyncLocal` storage to maintain context per-request and automatically cleans up when requests complete.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddRequestContextManager();
+builder.Services.AddSingleton<RequestContextManager>();
+
+// In your ASP.NET Core middleware or controller
+var contextManager = app.Services.GetRequiredService<RequestContextManager>();
+
+// Create a request context at the start of a request
+var context = contextManager.CreateContext(
+    requestId: Guid.NewGuid().ToString(),
+    userId: "user-123",
+    metadata: new Dictionary<string, string> { { "correlation-id", Guid.NewGuid().ToString() } }
+);
+
+Console.WriteLine($"Created context: {context.RequestId}");
+
+// Access context properties
+string? requestId = contextManager.GetRequestId();
+string? userId = contextManager.GetUserId();
+
+// Store and retrieve metadata
+contextManager.SetMetadata("tracking-id", "track-456");
+string? trackingId = contextManager.GetMetadata("tracking-id");
+
+// Record completion time when request finishes
+contextManager.RecordElapsedTime();
+
+// Check if context is active
+bool isActive = contextManager.IsContextActive();
+
+// Clear context when done (typically in middleware's finally block)
+contextManager.Clear();
+```
+
 ## CorrelationIdManagerExtensions
 
 The `CorrelationIdManagerExtensions` class provides utilities for managing distributed tracing correlation IDs and tracking request lifecycles. It supports trace creation, status inspection, and cleanup of expired traces.
