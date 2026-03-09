@@ -299,6 +299,68 @@ string status = controller.GetStatusString();
 Console.WriteLine(status);
 ```
 
+## EventBus
+
+The `EventBus` class implements a publish-subscribe pattern for loose coupling between components in the gRPC-Web Bridge. It supports both synchronous and asynchronous event handling with comprehensive event history tracking and subscriber management.
+
+Example usage:
+
+```csharp
+// Create an event bus (typically injected via DI)
+var eventBus = new EventBus(logger);
+
+// Define a custom event by inheriting from EventBase
+public class UserCreatedEvent : EventBase
+{
+    public string UserId { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+}
+
+// Subscribe to events synchronously
+void HandleUserCreated(UserCreatedEvent @event)
+{
+    Console.WriteLine($"User created: {@event.Username} ({@event.Email})");
+}
+
+eventBus.Subscribe<UserCreatedEvent>(HandleUserCreated);
+
+// Subscribe to events asynchronously
+async Task HandleUserCreatedAsync(UserCreatedEvent @event)
+{
+    await Task.Delay(100); // Simulate async work
+    Console.WriteLine($"Async handling: User {@event.Username} created at {@event.CreatedAt}");
+}
+
+eventBus.Subscribe<UserCreatedEvent>(HandleUserCreatedAsync);
+
+// Publish an event
+var userEvent = new UserCreatedEvent
+{
+    UserId = Guid.NewGuid().ToString(),
+    Username = "johndoe",
+    Email = "john@example.com",
+    Source = "UserService"
+};
+
+await eventBus.PublishAsync(userEvent);
+
+// Check subscriber count
+int subscriberCount = eventBus.GetSubscriberCount<UserCreatedEvent>();
+Console.WriteLine($"Subscribers for UserCreatedEvent: {subscriberCount}");
+
+// Get event history for auditing
+var history = eventBus.GetEventHistory(typeof(UserCreatedEvent).Name);
+Console.WriteLine($"Event history count: {history.Count}");
+
+// Unsubscribe from events
+eventBus.Unsubscribe<UserCreatedEvent>(HandleUserCreated);
+eventBus.Unsubscribe<UserCreatedEvent>(HandleUserCreatedAsync);
+
+// Clear all subscribers (useful for testing)
+eventBus.ClearSubscribers();
+```
+
 ## Docker Support
 
 The gRPC-Web Bridge can be run in Docker containers for easy deployment and scaling.
