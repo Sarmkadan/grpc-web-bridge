@@ -619,9 +619,64 @@ if (alertSummary.recentAlerts.Count > 0)
 }
 ```
 
-## WebhookPublisherExtensions
+## WebhookPublisher
 
-The `WebhookPublisherExtensions` class provides extension methods for the `WebhookPublisher` class to simplify webhook management, event filtering, and subscription operations. It includes utilities for subscribing with event type filters, publishing events with timeout support, retrieving strongly-typed statistics, and finding subscriptions by URL.
+The `WebhookPublisher` class implements a webhook publisher that sends events to external HTTP endpoints. It supports subscribing to specific event types, custom HTTP headers, automatic retry on failure, and comprehensive statistics tracking. Events are processed asynchronously in the background for high throughput scenarios.
+
+Example usage:
+
+```csharp
+// Create a webhook publisher (typically registered via dependency injection)
+var webhookPublisher = new WebhookPublisher(logger, httpClientFactory);
+
+// Subscribe to specific event types with custom headers and retry enabled
+var subscriptionId = webhookPublisher.Subscribe(
+    webhookUrl: "https://external-service.example.com/api/webhooks",
+    eventTypes: ["UserCreatedEvent", "UserUpdatedEvent"],
+    headers: new Dictionary<string, string>
+    {
+        {"Authorization", "Bearer secret-token-123"},
+        {"X-Custom-Header", "custom-value"}
+    },
+    retryOnFailure: true
+);
+
+Console.WriteLine($"Created subscription: {subscriptionId}");
+
+// Subscribe to all events (empty array means all event types)
+var allEventsSubscriptionId = webhookPublisher.Subscribe(
+    webhookUrl: "https://monitoring.example.com/events",
+    eventTypes: []
+);
+
+// Publish an event to all matching subscriptions
+var userCreatedEvent = new UserCreatedEvent
+{
+    EventId = Guid.NewGuid().ToString(),
+    Username = "johndoe",
+    Email = "john@example.com",
+    CreatedAt = DateTime.UtcNow,
+    Source = "UserService"
+};
+
+await webhookPublisher.PublishEventAsync(userCreatedEvent);
+
+// Get all active subscriptions
+var activeSubscriptions = webhookPublisher.GetSubscriptions();
+Console.WriteLine($"Active subscriptions: {activeSubscriptions.Count}");
+
+// Get publishing statistics
+var statistics = webhookPublisher.GetStatistics();
+Console.WriteLine($"Total events sent: {statistics.totalEventsSent}");
+Console.WriteLine($"Total events failed: {statistics.totalEventsFailed}");
+
+// Unsubscribe when no longer needed
+bool unsubscribed = webhookPublisher.Unsubscribe(subscriptionId);
+Console.WriteLine($"Unsubscribed: {unsubscribed}");
+
+// Clean up when application shuts down
+webhookPublisher.Dispose();
+```
 
 ## GrpcConnectionManagerExtensions
 
