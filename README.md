@@ -442,6 +442,44 @@ bool isValid = benchmarks.ValidateContext();
 Console.WriteLine($"Context validation result: {isValid}");
 ```
 
+## ProtocolTranslationBenchmarks
+
+The `ProtocolTranslationBenchmarks` class provides performance benchmarks for protocol translation operations in the gRPC-Web Bridge, including metadata translation, protobuf-to-JSON conversion, and gRPC-to-HTTP response translation. It uses BenchmarkDotNet to measure execution time and memory allocation for various protocol translation scenarios.
+
+Example usage:
+
+```csharp
+// Create a benchmark instance
+var benchmarks = new ProtocolTranslationBenchmarks();
+
+// Setup the benchmark (required before running benchmarks)
+benchmarks.Setup();
+
+// Benchmark translating small metadata (5 headers)
+var smallMetadata = benchmarks.TranslateMetadata_Small();
+Console.WriteLine($"Translated small metadata: {smallMetadata.Count} headers");
+
+// Benchmark translating large metadata (50 headers)
+var largeMetadata = benchmarks.TranslateMetadata_Large();
+Console.WriteLine($"Translated large metadata: {largeMetadata.Count} headers");
+
+// Benchmark converting a 256-byte Protobuf payload to JSON
+var protobufPayload = benchmarks.ConvertProtobufToJson_256B();
+Console.WriteLine($"Converted Protobuf to JSON: {protobufPayload.Length} bytes");
+
+// Benchmark converting a base64-wrapped JSON payload back to Protobuf
+var base64JsonPayload = benchmarks.ConvertJsonToProtobuf_Base64();
+Console.WriteLine($"Converted JSON to Protobuf: {base64JsonPayload.Length} bytes");
+
+// Benchmark translating a Protobuf response to HTTP (passthrough)
+var protobufResponse = benchmarks.TranslateGrpcToHttp_Passthrough();
+Console.WriteLine($"Translated gRPC to HTTP (passthrough): {protobufResponse.Length} bytes");
+
+// Benchmark translating a Protobuf response to HTTP with JSON conversion
+var jsonResponse = benchmarks.TranslateGrpcToHttp_Convert();
+Console.WriteLine($"Translated gRPC to HTTP (converted): {jsonResponse.Length} bytes");
+```
+
 ## ProtocolTranslationBenchmarksExtensions
 
 The `ProtocolTranslationBenchmarksExtensions` class provides extension methods for the `ProtocolTranslationBenchmarks` class to simplify common benchmarking scenarios for gRPC protocol translation. It offers utilities for setting up test data, translating metadata, converting between protobuf and JSON formats, and creating test responses.
