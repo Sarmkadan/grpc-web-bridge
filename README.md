@@ -794,6 +794,50 @@ if (alertSummary.recentAlerts.Count > 0)
 }
 ```
 
+## StreamingException
+
+The `StreamingException` class represents exceptions thrown during streaming operations in the gRPC-Web Bridge. It provides detailed error information including stream identifiers, sequence numbers, and stream state tracking to enable comprehensive error handling and debugging for streaming scenarios.
+
+Example usage:
+
+```csharp
+// Create a streaming exception with a custom message
+var exception = new StreamingException("Failed to establish streaming connection");
+Console.WriteLine(exception.Message); // "Failed to establish streaming connection"
+Console.WriteLine(exception.ErrorCode); // "STREAMING_ERROR"
+
+// Create a streaming exception with stream ID and message
+var streamException = new StreamingException("stream-123", "Connection timeout occurred");
+Console.WriteLine(streamException.StreamId); // "stream-123"
+Console.WriteLine(streamException.Message); // "Stream 'stream-123' error: Connection timeout occurred"
+Console.WriteLine(streamException.ErrorCode); // "STREAM_FAILED"
+
+// Create a streaming exception with stream ID and sequence number
+var messageException = new StreamingException("stream-456", 42, "Invalid message format");
+Console.WriteLine(messageException.StreamId); // "stream-456"
+Console.WriteLine(messageException.SequenceNumber); // 42
+Console.WriteLine(messageException.Message); // "Stream 'stream-456' message 42 error: Invalid message format"
+Console.WriteLine(messageException.ErrorCode); // "STREAM_MESSAGE_ERROR"
+
+// Set stream state for additional context
+var exceptionWithState = new StreamingException("stream-789", "Processing failed");
+exceptionWithState.SetStreamState(StreamState.Failed);
+Console.WriteLine(exceptionWithState.LastStreamState); // StreamState.Failed
+
+// Custom exception with inner exception
+try
+{
+    await SomeStreamingOperationAsync();
+}
+catch (Exception ex)
+{
+    var streamingEx = new StreamingException("stream-999", "Stream processing error", ex);
+    streamingEx.SetStreamState(StreamState.Processing);
+    Console.WriteLine(streamingEx.ToString());
+    // Output includes: Stream: stream-999 | State: Processing | ...
+}
+```
+
 ## ServiceExtensions
 
 The `ServiceExtensions` class provides extension methods for service registration, validation, and health monitoring in the gRPC-Web Bridge. It includes utilities for safely registering services and methods, converting exceptions to gRPC responses, checking service health, and generating human-readable status messages.
