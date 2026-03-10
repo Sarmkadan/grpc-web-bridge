@@ -794,6 +794,80 @@ if (alertSummary.recentAlerts.Count > 0)
 }
 ```
 
+## ServiceExtensions
+
+The `ServiceExtensions` class provides extension methods for service registration, validation, and health monitoring in the gRPC-Web Bridge. It includes utilities for safely registering services and methods, converting exceptions to gRPC responses, checking service health, and generating human-readable status messages.
+
+Example usage:
+
+```csharp
+// Create a service repository and service instance
+var serviceRepository = new ServiceRepository();
+var service = new GrpcService(
+    name: "UserService",
+    host: "localhost",
+    port: 50051,
+    serviceType: ServiceType.Grpc
+);
+
+// Safely register the service (returns true on success, false on failure)
+bool registrationSuccess = await serviceRepository.TryRegisterServiceAsync(service);
+Console.WriteLine($"Service registration: {(registrationSuccess ? "SUCCESS" : "FAILED")}");
+
+// Add a method to the service
+var method = new GrpcMethod(
+    name: "GetUser",
+    methodType: MethodType.Unary,
+    inputType: "UserRequest",
+    outputType: "UserResponse"
+);
+
+bool methodAdded = service.TryAddMethod(method);
+Console.WriteLine($"Method added: {(methodAdded ? "SUCCESS" : "FAILED")}");
+
+// Create a protocol translation service for error handling
+var translationService = new ProtocolTranslationService();
+
+// Convert an exception to a gRPC response
+try
+{
+    // Some operation that might fail
+    var result = await SomeRiskyOperationAsync();
+}
+catch (Exception ex)
+{
+    var requestId = Guid.NewGuid().ToString();
+    var grpcResponse = ex.ToGrpcResponse(requestId, translationService);
+    Console.WriteLine($"Error response created: {grpcResponse.StatusCode}");
+}
+
+// Get human-readable status messages
+string okMessage = GrpcStatusCode.Ok.GetStatusMessage();
+string notFoundMessage = GrpcStatusCode.NotFound.GetStatusMessage();
+Console.WriteLine($"Status messages: OK={okMessage}, NotFound={notFoundMessage}");
+
+// Check if a status code represents an error
+bool isError = GrpcStatusCode.Internal.IsError();
+Console.WriteLine($"Is Internal error: {isError}");
+
+// Convert gRPC status codes to HTTP status codes
+int httpStatus = GrpcStatusCode.NotFound.ToHttpStatusCode();
+Console.WriteLine($"HTTP status for NotFound: {httpStatus}");
+
+// Get service health summary
+var registry = new ServiceRegistry();
+var streaming = new StreamingService();
+var healthSummary = registry.GetHealthSummary(streaming);
+Console.WriteLine($"Health: {healthSummary.TotalServices} total, {healthSummary.HealthyServices} healthy, {healthSummary.UnhealthyServices} unhealthy");
+Console.WriteLine($"Health percentage: {healthSummary.HealthPercentage:F1}%");
+Console.WriteLine($"Active streams: {healthSummary.ActiveStreams}");
+
+// Convert method types to descriptions
+string unaryDescription = MethodType.Unary.ToDescription();
+string streamingDescription = MethodType.ServerStreaming.ToDescription();
+Console.WriteLine($"Method descriptions: Unary={unaryDescription}, ServerStreaming={streamingDescription}");
+```
+
 ## WebhookPublisher
 
 The `WebhookPublisher` class implements a webhook publisher that sends events to external HTTP endpoints. It supports subscribing to specific event types, custom HTTP headers, automatic retry on failure, and comprehensive statistics tracking. Events are processed asynchronously in the background for high throughput scenarios.
