@@ -942,6 +942,33 @@ string streamingDescription = MethodType.ServerStreaming.ToDescription();
 Console.WriteLine($"Method descriptions: Unary={unaryDescription}, ServerStreaming={streamingDescription}");
 ```
 
+## ValidationException
+
+The `ValidationException` class represents exceptions thrown when input data validation fails in the gRPC-Web Bridge. It provides detailed error information including the invalid field name, the invalid value, and the validation rule that failed, enabling precise error handling and client feedback.
+
+Example usage:
+
+```csharp
+// Create a validation exception with field name, invalid value, and validation rule
+var validationException = new ValidationException(
+    fieldName: "email",
+    invalidValue: "invalid-email",
+    validationRule: "email_format",
+    message: "Email address format is invalid"
+);
+
+// Access exception properties for detailed error reporting
+Console.WriteLine(validationException.Message); // "Validation failed for 'email': Email address format is invalid (Value: invalid-email, Rule: email_format)"
+Console.WriteLine(validationException.FieldName); // "email"
+Console.WriteLine(validationException.InvalidValue); // "invalid-email"
+Console.WriteLine(validationException.ValidationRule); // "email_format"
+Console.WriteLine(validationException.ToString()); // Includes all context
+
+// Create a simple validation exception with custom message
+var simpleException = new ValidationException("Username is required");
+Console.WriteLine(simpleException.ErrorCode); // "VALIDATION_ERROR"
+```
+
 ## WebhookPublisher
 
 The `WebhookPublisher` class implements a webhook publisher that sends events to external HTTP endpoints. It supports subscribing to specific event types, custom HTTP headers, automatic retry on failure, and comprehensive statistics tracking. Events are processed asynchronously in the background for high throughput scenarios.
