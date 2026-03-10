@@ -1057,6 +1057,54 @@ Console.WriteLine($"Unsubscribed: {unsubscribed}");
 webhookPublisher.Dispose();
 ```
 
+## GrpcWebBridgeException
+
+The `GrpcWebBridgeException` class serves as the base exception type for all gRPC-Web bridge operations. It provides structured error handling with support for gRPC status codes, custom error codes, and contextual metadata that enables detailed error reporting and debugging across the bridge's protocol translation and service routing layers.
+
+Example usage:
+
+```csharp
+// Create a basic bridge exception with a custom error code
+var exception = new GrpcWebBridgeException(
+    "Failed to establish connection to downstream service",
+    "DOWNSTREAM_CONNECTION_FAILED"
+);
+
+// Access exception properties
+Console.WriteLine(exception.ErrorCode); // "DOWNSTREAM_CONNECTION_FAILED"
+Console.WriteLine(exception.Message); // "Failed to establish connection to downstream service"
+
+// Add contextual metadata for debugging
+var requestId = Guid.NewGuid().ToString();
+exception.AddContext("requestId", requestId);
+exception.AddContext("serviceName", "UserService");
+exception.AddContext("attempt", 3);
+
+// Create a bridge exception with gRPC status code
+var grpcException = new GrpcWebBridgeException(
+    "Invalid request format received",
+    GrpcStatusCode.InvalidArgument
+);
+Console.WriteLine(grpcException.GrpcStatus); // GrpcStatusCode.InvalidArgument
+
+// Chain operations using fluent API
+var finalException = new GrpcWebBridgeException(
+    "Failed to process gRPC-Web request",
+    "PROCESSING_ERROR"
+)
+.WithContext("endpoint", "/api/UserService/GetUser")
+.WithContext("timestamp", DateTime.UtcNow)
+.WithInnerException(new InvalidOperationException("Database connection failed"));
+
+// Retrieve context values
+var endpoint = exception.GetContext("endpoint") as string;
+var errorCode = exception.ErrorCode;
+
+// Get formatted string representation
+Console.WriteLine(finalException.ToString());
+// Output includes: Failed to process gRPC-Web request [ErrorCode: PROCESSING_ERROR] [GrpcStatus: ...]
+```
+
 ## ServiceDiscoveryClient
 
 The `ServiceDiscoveryClient` class provides service discovery and health monitoring capabilities for gRPC services in the gRPC-Web Bridge. It enables dynamic registration and deregistration of services, discovery of available service instances, health checks via heartbeats, and automatic cache refresh for service instances.
