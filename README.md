@@ -785,6 +785,78 @@ Console.WriteLine($"Unsubscribed: {unsubscribed}");
 webhookPublisher.Dispose();
 ```
 
+## ServiceDiscoveryClient
+
+The `ServiceDiscoveryClient` class provides service discovery and health monitoring capabilities for gRPC services in the gRPC-Web Bridge. It enables dynamic registration and deregistration of services, discovery of available service instances, health checks via heartbeats, and automatic cache refresh for service instances.
+
+Example usage:
+
+```csharp
+// Create a service discovery client (typically registered via dependency injection)
+var serviceDiscovery = new ServiceDiscoveryClient(
+    id: "order-service-client",
+    name: "OrderService",
+    host: "order-service.example.com",
+    port: 50051,
+    metadata: new Dictionary<string, string>
+    {
+        {"environment", "production"},
+        {"version", "1.2.3"}
+    }
+);
+
+Console.WriteLine($"Created service discovery client: {serviceDiscovery.Name} ({serviceDiscovery.Id})");
+
+// Register the service instance with the discovery system
+bool registrationSuccess = await serviceDiscovery.RegisterServiceAsync();
+Console.WriteLine($"Service registration: {(registrationSuccess ? "SUCCESS" : "FAILED")}");
+
+// Send a heartbeat to indicate the service is alive
+bool heartbeatSuccess = await serviceDiscovery.SendHeartbeatAsync();
+Console.WriteLine($"Heartbeat sent: {(heartbeatSuccess ? "SUCCESS" : "FAILED")}");
+
+// Discover all available service instances
+var allInstances = await serviceDiscovery.DiscoverServicesAsync();
+Console.WriteLine($"Discovered {allInstances.Count} service instances");
+
+// Get a healthy instance (filters by status and last heartbeat)
+var healthyInstance = await serviceDiscovery.GetHealthyInstanceAsync();
+if (healthyInstance != null)
+{
+    Console.WriteLine($"Healthy instance found: {healthyInstance.Host}:{healthyInstance.Port} (Status: {healthyInstance.Status})");
+}
+
+// Start automatic cache refresh (refreshes every 30 seconds by default)
+serviceDiscovery.StartAutoRefresh();
+
+// Get cached services (avoids network calls)
+var cachedServices = serviceDiscovery.GetCachedServices();
+Console.WriteLine($"Cached services count: {cachedServices.Count}");
+
+// Clear the cache if needed (e.g., after configuration changes)
+serviceDiscovery.ClearCache();
+
+// Get service statistics
+var stats = serviceDiscovery.GetStatistics();
+Console.WriteLine($"Service statistics: {stats}");
+
+// Check service status
+Console.WriteLine($"Service ID: {serviceDiscovery.Id}");
+Console.WriteLine($"Service Name: {serviceDiscovery.Name}");
+Console.WriteLine($"Service Host: {serviceDiscovery.Host}");
+Console.WriteLine($"Service Port: {serviceDiscovery.Port}");
+Console.WriteLine($"Service Status: {serviceDiscovery.Status}");
+Console.WriteLine($"Registered At: {serviceDiscovery.RegisteredAt}");
+Console.WriteLine($"Last Heartbeat: {serviceDiscovery.LastHeartbeat}");
+
+// Deregister the service when shutting down
+bool deregistrationSuccess = await serviceDiscovery.DeregisterServiceAsync();
+Console.WriteLine($"Service deregistration: {(deregistrationSuccess ? "SUCCESS" : "FAILED")}");
+
+// Clean up resources
+serviceDiscovery.Dispose();
+```
+
 ## GrpcConnectionManagerExtensions
 
 The `GrpcConnectionManagerExtensions` class provides extension methods for `GrpcConnectionManager` that enable comprehensive monitoring and analysis of gRPC connection metrics. It offers utilities for retrieving connection statistics, analyzing connection patterns, filtering by service, and generating observability data for monitoring and debugging purposes.
