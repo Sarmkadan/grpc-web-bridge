@@ -794,6 +794,36 @@ if (alertSummary.recentAlerts.Count > 0)
 }
 ```
 
+## ProtocolException
+
+The `ProtocolException` class represents exceptions thrown during protocol translation and conversion operations in the gRPC-Web Bridge. It provides detailed error information including source/target formats, request identifiers, and comprehensive error context to enable robust error handling and debugging for protocol translation scenarios.
+
+Example usage:
+
+```csharp
+// Create a protocol exception with source and target formats
+var exception = new ProtocolException(
+    sourceFormat: "Protobuf",
+    targetFormat: "JSON",
+    message: "Failed to convert message from Protobuf to JSON format"
+);
+
+// Set request ID for correlation tracking
+exception.RequestId = Guid.NewGuid().ToString();
+
+// Access exception properties
+Console.WriteLine(exception.Message);
+Console.WriteLine(exception.SourceFormat);  // "Protobuf"
+Console.WriteLine(exception.TargetFormat);    // "JSON"
+Console.WriteLine(exception.RequestId);       // Request GUID
+Console.WriteLine(exception.ErrorCode);       // "TRANSLATION_FAILED"
+Console.WriteLine(exception.ToString());       // Includes all context
+
+// Create a simple protocol exception with custom message
+var simpleException = new ProtocolException("Invalid protocol message received");
+Console.WriteLine(simpleException.ErrorCode);  // "PROTOCOL_ERROR"
+```
+
 ## StreamingException
 
 The `StreamingException` class represents exceptions thrown during streaming operations in the gRPC-Web Bridge. It provides detailed error information including stream identifiers, sequence numbers, and stream state tracking to enable comprehensive error handling and debugging for streaming scenarios.
