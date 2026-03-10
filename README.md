@@ -93,6 +93,74 @@ bool isActive = contextManager.IsContextActive();
 contextManager.Clear();
 ```
 
+## CorrelationIdManager
+
+The `CorrelationIdManager` class provides distributed tracing and correlation ID management for tracking requests across multiple services and components. It enables request lifecycle tracking, metadata storage, and comprehensive observability through trace hierarchies and statistics.
+
+Example usage:
+```csharp
+// Configure services in Program.cs
+builder.Services.AddCorrelationIdManager();
+builder.Services.AddLogging(configure => configure.AddConsole());
+
+// In your ASP.NET Core middleware or controller
+var correlationIdManager = app.Services.GetRequiredService<CorrelationIdManager>();
+
+// Get or create a correlation ID (automatically creates one if not set)
+string correlationId = correlationIdManager.GetOrCreateCorrelationId();
+Console.WriteLine($"Correlation ID: {correlationId}");
+
+// Set a specific correlation ID from incoming request headers
+string incomingCorrelationId = httpContext.Request.Headers["X-Correlation-ID"];
+if (!string.IsNullOrEmpty(incomingCorrelationId))
+{
+correlationIdManager.SetCorrelationId(incomingCorrelationId);
+}
+
+// Start a new trace for an operation
+var trace = correlationIdManager.StartTrace(
+operationName: "ProcessOrder",
+parentTraceId: null,
+metadata: new Dictionary<string, string> { { "userId", "user-123" }, { "orderId", "order-456" } }
+);
+
+Console.WriteLine($"Trace started: {trace.TraceId}");
+
+// Add metadata to the trace
+correlationIdManager.AddTraceMetadata(trace.TraceId, "paymentMethod", "credit-card");
+correlationIdManager.AddTraceMetadata(trace.TraceId, "amount", "99.99");
+
+// Complete the trace when operation finishes
+correlationIdManager.CompleteTrace(trace.TraceId, success: true);
+
+// Get a specific trace
+var retrievedTrace = correlationIdManager.GetTrace(trace.TraceId);
+if (retrievedTrace != null)
+{
+Console.WriteLine($"Trace duration: {retrievedTrace.GetDuration()?.TotalMilliseconds}ms");
+Console.WriteLine($"Success: {retrievedTrace.Success}");
+}
+
+// Get all traces for this correlation ID
+var allTraces = correlationIdManager.GetTracesForCorrelation(correlationId);
+Console.WriteLine($"Total traces for correlation: {allTraces.Count}");
+
+// Get statistics about all traces
+var stats = correlationIdManager.GetStatistics();
+Console.WriteLine($"Total traces: {stats.totalTraces}");
+Console.WriteLine($"Successful traces: {stats.successfulTraces}");
+
+// Clean up old traces (older than 5 minutes)
+int cleanedCount = correlationIdManager.CleanupOldTraces(TimeSpan.FromMinutes(5));
+Console.WriteLine($"Cleaned {cleanedCount} old traces");
+
+// Clear all traces when needed
+correlationIdManager.ClearAllTraces();
+
+// Clear the correlation ID when request completes
+correlationIdManager.ClearCorrelationId();
+```
+
 ## CorrelationIdManagerExtensions
 
 The `CorrelationIdManagerExtensions` class provides utilities for managing distributed tracing correlation IDs and tracking request lifecycles. It supports trace creation, status inspection, and cleanup of expired traces.
