@@ -794,6 +794,35 @@ if (alertSummary.recentAlerts.Count > 0)
 }
 ```
 
+## ServiceRegistrationException
+
+The `ServiceRegistrationException` class represents exceptions thrown during service registration and discovery processes in the gRPC-Web Bridge. It allows for detailed error context by including the affected service name and endpoint, enabling robust error handling for service connectivity issues.
+
+Example usage:
+
+```csharp
+// Create a basic registration exception
+var exception = new ServiceRegistrationException("Service registration failed due to timeout");
+
+// Create an exception with specific service details
+var serviceException = new ServiceRegistrationException("UserService", "Failed to resolve endpoint");
+
+// Create an exception with service and endpoint details
+var connectionException = new ServiceRegistrationException(
+    "OrderService",
+    "https://orders.example.com",
+    "Service unavailable"
+);
+
+// Access exception properties
+Console.WriteLine(serviceException.ServiceName); // "UserService"
+Console.WriteLine(connectionException.ServiceEndpoint); // "https://orders.example.com"
+
+// Get formatted string representation
+Console.WriteLine(connectionException.ToString());
+// Output includes: Failed to connect to service 'OrderService' at https://orders.example.com: Service unavailable | Service: OrderService | Endpoint: https://orders.example.com
+```
+
 ## ProtocolException
 
 The `ProtocolException` class represents exceptions thrown during protocol translation and conversion operations in the gRPC-Web Bridge. It provides detailed error information including source/target formats, request identifiers, and comprehensive error context to enable robust error handling and debugging for protocol translation scenarios.
