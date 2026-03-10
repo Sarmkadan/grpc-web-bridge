@@ -446,6 +446,72 @@ docker run -d -p 8080:8080 \
 See `docker-compose.yml` for a complete configuration example.
 
 
+## HttpClientFactory
+
+The `HttpClientFactory` class provides a managed HTTP client factory for making HTTP requests to external services. It implements connection pooling, configurable timeouts, and supports multiple named clients with customizable settings for cookies, redirects, and HTTPS validation. The factory automatically manages client lifecycle and provides convenient methods for common HTTP operations like GET, POST with JSON, and custom requests.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<IHttpClientFactory>(provider =>
+{
+    var logger = provider.GetRequiredService<ILogger<HttpClientFactory>>();
+    var options = new HttpClientFactoryOptions
+    {
+        RequestTimeoutMs = 15000,  // 15 seconds timeout
+        MaxConnectionsPerServer = 20,
+        UseCookies = false,
+        AllowAutoRedirect = true,
+        AllowInsecureHttps = false
+    };
+    return new HttpClientFactory(logger, options);
+});
+
+// In your service or controller
+var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+
+// Get a default client
+var defaultClient = httpClientFactory.GetClient();
+
+// Get a client for a specific endpoint
+var apiClient = httpClientFactory.GetClientForUri("https://api.example.com");
+
+// Make a GET request
+string response = await httpClientFactory.GetAsync("https://api.example.com/users");
+Console.WriteLine(response);
+
+// Make a POST request with JSON
+var userData = new { Name = "John Doe", Email = "john@example.com" };
+string postResponse = await httpClientFactory.PostJsonAsync(
+    "https://api.example.com/users",
+    userData
+);
+
+// Make a custom request
+var responseMessage = await httpClientFactory.SendAsync(
+    "https://api.example.com/data",
+    HttpMethod.Put,
+    new StringContent("{\"value\": 42}", Encoding.UTF8, "application/json"),
+    new Dictionary<string, string> { { "X-Custom-Header", "value" } }
+);
+
+// Register a pre-configured client
+var customClient = new HttpClient
+{
+    BaseAddress = new Uri("https://auth.example.com"),
+    Timeout = TimeSpan.FromSeconds(10)
+};
+httpClientFactory.RegisterClient("auth-service", customClient);
+
+// Get list of registered clients
+var clientNames = httpClientFactory.GetRegisteredClientNames();
+Console.WriteLine(string.Join(", ", clientNames));
+
+// Remove a client when no longer needed
+bool removed = httpClientFactory.RemoveClient("old-client");
+```
+
 ## StreamProcessingBenchmarks
 
 The `StreamProcessingBenchmarks` class provides performance benchmarks for stream processing operations in the gRPC-Web Bridge, including reading streams to end, chunked copying, and base64 conversion. It uses BenchmarkDotNet to measure execution time and memory allocation for various stream sizes.
