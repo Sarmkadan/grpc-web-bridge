@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -8,7 +9,7 @@ namespace GrpcWebBridge.Domain.Models;
 /// <summary>
 /// Configuration settings for the gRPC-Web bridge
 /// </summary>
-public class BridgeConfiguration
+public sealed class BridgeConfiguration
 {
     public string InstanceId { get; set; } = Guid.NewGuid().ToString("N");
     public string? InstanceName { get; set; }

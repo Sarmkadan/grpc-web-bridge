@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -13,7 +14,7 @@ namespace GrpcWebBridge.Services;
 /// <summary>
 /// Service registry for managing and discovering gRPC services
 /// </summary>
-public class ServiceRegistry
+public sealed class ServiceRegistry
 {
     private readonly ILogger<ServiceRegistry> _logger;
     private readonly Dictionary<string, GrpcService> _services = [];
@@ -226,7 +227,7 @@ public class ServiceRegistry
 /// <summary>
 /// Cached metadata for a service
 /// </summary>
-public class ServiceMetadata
+public sealed class ServiceMetadata
 {
     public string? ServiceName { get; set; }
     public string? FullName { get; set; }

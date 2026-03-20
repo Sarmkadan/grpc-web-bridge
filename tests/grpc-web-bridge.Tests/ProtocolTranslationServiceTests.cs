@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -13,7 +14,7 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
-public class ProtocolTranslationServiceTests
+public sealed class ProtocolTranslationServiceTests
 {
     private readonly ILogger<ProtocolTranslationService> _logger;
     private readonly ProtocolTranslationService _service;
@@ -45,7 +46,7 @@ public class ProtocolTranslationServiceTests
     public void ConvertProtobufToJson_WithEmptyArray_ReturnsEmptyJson()
     {
         // Arrange
-        var protobuf = Array.Empty<byte>();
+        var protobuf = [];
 
         // Act
         var json = _service.ConvertProtobufToJson(protobuf);
@@ -58,7 +59,7 @@ public class ProtocolTranslationServiceTests
     public void ConvertJsonToProtobuf_WithEmptyArray_ReturnsEmptyArray()
     {
         // Arrange
-        var json = Array.Empty<byte>();
+        var json = [];
 
         // Act
         var protobuf = _service.ConvertJsonToProtobuf(json);

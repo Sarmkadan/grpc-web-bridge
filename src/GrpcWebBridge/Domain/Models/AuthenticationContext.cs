@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -10,7 +11,7 @@ namespace GrpcWebBridge.Domain.Models;
 /// <summary>
 /// Represents authentication context for a request or stream
 /// </summary>
-public class AuthenticationContext
+public sealed class AuthenticationContext
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public AuthenticationScheme Scheme { get; set; } = AuthenticationScheme.None;

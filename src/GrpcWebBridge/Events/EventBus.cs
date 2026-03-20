@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -32,7 +33,7 @@ public class EventBus : IDisposable
     /// </summary>
     public void Subscribe<TEvent>(Action<TEvent> handler) where TEvent : EventBase
     {
-        if (handler == null)
+        if (handler is null)
             throw new ArgumentNullException(nameof(handler));
 
         var eventName = typeof(TEvent).Name;
@@ -51,7 +52,7 @@ public class EventBus : IDisposable
     /// </summary>
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : EventBase
     {
-        if (handler == null)
+        if (handler is null)
             throw new ArgumentNullException(nameof(handler));
 
         var eventName = typeof(TEvent).Name;
@@ -70,7 +71,7 @@ public class EventBus : IDisposable
     /// </summary>
     public bool Unsubscribe<TEvent>(Delegate handler) where TEvent : EventBase
     {
-        if (handler == null)
+        if (handler is null)
             return false;
 
         var eventName = typeof(TEvent).Name;
@@ -92,7 +93,7 @@ public class EventBus : IDisposable
     /// </summary>
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : EventBase
     {
-        if (@event == null)
+        if (@event is null)
             throw new ArgumentNullException(nameof(@event));
 
         var eventName = typeof(TEvent).Name;
@@ -218,7 +219,7 @@ public abstract class EventBase
 /// <summary>
 /// Event record for history tracking.
 /// </summary>
-public class EventRecord
+public sealed class EventRecord
 {
     public string EventType { get; set; } = string.Empty;
     public string EventId { get; set; } = string.Empty;

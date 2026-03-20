@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -213,7 +214,7 @@ public static class ResponseFormatter
             { "timestamp", DateTime.UtcNow }
         };
 
-        if (headers != null)
+        if (headers is not null)
         {
             response["headers"] = headers;
         }

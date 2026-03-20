@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -8,7 +9,7 @@ namespace GrpcWebBridge.Domain.Models;
 /// <summary>
 /// Represents a single parameter in a gRPC method signature
 /// </summary>
-public class MethodParameter
+public sealed class MethodParameter
 {
     public string Name { get; set; } = string.Empty;
     public string TypeName { get; set; } = string.Empty;

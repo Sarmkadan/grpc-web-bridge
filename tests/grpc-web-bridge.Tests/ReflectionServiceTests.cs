@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -15,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace GrpcWebBridge.Tests;
 
-public class ReflectionServiceTests
+public sealed class ReflectionServiceTests
 {
     private readonly ILogger<ReflectionService> _mockReflectionLogger;
     private readonly ILogger<ServiceRegistry> _mockServiceRegistryLogger;

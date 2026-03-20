@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -12,7 +13,7 @@ namespace GrpcWebBridge.Integration;
 /// Enables request tracking across multiple services and components.
 /// Integrates with logging for comprehensive request visibility.
 /// </summary>
-public class CorrelationIdManager
+public sealed class CorrelationIdManager
 {
     private static readonly AsyncLocal<string?> _correlationId = new();
     private readonly ILogger<CorrelationIdManager> _logger;
@@ -210,7 +211,7 @@ public class CorrelationIdManager
 /// <summary>
 /// Represents a correlation trace for a single operation.
 /// </summary>
-public class CorrelationTrace
+public sealed class CorrelationTrace
 {
     public string TraceId { get; set; } = string.Empty;
     public string CorrelationId { get; set; } = string.Empty;
@@ -229,7 +230,7 @@ public class CorrelationTrace
 /// <summary>
 /// Middleware for managing correlation IDs.
 /// </summary>
-public class CorrelationIdMiddleware
+public sealed class CorrelationIdMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly CorrelationIdManager _correlationIdManager;
