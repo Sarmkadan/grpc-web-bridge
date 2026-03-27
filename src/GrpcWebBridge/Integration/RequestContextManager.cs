@@ -196,7 +196,7 @@ public sealed class RequestContextMiddleware
 
         try
         {
-            await _next(httpContext);
+            await _next(httpContext).ConfigureAwait(false);
         }
         finally
         {

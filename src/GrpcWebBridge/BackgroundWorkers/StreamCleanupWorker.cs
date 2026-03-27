@@ -39,8 +39,8 @@ public class StreamCleanupWorker : BackgroundService
         {
             try
             {
-                await PerformCleanupAsync(stoppingToken);
-                await Task.Delay(TimeSpan.FromSeconds(_options.CleanupIntervalSeconds), stoppingToken);
+                await PerformCleanupAsync(stoppingToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(_options.CleanupIntervalSeconds), stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

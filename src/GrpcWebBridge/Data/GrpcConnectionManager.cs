@@ -145,7 +145,7 @@ public class GrpcConnectionManager : IAsyncDisposable
         {
             try
             {
-                await channel.ShutdownAsync();
+                await channel.ShutdownAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -231,7 +231,7 @@ public class GrpcConnectionManager : IAsyncDisposable
         if (_disposed)
             return;
 
-        await CloseAllChannelsAsync();
+        await CloseAllChannelsAsync().ConfigureAwait(false);
         _disposed = true;
 
         _logger.LogInformation("GrpcConnectionManager disposed");

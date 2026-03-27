@@ -29,7 +29,7 @@ public static class ServiceExtensions
         try
         {
             service.Validate();
-            return await repository.AddAsync(service);
+            return await repository.AddAsync(service).ConfigureAwait(false);
         }
         catch
         {
