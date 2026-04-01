@@ -5,6 +5,13 @@
 // =============================================================================
 
 using BenchmarkDotNet.Running;
-using GrpcWebBridge.Benchmarks;
 
-BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+namespace GrpcWebBridge.Benchmarks;
+
+public class BenchmarkProgram
+{
+    public static void Main(string[] args)
+    {
+        BenchmarkSwitcher.FromAssembly(typeof(BenchmarkProgram).Assembly).Run(args);
+    }
+}

@@ -41,8 +41,8 @@ public sealed class ServiceRepositoryTests
         var service = CreateValidGrpcService("TestService", "test.package", "localhost", 5000);
 
         // Act
-        var result = await _repository.AddAsync(service).ConfigureAwait(false);
-        var retrieved = await _repository.GetByIdAsync(service.Id).ConfigureAwait(false);
+        var result = await _repository.AddAsync(service);
+        var retrieved = await _repository.GetByIdAsync(service.Id);
 
         // Assert
         result.Should().BeTrue();
@@ -56,13 +56,13 @@ public sealed class ServiceRepositoryTests
     {
         // Arrange
         var service1 = CreateValidGrpcService("ServiceOne", "package.one", "host.one", 1000);
-        await _repository.AddAsync(service1).ConfigureAwait(false);
+        await _repository.AddAsync(service1);
 
         var service2 = CreateValidGrpcService("ServiceTwo", "package.two", "host.two", 2000);
         service2.Id = service1.Id; // Simulate duplicate ID
 
         // Act
-        var result = await _repository.AddAsync(service2).ConfigureAwait(false);
+        var result = await _repository.AddAsync(service2);
 
         // Assert
         result.Should().BeFalse();
@@ -73,10 +73,10 @@ public sealed class ServiceRepositoryTests
     {
         // Arrange
         var service = CreateValidGrpcService("TestService", "test.package", "localhost", 5000);
-        await _repository.AddAsync(service).ConfigureAwait(false);
+        await _repository.AddAsync(service);
 
         // Act
-        var result = await _repository.GetByFullNameAsync("test.package.TestService").ConfigureAwait(false);
+        var result = await _repository.GetByFullNameAsync("test.package.TestService");
 
         // Assert
         result.Should().NotBeNull();
@@ -88,11 +88,11 @@ public sealed class ServiceRepositoryTests
     {
         // Arrange
         var service = CreateValidGrpcService("ServiceToRemove", "remove.package", "localhost", 5000);
-        await _repository.AddAsync(service).ConfigureAwait(false);
+        await _repository.AddAsync(service);
 
         // Act
-        var deleteResult = await _repository.DeleteAsync(service.Id).ConfigureAwait(false);
-        var getResult = await _repository.GetByIdAsync(service.Id).ConfigureAwait(false);
+        var deleteResult = await _repository.DeleteAsync(service.Id);
+        var getResult = await _repository.GetByIdAsync(service.Id);
 
         // Assert
         deleteResult.Should().BeTrue();
@@ -103,11 +103,11 @@ public sealed class ServiceRepositoryTests
     public async Task CountAsync_ReturnsCorrectCount()
     {
         // Arrange
-        await _repository.AddAsync(CreateValidGrpcService("Service1", "package.one", "localhost", 5001)).ConfigureAwait(false);
-        await _repository.AddAsync(CreateValidGrpcService("Service2", "package.two", "localhost", 5002)).ConfigureAwait(false);
+        await _repository.AddAsync(CreateValidGrpcService("Service1", "package.one", "localhost", 5001));
+        await _repository.AddAsync(CreateValidGrpcService("Service2", "package.two", "localhost", 5002));
 
         // Act
-        var count = await _repository.CountAsync().ConfigureAwait(false);
+        var count = await _repository.CountAsync();
 
         // Assert
         count.Should().Be(2);
@@ -118,15 +118,15 @@ public sealed class ServiceRepositoryTests
     {
         // Arrange
         var service = CreateValidGrpcService("ServiceToUpdate", "update.package", "localhost", 5000);
-        await _repository.AddAsync(service).ConfigureAwait(false);
+        await _repository.AddAsync(service);
         
         // Modify some properties
         service.PackageName = "UpdatedPackage";
         service.Description = "Updated description";
 
         // Act
-        var result = await _repository.UpdateAsync(service).ConfigureAwait(false);
-        var updated = await _repository.GetByIdAsync(service.Id).ConfigureAwait(false);
+        var result = await _repository.UpdateAsync(service);
+        var updated = await _repository.GetByIdAsync(service.Id);
 
         // Assert
         result.Should().BeTrue();
@@ -139,7 +139,7 @@ public sealed class ServiceRepositoryTests
     public async Task ExistsAsync_WithNonExistentFullName_ReturnsFalse()
     {
         // Act
-        var exists = await _repository.ExistsAsync("non.existent.Service").ConfigureAwait(false);
+        var exists = await _repository.ExistsAsync("non.existent.Service");
 
         // Assert
         exists.Should().BeFalse();
@@ -152,8 +152,8 @@ public sealed class ServiceRepositoryTests
         var request = new GrpcRequest("TestService", "TestMethod", []);
 
         // Act
-        var result = await _repository.AddRequestAsync(request).ConfigureAwait(false);
-        var stored = await _repository.GetRequestAsync(request.Id).ConfigureAwait(false);
+        var result = await _repository.AddRequestAsync(request);
+        var stored = await _repository.GetRequestAsync(request.Id);
 
         // Assert
         result.Should().BeTrue();
@@ -165,7 +165,7 @@ public sealed class ServiceRepositoryTests
     public async Task GetByIdAsync_WithNonExistentId_ReturnsNull()
     {
         // Act
-        var result = await _repository.GetByIdAsync("nonexistent-id").ConfigureAwait(false);
+        var result = await _repository.GetByIdAsync("nonexistent-id");
 
         // Assert
         result.Should().BeNull();
@@ -178,12 +178,12 @@ public sealed class ServiceRepositoryTests
         var service1 = CreateValidGrpcService("Service1", "package.filter", "host.one", 1000);
         var service2 = CreateValidGrpcService("Service2", "package.filter", "host.two", 2000);
         var service3 = CreateValidGrpcService("Service3", "other.package", "host.three", 3000);
-        await _repository.AddAsync(service1).ConfigureAwait(false);
-        await _repository.AddAsync(service2).ConfigureAwait(false);
-        await _repository.AddAsync(service3).ConfigureAwait(false);
+        await _repository.AddAsync(service1);
+        await _repository.AddAsync(service2);
+        await _repository.AddAsync(service3);
 
         // Act
-        var servicesInPackage = await _repository.GetByPackageAsync("package.filter").ConfigureAwait(false);
+        var servicesInPackage = await _repository.GetByPackageAsync("package.filter");
 
         // Assert
         servicesInPackage.Should().HaveCount(2);
