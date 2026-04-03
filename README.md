@@ -148,13 +148,15 @@ gRPC-Web Bridge solves this elegantly by:
 - ✅ **Health Checks**: Readiness & liveness probes
 - ✅ **Structured Logging**: Serilog integration
 - ✅ **Metrics Collection**: Performance and usage metrics
+- ✅ **Prometheus Metrics**: `grpcweb_bridge_*` counters, histograms, and gauges for Prometheus scraping
 - ✅ **Request Tracing**: Correlation IDs for debugging
-- ✅ **Stream Management**: Active stream monitoring
+- ✅ **Stream Management**: Active stream monitoring with disconnect detection
 - ✅ **Webhook Publishing**: Event notifications
 
 ### Developer Experience
 
-- ✅ **Swagger/OpenAPI**: Interactive API documentation
+- ✅ **Swagger/OpenAPI**: Interactive API documentation — see [docs/SWAGGER_OPENAPI.md](docs/SWAGGER_OPENAPI.md)
+- ✅ **Per-route Header Transform Hooks**: Inject or rename headers before forwarding to downstream services
 - ✅ **Service Discovery**: Dynamic service registration
 - ✅ **Configuration Management**: Flexible settings system
 - ✅ **Error Messages**: Detailed, actionable error responses
@@ -516,7 +518,7 @@ client.getUser(request, metadata, (err, response) => {
 });
 ```
 
-### Example 8: Rate Limiting and Metrics
+### Example 8: Rate Limiting and Prometheus Metrics
 
 **Configuration**:
 ```json
@@ -529,20 +531,96 @@ client.getUser(request, metadata, (err, response) => {
 }
 ```
 
-**Monitoring Metrics**:
-```bash
-# Get bridge metrics
-curl http://localhost:5000/api/metrics
+**Enabling Prometheus scraping**:
 
-# Returns:
-# {
-#   "activeStreams": 45,
-#   "totalRequests": 125430,
-#   "totalErrors": 42,
-#   "averageLatencyMs": 125,
-#   "uptime": "5d 12h 34m"
-# }
+```csharp
+// Program.cs — register metric definitions
+builder.Services.AddGrpcWebBridgePrometheus();
+
+// Expose /metrics endpoint (scraped by Prometheus / Grafana Agent)
+app.MapMetrics();
 ```
+
+The bridge publishes the following metrics:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `grpcweb_bridge_requests_total` | Counter | `service`, `method`, `grpc_status` | Total bridged RPC calls |
+| `grpcweb_bridge_request_duration_seconds` | Histogram | `service`, `method` | End-to-end latency |
+| `grpcweb_bridge_active_streams` | Gauge | — | Currently active streaming connections |
+| `grpcweb_bridge_stream_errors_total` | Counter | `service`, `method` | Stream-level errors |
+
+**Example Prometheus scrape config**:
+```yaml
+scrape_configs:
+  - job_name: grpc-web-bridge
+    static_configs:
+      - targets: ['localhost:5000']
+    metrics_path: /metrics
+```
+
+**Legacy JSON metrics**:
+```bash
+curl http://localhost:5000/api/metrics
+```
+
+### Example 9: Per-route Header Transform Hooks
+
+Use `IRouteHeaderTransformHook` to inject or rename headers before a request is forwarded
+to a downstream gRPC service — without touching every controller action.
+
+```csharp
+// Program.cs — register a delegate-based hook for a specific route
+builder.Services.AddRouteHeaderTransformHook(
+    routePrefix: "/api/bridge",       // apply only to bridge endpoints; null = all routes
+    transformRequest: (headers, grpcMetadata, ct) =>
+    {
+        // Map HTTP header to gRPC metadata key expected by the downstream service
+        if (headers.TryGetValue("x-tenant-id", out var tenant))
+            grpcMetadata["tenant"] = tenant.ToString();
+
+        // Inject an HMAC signature into gRPC metadata
+        grpcMetadata["x-hmac-signature"] = ComputeHmac(headers);
+        return Task.CompletedTask;
+    });
+
+// Register the middleware (before UseRouting)
+app.UseRouteHeaderTransforms();
+app.UseRouting();
+```
+
+For more complex hooks with DI dependencies, implement `IRouteHeaderTransformHook`:
+
+```csharp
+public class TenantHeaderHook : IRouteHeaderTransformHook
+{
+    private readonly ITenantResolver _resolver;
+
+    public string? RoutePrefix => "/api/bridge";   // null applies to every route
+
+    public TenantHeaderHook(ITenantResolver resolver) => _resolver = resolver;
+
+    public async Task TransformRequestAsync(
+        IHeaderDictionary requestHeaders,
+        Dictionary<string, string> grpcMetadata,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = await _resolver.ResolveAsync(requestHeaders, cancellationToken);
+        if (tenantId is not null)
+            grpcMetadata["tenant"] = tenantId;
+    }
+
+    public Task TransformResponseAsync(IHeaderDictionary responseHeaders, CancellationToken _)
+        => Task.CompletedTask;
+}
+
+// Register
+builder.Services.AddRouteHeaderTransformHook<TenantHeaderHook>();
+app.UseRouteHeaderTransforms();
+```
+
+Accumulated gRPC metadata is stored in `HttpContext.Items["GrpcWebBridge.GrpcMetadata"]`
+and available to downstream handlers that need to forward it to the upstream gRPC channel.
 
 ### Example 9: Service Registration Workflow
 
@@ -783,23 +861,53 @@ PUT /api/configuration
 
 ### JWT Bearer Token
 
+Call `AddGrpcWebBridgeAuthentication` with a delegate to configure your JWT bearer options:
+
 ```csharp
-// 1. Configure JWT in appsettings.json
+// Program.cs
+builder.Services.AddGrpcWebBridgeAuthentication(jwt =>
 {
-  "Authentication": {
-    "JwtIssuer": "https://auth.example.com",
-    "JwtAudience": "grpc-web-bridge"
-  }
-}
+    // Point to your OpenID Connect / OAuth2 authority so the middleware fetches
+    // signing keys and issuer metadata automatically.
+    jwt.Authority = "https://login.microsoftonline.com/{tenant}/v2.0"; // or Keycloak, Auth0, …
 
-// 2. Include token in requests
-const metadata = new grpc.Metadata();
-metadata.add('authorization', `Bearer ${jwtToken}`);
-client.getUser(request, metadata, callback);
+    jwt.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateAudience = true,
+        ValidAudience    = "api://grpc-web-bridge",  // must match the token's 'aud' claim
+        ValidateIssuer   = true,
+        ValidateLifetime = true
+    };
 
-// 3. Bridge validates token and extracts claims
-// Token is available in AuthenticationContext
+    // Optionally, map gRPC-Web clients that cannot send an HTTP Authorization header
+    // and instead embed the token in a custom header or query string:
+    jwt.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = ctx =>
+        {
+            // Example: read token from "grpc-authorization" header as a fallback
+            var grpcHeader = ctx.Request.Headers["grpc-authorization"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(grpcHeader) && grpcHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                ctx.Token = grpcHeader["Bearer ".Length..];
+            return Task.CompletedTask;
+        }
+    };
+});
 ```
+
+> **If you are getting 401 from an Angular / grpc-web client**  
+> Make sure the Angular `@improbable-eng/grpc-web` transport sends the `Authorization` header
+> with the full `Bearer <token>` value and that CORS is configured to expose that header:
+>
+> ```typescript
+> const metadata = new grpc.Metadata();
+> metadata.set('authorization', `Bearer ${accessToken}`);
+> client.myMethod(request, metadata, callback);
+> ```
+>
+> On the server add `"Authorization"` to `AllowedHeaders` in `AddGrpcWebBridgeCors()` and
+> ensure the CORS policy includes `.AllowCredentials()` only when origins are not wildcard.
+
 
 ### API Key
 
