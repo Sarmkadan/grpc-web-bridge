@@ -183,7 +183,7 @@ public static class CryptographyUtility
             using (var cipher = new AesGcm(keyBytes))
             {
                 var ciphertext = new byte[plaintextBytes.Length];
-                cipher.Encrypt(iv, plaintextBytes, tag, ciphertext);
+                cipher.Encrypt(iv, plaintextBytes, ciphertext, tag);
 
                 // Combine IV + ciphertext + tag
                 var result = new byte[iv.Length + ciphertext.Length + tag.Length];
