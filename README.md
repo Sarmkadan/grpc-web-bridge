@@ -1105,6 +1105,55 @@ Console.WriteLine(finalException.ToString());
 // Output includes: Failed to process gRPC-Web request [ErrorCode: PROCESSING_ERROR] [GrpcStatus: ...]
 ```
 
+## ConfigurationException
+
+The `ConfigurationException` class represents exceptions thrown when configuration validation fails in the gRPC-Web Bridge. It provides detailed error information including the configuration key, configuration value, and a descriptive error message, enabling precise error handling and debugging for configuration-related issues.
+
+Example usage:
+
+```csharp
+// Create a basic configuration exception with a custom message
+var exception = new ConfigurationException("Invalid configuration value provided");
+
+// Access exception properties
+Console.WriteLine(exception.Message); // "Invalid configuration value provided"
+Console.WriteLine(exception.ErrorCode); // "CONFIGURATION_ERROR"
+Console.WriteLine(exception.GrpcStatus); // GrpcStatusCode.InvalidArgument
+
+// Create a configuration exception with key and message
+var keyException = new ConfigurationException("DatabaseConnection", "Connection string is empty");
+Console.WriteLine(keyException.ConfigurationKey); // "DatabaseConnection"
+Console.WriteLine(keyException.Message); // "Configuration 'DatabaseConnection' error: Connection string is empty"
+
+// Create a configuration exception with key, value, and message
+var fullException = new ConfigurationException(
+  "DatabaseConnection",
+  "Server=localhost;Database=test",
+  "Failed to connect to database"
+);
+Console.WriteLine(fullException.ConfigurationKey); // "DatabaseConnection"
+Console.WriteLine(fullException.ConfigurationValue); // "Server=localhost;Database=test"
+Console.WriteLine(fullException.Message); // "Configuration 'DatabaseConnection' with value 'Server=localhost;Database=test' error: Failed to connect to database"
+Console.WriteLine(fullException.ToString()); // Includes all context with format: ... | ConfigKey: DatabaseConnection | ConfigValue: Server=localhost;Database=test
+
+// Create a configuration exception with inner exception
+try
+{
+  // Some configuration validation
+}
+catch (Exception ex)
+{
+  var configException = new ConfigurationException(
+    "TimeoutSettings",
+    "RequestTimeout",
+    "Timeout value must be greater than 0 seconds",
+    ex
+  );
+  Console.WriteLine(configException.ToString());
+}
+```
+
+
 ## ServiceDiscoveryClient
 
 The `ServiceDiscoveryClient` class provides service discovery and health monitoring capabilities for gRPC services in the gRPC-Web Bridge. It enables dynamic registration and deregistration of services, discovery of available service instances, health checks via heartbeats, and automatic cache refresh for service instances.
