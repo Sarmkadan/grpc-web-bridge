@@ -1,0 +1,60 @@
+## Rider
+.idea/
+*.sln.iml
+
+## Visual Studio
+.vs/
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.suo
+
+## Visual Studio Code
+.vscode/
+*.code-workspace
+.DS_Store
+
+## Test Results
+TestResults/
+*.trx
+*.coverage
+
+## NuGet
+.nuget/
+*.nupkg
+*.snupkg
+packages/
+.nuget/packages/
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Application Insights
+ApplicationInsights.config
+.ApplicationInsightsConfig.xml
+
+## Local environment
+.env
+.env.local
+appsettings.local.json
+
+## Temporary files
+*.tmp
+*.temp
+*.log
