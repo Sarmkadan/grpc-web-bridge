@@ -60,7 +60,7 @@ namespace GrpcWebBridge.Examples
             try
             {
                 _logger.LogInformation("Checking bridge health...");
-                var response = await _httpClient.GetAsync("/health");
+                var response = await _httpClient.GetAsync("/health").ConfigureAwait(false);
                 var isHealthy = response.IsSuccessStatusCode;
                 _logger.LogInformation($"Bridge health: {(isHealthy ? "Healthy" : "Unhealthy")}");
                 return isHealthy;
@@ -80,10 +80,10 @@ namespace GrpcWebBridge.Examples
             try
             {
                 _logger.LogInformation("Listing registered services...");
-                var response = await _httpClient.GetAsync("/api/services");
+                var response = await _httpClient.GetAsync("/api/services").ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
-                var json = await response.Content.ReadAsStringAsync();
+                var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var services = JsonSerializer.Deserialize<List<ServiceInfo>>(json);
 
                 _logger.LogInformation($"Found {services?.Count} services");
@@ -106,7 +106,7 @@ namespace GrpcWebBridge.Examples
         {
             try
             {
-                _logger.LogInformation($"Registering service: {serviceName}");
+                _logger.LogInformation("Registering service: {ServiceName}", serviceName);
 
                 var request = new
                 {
@@ -120,7 +120,7 @@ namespace GrpcWebBridge.Examples
                     request);
 
                 response.EnsureSuccessStatusCode();
-                _logger.LogInformation($"Service {serviceName} registered successfully");
+                _logger.LogInformation("Service {ServiceName} registered successfully", serviceName);
                 return true;
             }
             catch (Exception ex)
@@ -144,17 +144,17 @@ namespace GrpcWebBridge.Examples
                     $"Calling {serviceName}.{methodName}");
 
                 var url = $"/api/bridge/{serviceName}/{methodName}";
-                var response = await _httpClient.PostAsJsonAsync(url, request);
+                var response = await _httpClient.PostAsJsonAsync(url, request).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var error = await response.Content.ReadAsStringAsync();
+                    var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     _logger.LogError(
                         $"RPC call failed: {response.StatusCode} - {error}");
                     return null;
                 }
 
-                var result = await response.Content.ReadAsAsync<T>();
+                var result = await response.Content.ReadAsAsync<T>().ConfigureAwait(false);
                 _logger.LogInformation("RPC call succeeded");
                 return result;
             }
@@ -175,10 +175,10 @@ namespace GrpcWebBridge.Examples
             try
             {
                 _logger.LogInformation("Fetching metrics...");
-                var response = await _httpClient.GetAsync("/api/metrics");
+                var response = await _httpClient.GetAsync("/api/metrics").ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
-                var metrics = await response.Content.ReadAsAsync<MetricsInfo>();
+                var metrics = await response.Content.ReadAsAsync<MetricsInfo>().ConfigureAwait(false);
                 _logger.LogInformation(
                     $"Metrics - Active Streams: {metrics.ActiveStreams}, " +
                     $"Total Requests: {metrics.TotalRequests}, " +
@@ -199,14 +199,14 @@ namespace GrpcWebBridge.Examples
         {
             try
             {
-                var response = await _httpClient.GetAsync("/api/streams");
+                var response = await _httpClient.GetAsync("/api/streams").ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
-                var json = await response.Content.ReadAsStringAsync();
+                var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var streams = JsonSerializer.Deserialize<StreamInfo>(json);
                 var count = streams?.ActiveStreams.Count ?? 0;
 
-                _logger.LogInformation($"Active streams: {count}");
+                _logger.LogInformation("Active streams: {Count}", count);
                 return count;
             }
             catch (Exception ex)
@@ -250,7 +250,7 @@ namespace GrpcWebBridge.Examples
 
                 if (attempt < maxRetries - 1)
                 {
-                    await Task.Delay(delay);
+                    await Task.Delay(delay).ConfigureAwait(false);
                     delay *= 2; // Exponential backoff
                 }
             }
@@ -392,7 +392,7 @@ namespace GrpcWebBridge.Examples
             try
             {
                 // Example 1: Check health
-                var healthy = await bridgeClient.CheckHealthAsync();
+                var healthy = await bridgeClient.CheckHealthAsync().ConfigureAwait(false);
                 if (!healthy)
                 {
                     logger.LogError("Bridge is not healthy");
@@ -400,10 +400,10 @@ namespace GrpcWebBridge.Examples
                 }
 
                 // Example 2: List services
-                var services2 = await bridgeClient.ListServicesAsync();
+                var services2 = await bridgeClient.ListServicesAsync().ConfigureAwait(false);
                 foreach (var service in services2 ?? new())
                 {
-                    logger.LogInformation($"Service: {service.ServiceName}");
+                    logger.LogInformation("Service: {ServiceName}", service.ServiceName);
                 }
 
                 // Example 3: Register a service
@@ -418,7 +418,7 @@ namespace GrpcWebBridge.Examples
                     new { id = 42 });
 
                 // Example 5: Get metrics
-                var metrics = await bridgeClient.GetMetricsAsync();
+                var metrics = await bridgeClient.GetMetricsAsync().ConfigureAwait(false);
 
                 // Example 6: Call with retry
                 var retryResult = await bridgeClient.CallWithRetryAsync<object>(

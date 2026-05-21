@@ -42,14 +42,14 @@ public class HealthCheckWorker : BackgroundService
         _logger.LogInformation("Health check worker started with interval {IntervalSeconds}s", _options.CheckIntervalSeconds);
 
         // Initial delay to allow services to fully initialize
-        await Task.Delay(TimeSpan.FromSeconds(_options.InitialDelaySeconds), stoppingToken);
+        await Task.Delay(TimeSpan.FromSeconds(_options.InitialDelaySeconds), stoppingToken).ConfigureAwait(false);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await PerformHealthCheckAsync(stoppingToken);
-                await Task.Delay(TimeSpan.FromSeconds(_options.CheckIntervalSeconds), stoppingToken);
+                await PerformHealthCheckAsync(stoppingToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(_options.CheckIntervalSeconds), stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -87,7 +87,7 @@ public class HealthCheckWorker : BackgroundService
             var checkTasks = services.Select(service =>
                 PerformServiceHealthCheckAsync(service, cancellationToken)).ToList();
 
-            await Task.WhenAll(checkTasks);
+            await Task.WhenAll(checkTasks).ConfigureAwait(false);
 
             var duration = DateTime.UtcNow - startTime;
             _logger.LogInformation(
@@ -110,7 +110,7 @@ public class HealthCheckWorker : BackgroundService
         try
         {
             // Check service connectivity
-            var isHealthy = await CheckServiceConnectivityAsync(service, cancellationToken);
+            var isHealthy = await CheckServiceConnectivityAsync(service, cancellationToken).ConfigureAwait(false);
 
             if (isHealthy)
             {
@@ -132,7 +132,7 @@ public class HealthCheckWorker : BackgroundService
                         service.Id, service.Name);
 
                     // Publish health event
-                    await PublishServiceHealthEventAsync(service, false);
+                    await PublishServiceHealthEventAsync(service, false).ConfigureAwait(false);
                 }
             }
 
@@ -163,7 +163,7 @@ public class HealthCheckWorker : BackgroundService
                 // Attempt to create a connection without making a full request
                 using (var httpClient = new HttpClient())
                 {
-                    var response = await httpClient.GetAsync($"http://{endpoint}/health", cts.Token);
+                    var response = await httpClient.GetAsync($"http://{endpoint}/health", cts.Token).ConfigureAwait(false);
                     return response.IsSuccessStatusCode;
                 }
             }
@@ -198,7 +198,7 @@ public class HealthCheckWorker : BackgroundService
                 Source = "HealthCheckWorker"
             };
 
-            await _eventBus.PublishAsync(@event);
+            await _eventBus.PublishAsync(@event).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
