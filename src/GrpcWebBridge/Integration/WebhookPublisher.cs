@@ -129,7 +129,7 @@ public class WebhookPublisher : IDisposable
 
             try
             {
-                await _eventQueue.Writer.WriteAsync(webhookEvent);
+                await _eventQueue.Writer.WriteAsync(webhookEvent).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -187,7 +187,7 @@ public class WebhookPublisher : IDisposable
                 {
                     if (_subscriptions.TryGetValue(webhookEvent.SubscriptionId, out var subscription))
                     {
-                        await SendWebhookAsync(webhookEvent, subscription, cancellationToken);
+                        await SendWebhookAsync(webhookEvent, subscription, cancellationToken).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)
@@ -253,7 +253,7 @@ public class WebhookPublisher : IDisposable
                     if (retryCount < maxRetries)
                     {
                         var delayMs = (int)(Math.Pow(2, retryCount) * 1000); // Exponential backoff
-                        await Task.Delay(delayMs, cancellationToken);
+                        await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                         retryCount++;
                         continue;
                     }
@@ -285,7 +285,7 @@ public class WebhookPublisher : IDisposable
                 if (retryCount <= maxRetries)
                 {
                     var delayMs = (int)(Math.Pow(2, retryCount - 1) * 1000);
-                    await Task.Delay(delayMs, cancellationToken);
+                    await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                 }
             }
         }

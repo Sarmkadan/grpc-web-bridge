@@ -122,10 +122,10 @@ public class HttpClientFactory : IDisposable
         try
         {
             var client = GetClient(clientName ?? "default");
-            var response = await client.GetAsync(uri);
+            var response = await client.GetAsync(uri).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadAsStringAsync();
+            return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -151,10 +151,10 @@ public class HttpClientFactory : IDisposable
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync(uri, content);
+            var response = await client.PostAsync(uri, content).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadAsStringAsync();
+            return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -192,7 +192,7 @@ public class HttpClientFactory : IDisposable
                 }
             }
 
-            var response = await client.SendAsync(request);
+            var response = await client.SendAsync(request).ConfigureAwait(false);
             return response;
         }
         catch (Exception ex)

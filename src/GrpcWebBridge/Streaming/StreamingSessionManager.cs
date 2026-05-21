@@ -285,7 +285,7 @@ public sealed class StreamingSessionManager
         await Task.WhenAll(streamIds.Select(async id =>
         {
             _streamToSession.TryRemove(id, out _);
-            await _engine.CloseStreamAsync(id, finalStatus, cancellationToken);
+            await _engine.CloseStreamAsync(id, finalStatus, cancellationToken).ConfigureAwait(false);
         }));
 
         _logger.LogInformation(

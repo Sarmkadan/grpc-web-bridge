@@ -73,7 +73,7 @@ public sealed class BidirectionalStreamContext : IAsyncDisposable
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        await LifetimeCts.CancelAsync();
+        await LifetimeCts.CancelAsync().ConfigureAwait(false);
         LifetimeCts.Dispose();
 
         InboundChannel.Writer.TryComplete();

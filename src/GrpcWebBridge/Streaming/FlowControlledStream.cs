@@ -77,7 +77,7 @@ internal sealed class FlowControlledStream : IFlowControlledStream
         EnsureWritable();
 
         long waitStart = Environment.TickCount64;
-        await BackpressureController.ConsumeCreditAsync(1, cancellationToken);
+        await BackpressureController.ConsumeCreditAsync(1, cancellationToken).ConfigureAwait(false);
         long waitedMs = Environment.TickCount64 - waitStart;
 
         if (waitedMs > 0)
@@ -86,7 +86,7 @@ internal sealed class FlowControlledStream : IFlowControlledStream
             _context.Metrics.RecordBackpressure();
         }
 
-        await _context.OutboundChannel.Writer.WriteAsync(message, cancellationToken);
+        await _context.OutboundChannel.Writer.WriteAsync(message, cancellationToken).ConfigureAwait(false);
         _context.Metrics.RecordOutbound(message.Data?.Length ?? 0);
 
         _logger.LogTrace(
@@ -149,7 +149,7 @@ internal sealed class FlowControlledStream : IFlowControlledStream
         _context.InboundChannel.Writer.TryComplete(reason);
         _context.State = StreamState.Failed;
 
-        await _context.LifetimeCts.CancelAsync();
+        await _context.LifetimeCts.CancelAsync().ConfigureAwait(false);
 
         _logger.LogWarning(
             "Stream {StreamId}: aborted — status={Status}, detail={Detail}.",
@@ -165,7 +165,7 @@ internal sealed class FlowControlledStream : IFlowControlledStream
         if (BackpressureController is IDisposable disposable)
             disposable.Dispose();
 
-        await _context.DisposeAsync();
+        await _context.DisposeAsync().ConfigureAwait(false);
     }
 
     // ─────────────────────────────────────────────────────────────────────

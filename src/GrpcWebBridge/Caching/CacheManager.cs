@@ -103,7 +103,7 @@ public class CacheManager : IDisposable
         if (TryGet(key, out T? cachedValue) && cachedValue is not null)
             return cachedValue;
 
-        var value = await factory();
+        var value = await factory().ConfigureAwait(false);
         Set(key, value, ttl ?? _options.DefaultTtl);
         return value;
     }
