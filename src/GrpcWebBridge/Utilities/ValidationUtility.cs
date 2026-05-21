@@ -169,6 +169,21 @@ public static class ValidationUtility
     }
 
     /// <summary>
+    /// Validates a network port number (1-65535).
+    /// Port 0 is reserved for dynamic assignment and is not considered valid for explicit configuration.
+    /// </summary>
+    /// <param name="port">The port number to validate.</param>
+    /// <param name="fieldName">Name of the field for error messages.</param>
+    /// <returns>A tuple indicating validity and an optional error message.</returns>
+    public static (bool Valid, string? Error) ValidatePort(int port, string fieldName = "Port")
+    {
+        if (port < 1 || port > 65535)
+            return (false, $"{fieldName} must be between 1 and 65535, got {port}");
+
+        return (true, null);
+    }
+
+    /// <summary>
     /// Validates that an enumerable is not null or empty.
     /// </summary>
     public static (bool Valid, string? Error) ValidateNotEmpty<T>(
