@@ -7,6 +7,7 @@
 using Grpc.AspNetCore.Web;
 using GrpcWebBridge.Configuration;
 using GrpcWebBridge.Services;
+using Prometheus;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,11 +52,17 @@ services.AddGrpcWebBridgeSwagger(
 // Add CORS
 services.AddGrpcWebBridgeCors();
 
-// Add authentication
-services.AddGrpcWebBridgeAuthentication();
+// Add authentication — configure JWT bearer options to match your identity provider.
+// Example: set Authority to your OIDC/OAuth2 server, or supply a signing key directly.
+services.AddGrpcWebBridgeAuthentication(jwt =>
+{
+    // jwt.Authority = "https://your-identity-provider.example.com";
+    // jwt.TokenValidationParameters.ValidAudience = "grpc-web-bridge";
+    // Override with your settings via environment variables or appsettings.json.
+});
 
-// Add reflection service
-services.AddGrpcWebBridgeReflection();
+// Add Prometheus metrics (opt-in; exposes /metrics for Prometheus scraping)
+services.AddGrpcWebBridgePrometheus();
 
 // Add controllers for REST endpoints
 services.AddControllers();
@@ -69,6 +76,9 @@ app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
 app.UseCors("AllowGrpcWeb");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Expose /metrics endpoint for Prometheus scraping.
+app.MapMetrics();
 
 if (app.Environment.IsDevelopment())
 {
