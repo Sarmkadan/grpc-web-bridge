@@ -6,6 +6,7 @@
 
 using Grpc.AspNetCore.Web;
 using GrpcWebBridge.Configuration;
+using GrpcWebBridge.Middleware;
 using GrpcWebBridge.Services;
 using Prometheus;
 using Serilog;
@@ -70,6 +71,7 @@ services.AddControllers();
 var app = builder.Build();
 
 // Configure middleware
+app.UseGrpcWebContentTypeValidation();
 app.UseRouting();
 app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
 
