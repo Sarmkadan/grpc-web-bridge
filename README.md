@@ -2113,6 +2113,49 @@ bool isValid = benchmarks.ValidateContext();
 Console.WriteLine($"Context validation result: {isValid}");
 ```
 
+## HealthCheckController
+
+The `HealthCheckController` provides health monitoring endpoints for the gRPC-Web Bridge server. It exposes endpoints to check overall system health, service-specific health status, resource metrics, and readiness/liveness probes. These endpoints are essential for container orchestration systems (like Kubernetes) and monitoring tools to determine the operational state of the bridge.
+
+Example usage:
+
+```csharp
+// In your ASP.NET Core application's Program.cs
+builder.Services.AddControllers();
+
+// The HealthCheckController is automatically registered when AddControllers() is called
+
+// Access health check endpoints:
+
+// 1. Get basic health status (simple OK/Not OK response)
+var healthStatus = await httpClient.GetStringAsync("http://localhost:5000/api/health");
+Console.WriteLine($"Health status: {healthStatus}"); // "OK" or error message
+
+// 2. Get detailed diagnostics with system information
+var diagnostics = await httpClient.GetFromJsonAsync<dynamic>("http://localhost:5000/api/health/diagnostics");
+Console.WriteLine($"System: {diagnostics.data.systemInfo.environment}");
+Console.WriteLine($"Uptime: {diagnostics.data.systemInfo.uptime}");
+Console.WriteLine($"Memory Usage: {diagnostics.data.resourceMetrics.memoryUsed}MB / {diagnostics.data.resourceMetrics.memoryTotal}MB");
+
+// 3. Check specific service health
+var serviceHealth = await httpClient.GetFromJsonAsync<dynamic>("http://localhost:5000/api/health/service/UserService");
+Console.WriteLine($"UserService healthy: {serviceHealth.data.isHealthy}");
+
+// 4. Get resource metrics for monitoring
+var metrics = await httpClient.GetFromJsonAsync<dynamic>("http://localhost:5000/api/health/metrics");
+Console.WriteLine($"Active Streams: {metrics.data.activeStreams}");
+Console.WriteLine($"CPU Usage: {metrics.data.cpuUsage}%");
+Console.WriteLine($"Request Rate: {metrics.data.requestRatePerSecond} req/s");
+
+// 5. Check readiness for load balancer routing
+var readiness = await httpClient.GetFromJsonAsync<dynamic>("http://localhost:5000/api/health/readiness");
+Console.WriteLine($"Ready for traffic: {readiness.data.ready}");
+
+// 6. Check liveness for container orchestration
+var liveness = await httpClient.GetFromJsonAsync<dynamic>("http://localhost:5000/api/health/liveness");
+Console.WriteLine($"Alive and responsive: {liveness.data.alive}");
+```
+
 ## ProtocolTranslationBenchmarks
 
 The `ProtocolTranslationBenchmarks` class provides performance benchmarks for protocol translation operations in the gRPC-Web Bridge, including metadata translation, protobuf-to-JSON conversion, and gRPC-to-HTTP response translation. It uses BenchmarkDotNet to measure execution time and memory allocation for various protocol translation scenarios.
