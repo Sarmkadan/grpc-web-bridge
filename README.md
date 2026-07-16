@@ -850,6 +850,57 @@ Console.WriteLine(string.Join(", ", clientNames));
 bool removed = httpClientFactory.RemoveClient("old-client");
 ```
 
+## TracingService
+
+The `TracingService` class creates and manages distributed-tracing spans for bridge operations. It wraps the OpenTelemetry `ActivitySource` to simplify span creation without requiring callers to handle the source directly. All methods safely return null when no tracing listener is active, allowing callers to use null-conditional disposal patterns.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<TracingService>(provider =>
+{
+    var logger = provider.GetRequiredService<ILogger<TracingService>>();
+    return new TracingService(logger, instanceName: "grpc-bridge-prod");
+});
+
+// In your middleware or controller
+var tracingService = serviceProvider.GetRequiredService<TracingService>();
+
+// Start a gRPC call span
+using var grpcActivity = tracingService.StartGrpcCallActivity(
+    serviceName: "UserService",
+    methodName: "GetUser",
+    isStreaming: false
+);
+
+// Start a protocol translation span
+using var translationActivity = tracingService.StartProtocolTranslationActivity(
+    sourceProtocol: "grpc-web",
+    targetProtocol: "grpc"
+);
+
+// Start an authentication span
+using var authActivity = tracingService.StartAuthenticationActivity(
+    scheme: "Bearer"
+);
+
+try
+{
+    // Your bridge operation here
+    await next(context);
+    
+    // Set success status on completion
+    TracingService.SetGrpcStatus(grpcActivity, "OK");
+}
+catch (Exception ex)
+{
+    // Record exception details
+    TracingService.RecordException(grpcActivity, ex, "INTERNAL");
+    throw;
+}
+```
+
 ## StreamProcessingBenchmarks
 
 The `StreamProcessingBenchmarks` class provides performance benchmarks for stream processing operations in the gRPC-Web Bridge, including reading streams to end, chunked copying, and base64 conversion. It uses BenchmarkDotNet to measure execution time and memory allocation for various stream sizes.
