@@ -1,543 +1,219 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
+# Architecture
 
-# gRPC-Web Bridge Architecture
+How gRPC-Web Bridge is actually put together. Everything below is grounded in the
+code under `src/GrpcWebBridge/` - if a component is not listed here, it does not exist.
 
-Comprehensive guide to the internal architecture and design of gRPC-Web Bridge.
+## What this is
 
-## System Architecture Overview
+A single ASP.NET Core (net10.0) application that sits between browser clients
+(gRPC-Web / plain JSON over HTTP) and backend gRPC services. It translates
+protocols, manages streaming sessions, keeps a registry of known backend
+services, and pools gRPC channels to them.
+
+Solution layout:
+
+| Project | Purpose |
+|---|---|
+| `src/GrpcWebBridge` | The bridge itself (only shipping code) |
+| `tests/grpc-web-bridge.Tests` | xUnit tests |
+| `benchmarks/grpc-web-bridge.Benchmarks` | BenchmarkDotNet suites (auth, protocol translation, stream processing, JSON) |
+
+## Request pipeline
+
+Middleware order as wired in `Program.cs` (order matters, this is the real one):
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Request Flow                              │
-└─────────────────────────────────────────────────────────────────┘
-
-Client (gRPC-Web)
-        │
-        ▼ HTTP/1.1 + gRPC-Web Format
-┌─────────────────────────────────────────────────────────────────┐
-│ ASP.NET Core Pipeline                                           │
-│  1. ErrorHandlingMiddleware       (Exception catching)          │
-│  2. RequestLoggingMiddleware       (Request logging)            │
-│  3. RateLimitingMiddleware         (Rate limit checks)          │
-│  4. CORS Middleware                (Cross-origin support)       │
-│  5. Authentication Middleware      (Token validation)           │
-└─────────────────────────────────────────────────────────────────┘
-        │
-        ▼ Validated Request
-┌─────────────────────────────────────────────────────────────────┐
-│ BridgeController                                                │
-│  - Parse request headers and body                               │
-│  - Extract service and method name                              │
-│  - Validate parameters                                          │
-│  - Route to ProtocolTranslationService                          │
-└─────────────────────────────────────────────────────────────────┘
-        │
-        ▼ Protocol Translation
-┌─────────────────────────────────────────────────────────────────┐
-│ ProtocolTranslationService                                      │
-│  - Deserialize gRPC-Web message                                 │
-│  - Convert to gRPC protocol                                     │
-│  - Add service routing metadata                                 │
-│  - Pass to StreamingService                                     │
-└─────────────────────────────────────────────────────────────────┘
-        │
-        ▼ Streaming Management
-┌─────────────────────────────────────────────────────────────────┐
-│ StreamingService                                                │
-│  - Create stream context                                        │
-│  - Set up message buffering                                     │
-│  - Configure timeout/heartbeat                                  │
-│  - Connect to GrpcConnectionManager                             │
-└─────────────────────────────────────────────────────────────────┘
-        │
-        ▼ Connection Management
-┌─────────────────────────────────────────────────────────────────┐
-│ GrpcConnectionManager                                           │
-│  - Check connection pool                                        │
-│  - Reuse or create gRPC channel                                 │
-│  - Execute backend RPC call                                     │
-│  - Return response/stream                                       │
-└─────────────────────────────────────────────────────────────────┘
-        │
-        ▼ Backend gRPC Service
-        Backend Service (gRPC)
-        │
-        ▼ Response
-┌─────────────────────────────────────────────────────────────────┐
-│ StreamingService (Response)                                     │
-│  - Buffer response messages                                     │
-│  - Serialize to gRPC-Web format                                 │
-│  - Compress if needed                                           │
-│  - Stream to client                                             │
-└─────────────────────────────────────────────────────────────────┘
-        │
-        ▼ HTTP/1.1 Response
-Client receives gRPC-Web response
+Client (gRPC-Web / JSON over HTTP)
+  │
+  ├─ ErrorHandlingMiddleware         - catches everything below, maps domain
+  │                                    exceptions to HTTP codes + JSON ErrorResponse
+  ├─ ContentTypeValidationMiddleware - rejects unsupported content types early
+  ├─ RequestLoggingMiddleware        - structured Serilog request/response logging
+  ├─ UseRouting
+  ├─ UseGrpcWeb                      - Grpc.AspNetCore.Web, DefaultEnabled = true
+  ├─ CORS ("AllowGrpcWeb" policy)
+  ├─ Authentication / Authorization  - JWT bearer
+  └─ Endpoints:
+       MapControllers()              - Bridge/HealthCheck/Metrics/Configuration controllers
+       MapMetrics()                  - Prometheus /metrics
+       MapOpenApi()                  - dev only
+       MapGrpcReflectionEndpoints()  - reflection discovery API
+       minimal APIs: /health, /api/services, /api/services/{id}, /api/streams
 ```
 
-## Layer Architecture
+`RateLimitingMiddleware` (sliding window, per client) and
+`RouteHeaderTransformMiddleware` (pluggable `IRouteHeaderTransformHook` per route
+prefix) exist and have `UseRateLimiting()` / extension wiring, but are **opt-in**:
+the default `Program.cs` does not enable them.
 
-### 1. **Presentation Layer** (Controllers)
+## Components
 
-Responsibility: Handle HTTP requests and responses
+### Controllers (`Controllers/`)
 
-**Components**:
-- `BridgeController` - Main RPC routing
-- `HealthCheckController` - Health/readiness probes
-- `MetricsController` - Performance metrics
-- `ConfigurationController` - Dynamic configuration
+- `BridgeController` (`api/bridge`) - the front door. Three endpoints:
+  `POST invoke` (unary call), `POST stream` (streaming session), `POST batch`
+  (multiple operations in one request, each with its own result/status).
+- `HealthCheckController`, `MetricsController`, `ConfigurationController` -
+  operational surface (probes, runtime metrics, runtime config inspection).
 
-**Key Methods**:
-```csharp
-[HttpPost("/{service}/{method}")]
-public async Task<IActionResult> RouteGrpcCall(
-    string service, string method, [FromBody] object request)
-```
+### Services (`Services/`) - all registered as singletons
 
-**Patterns**:
-- RESTful routing convention
-- Automatic content negotiation
-- Custom formatter support (JSON, CSV, XML)
+- `ProtocolTranslationService` - the core translation logic:
+  `TranslateHttpToGrpc`, `TranslateGrpcToHttp`, protobuf<->JSON conversion
+  (via `ProtobufUtility`), metadata translation, `TranslateAndInvokeAsync`
+  for the full round trip, and error-response construction.
+- `StreamingService` - owns a `ConcurrentDictionary` of `Stream` objects
+  (stream id -> state machine with a per-stream message queue and
+  last-activity timestamp). Supports enqueue/dequeue, heartbeats, per-stream
+  statistics, and `CleanupIdleStreams()`.
+- `AuthenticationService` - JWT validation and `AuthenticationContext`
+  construction; JWT bearer options are configured through
+  `AddGrpcWebBridgeAuthentication`.
+- `ServiceRegistry` - in-memory catalog of backend `GrpcService` descriptors
+  (register/unregister/list/by-package, status updates, cached
+  `ServiceMetadata`, health status).
+- `ReflectionService` - backs the reflection HTTP endpoints
+  (`MapGrpcReflectionEndpoints` in `Configuration/ReflectionServiceExtensions.cs`).
+- `BridgePrometheusMetrics` - prometheus-net counters/gauges, enabled via
+  `AddGrpcWebBridgePrometheus()`.
 
-### 2. **Middleware Layer**
+### Data access (`Data/`)
 
-Responsibility: Cross-cutting concerns
+- `GrpcConnectionManager` - gRPC channel pool keyed by service full name.
+  `GetOrCreateChannel` reuses channels (they are expensive: HTTP/2 connection
+  setup, TLS), tracks per-channel `ConnectionMetrics`, supports
+  `TestConnectionAsync` and graceful teardown (`IAsyncDisposable`).
+- `IServiceRepository` / `ServiceRepository` - persistence abstraction for
+  services/requests/responses. The only implementation is in-memory
+  dictionaries. The interface exists precisely so a real store can be swapped
+  in without touching callers.
 
-**Stack Order** (top to bottom):
-1. **ErrorHandlingMiddleware** - Exception to response conversion
-2. **RequestLoggingMiddleware** - Structured request/response logging
-3. **RateLimitingMiddleware** - Per-client request rate limiting
-4. **CORS** - Cross-origin validation
-5. **Authentication** - Token/API key validation
-6. **Authorization** - Role-based access control
+### Streaming subsystem (`Streaming/`)
 
-**Key Features**:
-- Async execution pipeline
-- Exception aggregation
-- Context propagation
-- Performance monitoring
+The advanced streaming machinery, contract-first (see `IStreamingContracts.cs`):
 
-### 3. **Service Layer** (Business Logic)
+- `IBidirectionalStreamingEngine` / `BidirectionalStreamingEngine` - manages
+  bidirectional sessions (`BidirectionalStreamContext`).
+- `IFlowControlledStream` / `FlowControlledStream` + `FlowControlOptions` -
+  bounded, credit-based message flow.
+- `IBackpressureController` / `BackpressureController` and
+  `AdaptiveFlowController` - throttle producers when consumers lag.
+- `StreamingSessionManager`, `StreamDiagnosticsService` - session bookkeeping
+  and diagnostics.
 
-#### ProtocolTranslationService
+Note the deliberate split: `Services/StreamingService` is the simple
+queue-per-stream model used by `BridgeController`; `Streaming/` is the richer
+engine with flow control. They are separate on purpose - the simple path stays
+simple.
 
-Converts between gRPC and gRPC-Web formats.
+### Background workers (`BackgroundWorkers/`)
 
-**Responsibilities**:
-- Parse gRPC-Web request format
-- Deserialize message payload
-- Convert to native gRPC message
-- Serialize response back to gRPC-Web
-- Handle compression (gzip/deflate)
+- `StreamCleanupService` - hosted service registered by `AddGrpcWebBridge()`;
+  every 5 minutes calls `StreamingService.CleanupIdleStreams()`.
+- `HealthCheckWorker`, `MetricsCollectionWorker`, `StreamCleanupWorker` -
+  additional workers, opt-in (not registered by the default DI helper).
 
-**Message Flow**:
-```
-gRPC-Web Request
-    ↓ (HTTP binary frame)
-ProtobufUtility.Deserialize
-    ↓
-GrpcRequest object
-    ↓ (native gRPC)
-Backend Service
-    ↓
-GrpcResponse object
-    ↓
-ResponseFormatter (JSON/CSV/XML)
-    ↓ (HTTP response)
-gRPC-Web Response
-```
+### Cross-cutting
 
-#### StreamingService
+- `Events/EventBus` - in-process pub/sub with sync and async subscribers,
+  typed events derived from `EventBase`, and a bounded event history
+  (default 1000 records). Used to decouple side effects (webhooks, metrics)
+  from the request path.
+- `Formatters/` - `ResponseFormatter` (static dispatcher) plus
+  `JsonFormatter`, `CsvFormatter`, `XmlFormatter` for response shaping.
+- `Integration/` - outward-facing helpers: `ServiceDiscoveryClient`,
+  `WebhookPublisher`, `CorrelationIdManager`, `RequestContextManager`,
+  `HttpClientFactory`.
+- `Telemetry/` - `BridgeActivitySource` + `TracingService`; OpenTelemetry
+  wired via `AddGrpcWebBridgeTracing()` (console exporter in dev, bring your
+  own OTLP/Zipkin in prod).
+- `Utilities/` - stateless helpers (`ProtobufUtility`, `JsonUtility`,
+  `CryptographyUtility`, `ValidationUtility`, `StreamUtility`, etc.).
+- `Domain/` - models (`GrpcRequest`, `GrpcResponse`, `GrpcService`,
+  `GrpcMethod`, `StreamMessage`, `BridgeConfiguration`,
+  `AuthenticationContext`), enums, constants, and an exception hierarchy
+  rooted at `GrpcWebBridgeException` (`ProtocolException`,
+  `StreamingException`, `ValidationException`, `ConfigurationException`,
+  `ServiceRegistrationException`). `ErrorHandlingMiddleware` maps these to
+  HTTP status codes, which is why throwing the right domain exception is the
+  contract for error reporting anywhere in the stack.
 
-Manages stream lifecycle and message buffering.
+## Composition (`Configuration/`)
 
-**Stream Types**:
-1. **Unary**: Single request, single response
-2. **ServerStreaming**: Single request, multiple responses
-3. **ClientStreaming**: Multiple requests, single response
-4. **BidirectionalStreaming**: Multiple requests, multiple responses
-
-**Key Features**:
-- In-memory message queue (bounded)
-- Heartbeat generation for idle streams
-- Automatic cleanup on timeout
-- Backpressure handling
-- Error state propagation
-
-**Stream State Machine**:
-```
-Created
-   ↓ (Request received)
-Active
-   ├─→ Idle (no activity)
-   │    └─→ Heartbeat
-   │         └─→ Active (if reset)
-   │         └─→ Closed (if timeout)
-   ├─→ Error (exception)
-   │    └─→ Closed (send error)
-   └─→ Completed (all messages sent)
-        └─→ Closed
-```
-
-#### AuthenticationService
-
-Validates and processes security credentials.
-
-**Supported Methods**:
-1. **JWT Bearer Token**
-   - Parse Authorization header
-   - Validate signature
-   - Check expiration
-   - Extract claims
-
-2. **API Key**
-   - Extract from header
-   - Lookup in keystore
-   - Validate permissions
-
-3. **Custom Schemes**
-   - Pluggable handlers
-   - Claim-based authorization
-
-**AuthenticationContext**:
-```csharp
-public class AuthenticationContext
-{
-    public string? UserId { get; set; }
-    public string? Username { get; set; }
-    public string[]? Roles { get; set; }
-    public Dictionary<string, object>? Claims { get; set; }
-    public bool IsAuthenticated { get; set; }
-}
-```
-
-#### ServiceRegistry
-
-Dynamic service discovery and registration.
-
-**Features**:
-- Manual service registration
-- Health check monitoring
-- Metadata caching
-- Instance tracking
-- Load balancing ready
-
-**Service Model**:
-```csharp
-public class GrpcService
-{
-    public string ServiceName { get; set; }
-    public string Address { get; set; }
-    public int Port { get; set; }
-    public ServiceStatus Status { get; set; }
-    public Dictionary<string, string> Metadata { get; set; }
-}
-```
-
-### 4. **Data Access Layer**
-
-#### GrpcConnectionManager
-
-Connection pooling and lifecycle management.
-
-**Features**:
-- Channel pooling (per-service)
-- Connection reuse
-- Graceful shutdown
-- Connection health monitoring
-
-**Connection Pool Strategy**:
-```
-Service Address
-    ↓
-Pool Lookup
-    ├─→ Found: Reuse channel
-    ├─→ Not found: Create new
-    │    └─→ Add to pool
-    ├─→ Unhealthy: Replace
-    └─→ Idle timeout: Close
-```
-
-#### ServiceRepository
-
-Service metadata persistence.
-
-**Operations**:
-- Register service
-- Update service status
-- Query services
-- Delete service
-- Get service by ID
-
-### 5. **Cross-cutting Concerns**
-
-#### Caching
-
-**Cache Manager**:
-- In-memory caching
-- Cache invalidation
-- TTL management
-- Hit/miss tracking
-
-**Cached Items**:
-- Service metadata
-- JWT token claims
-- Compression buffers
-- Response templates
-
-#### Logging
-
-**Serilog Integration**:
-- Structured logging with properties
-- Request/response correlation
-- Performance metrics
-- Error tracing
-
-**Log Levels**:
-- **Debug**: Detailed flow, parameters
-- **Information**: Key events, service registration
-- **Warning**: Recoverable errors, timeouts
-- **Error**: Failures, exceptions
-- **Critical**: System failures
-
-#### Metrics
-
-**Collected Metrics**:
-- Request count, latency, errors
-- Stream count, message throughput
-- Cache hit rate, compression ratio
-- Connection pool utilization
-- Memory usage
-
-## Domain Models
-
-### Request Models
-
-**GrpcRequest**:
-```csharp
-public class GrpcRequest
-{
-    public string ServiceName { get; set; }
-    public string MethodName { get; set; }
-    public byte[] Payload { get; set; }
-    public Dictionary<string, string> Metadata { get; set; }
-    public CompressionType? Compression { get; set; }
-    public TimeSpan Timeout { get; set; }
-}
-```
-
-**MethodParameter**:
-```csharp
-public class MethodParameter
-{
-    public string Name { get; set; }
-    public string Type { get; set; }
-    public bool Required { get; set; }
-    public object? DefaultValue { get; set; }
-}
-```
-
-### Response Models
-
-**GrpcResponse**:
-```csharp
-public class GrpcResponse
-{
-    public byte[] Payload { get; set; }
-    public int StatusCode { get; set; }
-    public Dictionary<string, string> Metadata { get; set; }
-    public string? ErrorMessage { get; set; }
-    public CompressionType? Compression { get; set; }
-}
-```
-
-**StreamMessage**:
-```csharp
-public class StreamMessage
-{
-    public string StreamId { get; set; }
-    public byte[] Content { get; set; }
-    public int SequenceNumber { get; set; }
-    public bool IsLast { get; set; }
-    public DateTime Timestamp { get; set; }
-}
-```
-
-## Extension Points
-
-### 1. Custom Middleware
-
-Add custom middleware for specialized concerns:
+All wiring lives in extension methods on `IServiceCollection`
+(`DependencyInjection.cs`), consumed fluently in `Program.cs`:
 
 ```csharp
-public class CustomMiddleware
-{
-    private readonly RequestDelegate _next;
-    
-    public CustomMiddleware(RequestDelegate next) => _next = next;
-    
-    public async Task InvokeAsync(HttpContext context)
-    {
-        // Pre-processing
-        await _next(context);
-        // Post-processing
-    }
-}
-
-// Register in Program.cs
-app.UseMiddleware<CustomMiddleware>();
+services.AddGrpcWebBridge(o => o.WithDevelopment()
+    .WithMaxStreamCount(10000)
+    .WithCompression(true, 6)
+    .WithCors(true).AddAllowedOrigins("*"));
+services.AddGrpcWebBridgeSwagger(...);
+services.AddGrpcWebBridgeCors();
+services.AddGrpcWebBridgeAuthentication(jwt => { ... });
+services.AddGrpcWebBridgePrometheus();
+services.AddGrpcWebBridgeTracing(...);
 ```
 
-### 2. Custom Authentication
+`GrpcWebBridgeOptions` is the single options object with a fluent builder API.
+`StartupConfiguration` validates options and reports `SystemInfo` at boot.
 
-Implement `IAuthenticationHandler`:
+## Key design decisions and trade-offs
 
-```csharp
-public class CustomAuthHandler : IAuthenticationHandler
-{
-    public Task<AuthenticationContext> AuthenticateAsync(
-        HttpContext context)
-    {
-        // Custom logic
-        return Task.FromResult(new AuthenticationContext { ... });
-    }
-}
-```
+1. **Everything in memory, single node.** Registry, repository, streams,
+   cache, event history - all process-local. Rationale: the bridge is a
+   stateless-ish edge component; losing the registry on restart is acceptable
+   because services re-register (or are re-discovered via
+   `ServiceDiscoveryClient`). Trade-off: no horizontal scaling of streaming
+   state - a stream is pinned to the instance that created it. Sticky routing
+   is required behind a load balancer.
 
-### 3. Custom Formatters
+2. **Singletons over scoped services.** Core services hold shared state
+   (channel pool, stream table), so singleton is the honest lifetime. The
+   cost: they must be thread-safe internally (hence `ConcurrentDictionary`
+   everywhere), and scoped dependencies have to be resolved via
+   `IServiceProvider` (see `StreamCleanupService`).
 
-Add response formatters:
+3. **Concrete types over interfaces for internal services.** Only boundaries
+   that plausibly get swapped have interfaces: `IServiceRepository`
+   (storage), the `Streaming/` contracts (alternative flow-control
+   implementations), `IRouteHeaderTransformHook` (user extension). Interfaces
+   for the sake of mocking were skipped deliberately - tests exercise the
+   real singletons.
 
-```csharp
-public class CustomFormatter : IResponseFormatter
-{
-    public string ContentType => "application/custom";
-    
-    public byte[] Format(GrpcResponse response)
-    {
-        // Custom serialization
-        return CustomSerialize(response);
-    }
-}
-```
+4. **Opt-in feature wiring.** Prometheus, tracing, Swagger, CORS, auth are
+   each a separate `AddGrpcWebBridge*` call rather than one mega-registration.
+   Keeps the default footprint small and makes the host's `Program.cs` read
+   as a manifest of what is actually enabled.
 
-### 4. Custom Event Handlers
+5. **Channel pooling in `GrpcConnectionManager`.** gRPC channels multiplex,
+   so one channel per backend service is the right granularity. Trade-off:
+   a dead channel affects all in-flight calls to that service, mitigated by
+   `TestConnectionAsync` and replacement on failure.
 
-Subscribe to bridge events:
+6. **EventBus instead of direct calls for side effects.** Webhooks and
+   metrics collection subscribe to events rather than being invoked inline.
+   Trade-off: in-process only, no delivery guarantees - fine for telemetry,
+   not for anything transactional.
 
-```csharp
-public class EventBus
-{
-    public event EventHandler<RequestProcessedEventArgs>? RequestProcessed;
-    public event EventHandler<StreamClosedEventArgs>? StreamClosed;
-}
-```
+## Extension points
 
-## Performance Considerations
+- `IRouteHeaderTransformHook` + `RouteHeaderTransformMiddleware` - mutate
+  headers per route prefix.
+- `IServiceRepository` - replace in-memory storage with a database.
+- `IBackpressureController` / `IFlowControlledStream` - alternative flow
+  control strategies.
+- `EventBus.Subscribe<TEvent>` - react to bridge events without touching the
+  request path.
+- Additional response formatters alongside JSON/CSV/XML.
+- Standard ASP.NET Core middleware - insert anywhere in the `Program.cs`
+  pipeline.
 
-### Memory Management
+## Known limitations
 
-- Bounded message queues (prevent unbounded growth)
-- Stream pooling to reduce allocations
-- Zero-copy where possible
-- Automatic cleanup of idle streams
-
-### Connection Pooling
-
-- Reuse gRPC channels (expensive to create)
-- Per-service channel pool
-- Health-based eviction
-- Connection timeout management
-
-### Compression
-
-- Configurable compression level
-- Automatic format detection
-- Deferred compression (only for large payloads)
-- Cache compressed responses
-
-### Request Handling
-
-- Async/await throughout
-- Connection pooling
-- Request batching support
-- Timeout management
-
-## Security Architecture
-
-### Authentication Flow
-
-```
-Request → Extract Credentials → Validate → Create AuthContext → Route
-              ↓                    ↓
-          JWT Extractor      Signature Check
-          API Key Extractor  Expiration Check
-          Custom Handler     Permission Check
-```
-
-### Authorization
-
-- Role-based access control (RBAC)
-- Claim-based authorization
-- Per-method authorization attributes
-- Service-level authorization policies
-
-### Data Protection
-
-- TLS for transport (HTTPS)
-- Message encryption ready
-- Secure credential handling
-- CORS validation
-
-## Concurrency Model
-
-- Fully async/await based
-- No blocking operations
-- Lock-free where possible
-- Bounded task concurrency
-- Graceful degradation under load
-
-## Failure Modes
-
-### Graceful Degradation
-
-1. **Service Unavailable**: Return 503 with retry info
-2. **Rate Limited**: Return 429 with backoff guidance
-3. **Timeout**: Abort stream, return timeout error
-4. **Authentication Failure**: Return 401/403
-5. **Protocol Error**: Return 400 with details
-
-### Recovery Strategies
-
-- Auto-reconnect for connections
-- Request retry with exponential backoff
-- Circuit breaker for failing services
-- Graceful shutdown with drain period
-
-## Monitoring Integration
-
-### Metrics Export Ready
-
-- Prometheus-compatible metrics
-- Custom metric collection
-- Performance baselines
-- Trend analysis support
-
-### Tracing Support
-
-- Request correlation IDs
-- Distributed tracing headers (W3C)
-- Span generation per operation
-- Service dependency tracking
-
-## Future Enhancements
-
-1. **gRPC Load Balancing**: Client-side load balancing
-2. **Circuit Breaker**: Automatic failure handling
-3. **Caching Layer**: Response caching strategies
-4. **API Versioning**: Service version management
-5. **Webhooks**: Event-driven integrations
-6. **GraphQL Support**: GraphQL to gRPC translation
+- No persistence: registry and stream state die with the process.
+- Rate limiting exists but is not enabled by default.
+- Message size capped at 4 MB (both directions) in the default `AddGrpc` config.
+- `ServiceRepository` keeps requests/responses in unbounded dictionaries -
+  fine for diagnostics in dev, needs eviction before heavy production use.
+- Single-instance streaming: no shared session store across replicas.
