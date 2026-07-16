@@ -2084,6 +2084,103 @@ catch (Exception ex)
 }
 ```
 
+## ResponseFormatter
+
+The `ResponseFormatter` class provides a unified response formatting utility for all API endpoints in the gRPC-Web Bridge. It ensures consistent response structure across the bridge by providing standardized methods for creating successful responses, error responses, validation errors, streaming responses, batch operations, health checks, and statistics. The formatter supports adding metadata, custom messages, and maintains a consistent timestamp across all responses.
+
+Example usage:
+
+```csharp
+// Format a successful response with data
+var userData = new { Id = 1, Name = "Alice", Email = "alice@example.com" };
+var successResponse = ResponseFormatter.FormatSuccess(userData, "User retrieved successfully");
+Console.WriteLine(ResponseFormatter.ToJson(successResponse, indented: true));
+
+// Format a successful response with pagination
+var users = new List<object> { userData };
+var paginatedResponse = ResponseFormatter.FormatSuccessList(users, total: 1, page: 1, pageSize: 50);
+Console.WriteLine(ResponseFormatter.ToJson(paginatedResponse, indented: true));
+
+// Format an error response
+var errorResponse = ResponseFormatter.FormatError(
+    "NotFound", 
+    "User not found", 
+    statusCode: 404,
+    details: new { UserId = "999" }
+);
+Console.WriteLine(ResponseFormatter.ToJson(errorResponse, indented: true));
+
+// Format a validation error response
+var validationErrors = new Dictionary<string, string> 
+{
+    { "email", "Email is required" },
+    { "password", "Password must be at least 8 characters" }
+};
+var validationResponse = ResponseFormatter.FormatValidationError(validationErrors);
+Console.WriteLine(ResponseFormatter.ToJson(validationResponse, indented: true));
+
+// Format a streaming response
+var streamingResponse = ResponseFormatter.FormatStreamingResponse(
+    streamId: "stream-abc-123",
+    status: "active",
+    messageCount: 42,
+    lastMessage: new { Content = "Last message content" }
+);
+
+// Format a batch response
+var batchResponse = ResponseFormatter.FormatBatchResponse(
+    operationCount: 10,
+    successCount: 8,
+    failureCount: 2,
+    results: new List<object> { /* batch results */ }
+);
+
+// Format a health check response
+var healthResponse = ResponseFormatter.FormatHealthCheckResponse(
+    healthy: true,
+    status: "All systems operational",
+    metrics: new Dictionary<string, object> { { "responseTimeMs", 42 } },
+    warnings: new List<string> { }
+);
+
+// Format a statistics response
+var statsResponse = ResponseFormatter.FormatStatisticsResponse(
+    statistics: new Dictionary<string, object> { { "requests", 1000 }, { "errors", 5 } },
+    period: "last-hour"
+);
+
+// Wrap any object in a standard response envelope
+var wrappedResponse = ResponseFormatter.WrapResponse(
+    data: new { Message = "Hello, World!" },
+    success: true,
+    message: "Custom message",
+    statusCode: 200
+);
+
+// Create a custom response with specific structure
+var customResponse = ResponseFormatter.CreateCustomResponse(
+    success: true,
+    body: new { Data = "Custom body content" },
+    headers: new Dictionary<string, object> { { "X-Custom-Header", "value" } },
+    statusCode: 201
+);
+
+// Format a service registry response
+var registryResponse = ResponseFormatter.FormatServiceRegistryResponse(
+    totalServices: 15,
+    healthyServices: 14,
+    unhealthyServices: 1,
+    totalMethods: 45,
+    services: new List<object> { /* service details */ }
+);
+
+// Format a configuration response
+var configResponse = ResponseFormatter.FormatConfigurationResponse(
+    config: new Dictionary<string, object> { { "timeout", 30000 }, { "retries", 3 } },
+    environment: "Production"
+);
+```
+
 ## ConfigurationController
 
 The `ConfigurationController` class provides runtime configuration management for the gRPC-Web Bridge server. It allows administrators to retrieve, update, validate, and reset configuration settings without restarting the application. The controller exposes endpoints for dynamic configuration changes, service health validation, and system state inspection, making it ideal for production environments where configuration needs to be adjusted on-the-fly.
