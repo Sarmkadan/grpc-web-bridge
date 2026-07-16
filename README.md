@@ -2023,6 +2023,104 @@ catch (Exception ex)
 }
 ```
 
+## ServiceRepository
+
+The `ServiceRepository` class provides a centralized in-memory repository for managing gRPC services, their metadata, and associated request/response data. It serves as the primary data access layer for service discovery, registration, and lookup operations within the gRPC-Web Bridge. The repository maintains collections of services, requests, and responses with comprehensive CRUD operations and search capabilities.
+
+Example usage:
+
+```csharp
+// Create a service repository instance
+var serviceRepository = new ServiceRepository();
+
+// Add a new gRPC service
+var userService = new GrpcService(
+    name: "UserService",
+    host: "localhost",
+    port: 50051,
+    serviceType: ServiceType.Grpc
+)
+{
+    Description = "Handles user authentication and profile management",
+    UseTls = true,
+    Status = ServiceStatus.Serving
+};
+
+bool addSuccess = await serviceRepository.AddAsync(userService);
+Console.WriteLine($"Service added: {(addSuccess ? "SUCCESS" : "FAILED")}");
+
+// Retrieve a service by ID
+var retrievedService = await serviceRepository.GetByIdAsync(userService.Id);
+if (retrievedService != null)
+{
+    Console.WriteLine($"Retrieved service: {retrievedService.Name} ({retrievedService.FullName})");
+}
+
+// Get service by full name
+var serviceByName = await serviceRepository.GetByFullNameAsync("UserService");
+Console.WriteLine($"Found by full name: {serviceByName?.Name}");
+
+// Add a method to the service
+var getUserMethod = new GrpcMethod(
+    name: "GetUser",
+    fullName: "UserService/GetUser",
+    methodType: MethodType.Unary,
+    inputMessage: "GetUserRequest",
+    outputMessage: "UserResponse"
+);
+userService.AddMethod(getUserMethod);
+
+// Update the service
+bool updateSuccess = await serviceRepository.UpdateAsync(userService);
+Console.WriteLine($"Service updated: {(updateSuccess ? "SUCCESS" : "FAILED")}");
+
+// Add a request for this service
+var request = new GrpcRequest(
+    serviceId: userService.Id,
+    method: "GetUser",
+    payload: Encoding.UTF8.GetBytes("{\"userId\": \"123\"}")
+);
+bool requestAdded = await serviceRepository.AddRequestAsync(request);
+Console.WriteLine($"Request added: {(requestAdded ? "SUCCESS" : "FAILED")}");
+
+// Add a response
+var response = new GrpcResponse(
+    requestId: request.Id,
+    payload: Encoding.UTF8.GetBytes("{\"id\": \"123\", \"name\": \"John Doe\"}")
+);
+response.SetSuccess(Encoding.UTF8.GetBytes("{\"success\": true}"), SerializationFormat.Json);
+bool responseAdded = await serviceRepository.AddResponseAsync(response);
+Console.WriteLine($"Response added: {(responseAdded ? "SUCCESS" : "FAILED")}");
+
+// Search for services
+var searchResults = await serviceRepository.SearchAsync("user", page: 1, pageSize: 10);
+Console.WriteLine($"Found {searchResults.Items.Count()} matching services");
+
+// Check if service exists
+bool exists = await serviceRepository.ExistsAsync(userService.Id);
+Console.WriteLine($"Service exists: {exists}");
+
+// Get all services
+var allServices = await serviceRepository.GetAllAsync();
+Console.WriteLine($"Total services: {allServices.Count()}");
+
+// Get services by package
+var packageServices = await serviceRepository.GetByPackageAsync("example.v1");
+Console.WriteLine($"Services in package: {packageServices.Count()}");
+
+// Get paged results
+var pagedResults = await serviceRepository.GetPagedAsync(page: 1, pageSize: 20);
+Console.WriteLine($"Page 1: {pagedResults.Items.Count()} items, Total: {pagedResults.Total} items");
+
+// Count services
+int serviceCount = await serviceRepository.CountAsync();
+Console.WriteLine($"Total service count: {serviceCount}");
+
+// Delete a service
+bool deleteSuccess = await serviceRepository.DeleteAsync(userService.Id);
+Console.WriteLine($"Service deleted: {(deleteSuccess ? "SUCCESS" : "FAILED")}");
+```
+
 ## ServiceExtensions
 
 The `ServiceExtensions` class provides extension methods for service registration, validation, and health monitoring in the gRPC-Web Bridge. It includes utilities for safely registering services and methods, converting exceptions to gRPC responses, checking service health, and generating human-readable status messages.
