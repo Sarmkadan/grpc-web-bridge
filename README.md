@@ -2084,6 +2084,78 @@ catch (Exception ex)
 }
 ```
 
+## ConfigurationController
+
+The `ConfigurationController` class provides runtime configuration management for the gRPC-Web Bridge server. It allows administrators to retrieve, update, validate, and reset configuration settings without restarting the application. The controller exposes endpoints for dynamic configuration changes, service health validation, and system state inspection, making it ideal for production environments where configuration needs to be adjusted on-the-fly.
+
+### Public Members
+
+- `GetConfiguration()` - Retrieves current bridge configuration including environment settings, streaming parameters, message limits, compression settings, and runtime configuration
+- `UpdateConfiguration(ConfigurationUpdateRequest)` - Updates specific configuration values at runtime (compression, rate limiting, timeouts, etc.)
+- `ValidateConfiguration()` - Validates configuration consistency and service connectivity by checking all registered services
+- `ResetConfiguration()` - Resets runtime configuration to default values
+- `Settings` - Dictionary containing runtime configuration settings that can be modified dynamically
+
+### Usage Examples
+
+```csharp
+// Example 1: Retrieve current configuration
+var httpClient = new HttpClient { BaseAddress = new Uri("https://localhost:5001") };
+
+var configResponse = await httpClient.GetAsync("/api/configuration");
+if (configResponse.IsSuccessStatusCode)
+{
+    var configData = await configResponse.Content.ReadFromJsonAsync<dynamic>();
+    Console.WriteLine($"Current compression: {configData.data.compressResponses}");
+    Console.WriteLine($"Max streams: {configData.data.maxStreamCount}");
+}
+
+// Example 2: Update configuration dynamically
+var updateRequest = new
+{
+    Settings = new Dictionary<string, object>
+    {
+        { "CompressResponses", false },
+        { "CompressionLevel", 6 },
+        { "RequestsPerSecond", 500 }
+    }
+};
+
+var updateResponse = await httpClient.PutAsJsonAsync(
+    "/api/configuration", 
+    updateRequest
+);
+
+if (updateResponse.IsSuccessStatusCode)
+{
+    var result = await updateResponse.Content.ReadFromJsonAsync<dynamic>();
+    Console.WriteLine($"Updated {result.updates.Count} settings");
+}
+
+// Example 3: Validate service connectivity
+var validationResponse = await httpClient.PostAsync(
+    "/api/configuration/validate", 
+    null
+);
+
+if (validationResponse.IsSuccessStatusCode)
+{
+    var validationData = await validationResponse.Content.ReadFromJsonAsync<dynamic>();
+    Console.WriteLine($"Healthy services: {validationData.healthyServices}/{validationData.serviceCount}");
+}
+
+// Example 4: Reset to defaults
+var resetResponse = await httpClient.PostAsync(
+    "/api/configuration/reset", 
+    null
+);
+
+if (resetResponse.IsSuccessStatusCode)
+{
+    Console.WriteLine("Configuration reset completed");
+}
+```
+
 ## StreamProcessingBenchmarks
 
 The `StreamProcessingBenchmarks` class provides performance benchmarks for stream processing operations in the gRPC-Web Bridge, including reading streams to end, chunked copying, and base64 conversion. It uses BenchmarkDotNet to measure execution time and memory allocation for various stream sizes.
