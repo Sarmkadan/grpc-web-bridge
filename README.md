@@ -1057,6 +1057,51 @@ if (!jwtValid)
 }
 ```
 
+## MetricsController
+
+The `MetricsController` class provides comprehensive monitoring and metrics collection endpoints for the gRPC-Web Bridge server. It tracks system statistics including uptime, request rates, error counts, active streams, service health, and resource usage (memory, CPU). The controller also exposes method-level invocation statistics and streaming performance metrics for observability and debugging purposes.
+
+Example usage:
+
+```csharp
+// In your ASP.NET Core application's Program.cs or Startup
+builder.Services.AddControllers();
+
+// The MetricsController is automatically registered when AddControllers() is called
+// Access metrics endpoints:
+
+// 1. Get comprehensive system metrics
+var systemMetrics = await httpClient.GetFromJsonAsync<dynamic>("http://localhost:5000/api/metrics");
+Console.WriteLine($"Uptime: {systemMetrics.data.systemMetrics.uptime.totalSeconds} seconds");
+Console.WriteLine($"Active streams: {systemMetrics.data.streamMetrics.activeStreams}");
+Console.WriteLine($"Error rate: {systemMetrics.data.requestMetrics.errorRate}%");
+
+// 2. Get method-level invocation statistics
+var methodMetrics = await httpClient.GetFromJsonAsync<dynamic>("http://localhost:5000/api/metrics/methods");
+foreach (var method in methodMetrics.data.methods)
+{
+    Console.WriteLine($"{method.method}: {method.callCount} calls, {method.errorRate}% errors");
+}
+
+// 3. Get streaming performance metrics
+var streamingMetrics = await httpClient.GetFromJsonAsync<dynamic>("http://localhost:5000/api/metrics/streaming");
+Console.WriteLine($"Active streams: {streamingMetrics.data.activeStreamCount}");
+
+// 4. Manually record method calls from your services
+MetricsController.RecordMethodCall("UserService.GetUser");
+MetricsController.RecordMethodCall("OrderService.CreateOrder");
+
+// 5. Record method errors when they occur
+MetricsController.RecordMethodError("PaymentService.ProcessPayment");
+
+// 6. Reset metrics for baseline testing (admin operation)
+var resetResponse = await httpClient.PostAsync("http://localhost:5000/api/metrics/reset", null);
+if (resetResponse.IsSuccessStatusCode)
+{
+    Console.WriteLine("Metrics reset successfully");
+}
+```
+
 ## StreamUtility
 
 The `StreamUtility` class provides comprehensive stream handling utilities for efficient data transfer operations in the gRPC-Web Bridge. It includes methods for chunked copying, compression/decompression, Base64 conversion, hashing, and multi-destination streaming (teeing) with optimized memory management and retry logic for robust data transfer operations.
