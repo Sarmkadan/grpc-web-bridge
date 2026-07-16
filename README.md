@@ -913,6 +913,71 @@ var isAsync = ReflectionUtility.IsAsyncMethod(
 );
 ```
 
+## StreamUtility
+
+The `StreamUtility` class provides comprehensive stream handling utilities for efficient data transfer operations in the gRPC-Web Bridge. It includes methods for chunked copying, compression/decompression, Base64 conversion, hashing, and multi-destination streaming (teeing) with optimized memory management and retry logic for robust data transfer operations.
+
+Example usage:
+
+```csharp
+// Create a sample stream with some data
+var sampleData = Encoding.UTF8.GetBytes("Hello, gRPC-Web Bridge! This is a test stream.");
+using var sampleStream = new MemoryStream(sampleData);
+
+// Copy stream with chunking (81920 bytes per chunk by default)
+using var destinationStream = new MemoryStream();
+await StreamUtility.CopyStreamChunkedAsync(sampleStream, destinationStream);
+Console.WriteLine($"Copied {destinationStream.Length} bytes");
+
+// Read entire stream to byte array (with 10MB size limit)
+var bytes = await StreamUtility.ReadStreamToEndAsync(sampleStream);
+Console.WriteLine($"Read {bytes.Length} bytes from stream");
+
+// Create pipe reader/writer for high-performance streaming
+var pipeReader = StreamUtility.CreatePipeReader(sampleStream);
+var pipeWriter = StreamUtility.CreatePipeWriter(destinationStream);
+
+// Compress and decompress streams
+using var compressedStream = new MemoryStream();
+using var compressedSource = new MemoryStream(sampleData);
+await StreamUtility.CompressStreamAsync(compressedSource, compressedStream);
+
+using var decompressedStream = new MemoryStream();
+compressedStream.Seek(0, SeekOrigin.Begin);
+await StreamUtility.DecompressStreamAsync(compressedStream, decompressedStream);
+
+// Convert stream to Base64
+compressedStream.Seek(0, SeekOrigin.Begin);
+string base64String = await StreamUtility.StreamToBase64Async(compressedStream);
+Console.WriteLine($"Base64 length: {base64String.Length} characters");
+
+// Convert Base64 back to stream
+using var base64Stream = StreamUtility.Base64ToStream(base64String);
+Console.WriteLine($"Base64 stream length: {base64Stream.Length} bytes");
+
+// Calculate stream hash (SHA256)
+base64Stream.Seek(0, SeekOrigin.Begin);
+string hash = await StreamUtility.CalculateStreamHashAsync(base64Stream, System.Security.Cryptography.SHA256.Create());
+Console.WriteLine($"Stream hash: {hash}");
+
+// Tee stream to multiple destinations (useful for logging/monitoring)
+using var stream1 = new MemoryStream();
+using var stream2 = new MemoryStream();
+sampleStream.Seek(0, SeekOrigin.Begin);
+await StreamUtility.TeeStreamAsync(sampleStream, stream1, stream2);
+Console.WriteLine($"Tee streams: {stream1.Length} and {stream2.Length} bytes");
+
+// Write with retry logic
+using var retryStream = new MemoryStream();
+await StreamUtility.WriteWithRetryAsync(retryStream, sampleData, maxRetries: 3, delayMs: 100);
+Console.WriteLine($"Wrote with retry: {retryStream.Length} bytes");
+
+// Check stream validity and get length
+bool isValid = StreamUtility.IsStreamValid(sampleStream);
+long? length = StreamUtility.GetStreamLength(sampleStream);
+Console.WriteLine($"Stream valid: {isValid}, Length: {length}");
+```
+
 ## JsonUtility
 
 The `JsonUtility` class provides comprehensive JSON serialization and deserialization utilities for consistent JSON handling across the gRPC-Web Bridge application. It supports various serialization options, type-safe deserialization, dynamic object parsing, JSON merging, property manipulation, and schema validation with comprehensive error handling throughout.
