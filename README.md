@@ -913,6 +913,51 @@ var isAsync = ReflectionUtility.IsAsyncMethod(
 );
 ```
 
+## CryptographyUtility
+
+The `CryptographyUtility` class provides secure cryptographic operations including password hashing, token generation, data encryption, and message authentication. It uses industry-standard algorithms like PBKDF2, AES-256-GCM, HMAC-SHA256, and SHA-256 to ensure data integrity and security throughout the gRPC-Web Bridge application.
+
+Example usage:
+
+```csharp
+// Hash a user password for secure storage
+string password = "SecurePassword123!";
+string hashedPassword = CryptographyUtility.HashPassword(password);
+Console.WriteLine($"Hashed password: {hashedPassword}");
+
+// Verify a password against stored hash
+bool isValid = CryptographyUtility.VerifyPassword(password, hashedPassword);
+Console.WriteLine($"Password valid: {isValid}");
+
+// Generate a secure authentication token
+string authToken = CryptographyUtility.GenerateToken(64);
+Console.WriteLine($"Authentication token: {authToken}");
+
+// Generate a human-readable API key
+string apiKey = CryptographyUtility.GenerateApiKey(32);
+Console.WriteLine($"API key: {apiKey}");
+
+// Compute SHA256 hash for data integrity
+string data = "Hello, gRPC-Web Bridge!";
+string sha256Hash = CryptographyUtility.ComputeSha256(data);
+Console.WriteLine($"SHA256 hash: {sha256Hash}");
+
+// Compute HMAC-SHA256 for message authentication
+string secretKey = "my-secret-key-123";
+string hmacHash = CryptographyUtility.ComputeHmacSha256(data, secretKey);
+Console.WriteLine($"HMAC-SHA256: {hmacHash}");
+
+// Encrypt sensitive data with AES-256-GCM
+string sensitiveData = "User SSN: 123-45-6789";
+string encryptionKey = "32-character-long-secret-key-123456";
+string encryptedData = CryptographyUtility.EncryptAes256(sensitiveData, encryptionKey);
+Console.WriteLine($"Encrypted: {encryptedData}");
+
+// Decrypt the data when needed
+string decryptedData = CryptographyUtility.DecryptAes256(encryptedData, encryptionKey);
+Console.WriteLine($"Decrypted: {decryptedData}");
+```
+
 ## StreamUtility
 
 The `StreamUtility` class provides comprehensive stream handling utilities for efficient data transfer operations in the gRPC-Web Bridge. It includes methods for chunked copying, compression/decompression, Base64 conversion, hashing, and multi-destination streaming (teeing) with optimized memory management and retry logic for robust data transfer operations.
