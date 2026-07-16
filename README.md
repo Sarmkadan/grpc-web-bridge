@@ -744,6 +744,81 @@ string formattedXml = formattedXmlFormatter.Format(xmlData);
 Console.WriteLine(formattedXml);
 ```
 
+## ProtobufUtility
+
+The `ProtobufUtility` class provides comprehensive utilities for working with Protocol Buffers messages in the gRPC-Web Bridge. It offers conversion between Protobuf, JSON, and binary formats, message cloning, validation, compression, and metadata introspection capabilities. This utility simplifies common Protobuf operations while maintaining type safety and performance.
+
+Example usage:
+
+```csharp
+// Define a sample Protobuf message (using Google.Protobuf.IMessage)
+// For demonstration, we'll use a simple message structure
+public class Person : Google.Protobuf.IMessage
+{
+    public string Name { get; set; } = string.Empty;
+    public int Age { get; set; }
+    public string Email { get; set; } = string.Empty;
+    
+    public Google.Protobuf.MessageDescriptor Descriptor => throw new NotImplementedException();
+    public int CalculateSize() => 0;
+    public void MergeFrom(Google.Protobuf.IMessage other) {}
+    public void MergeFrom(Google.Protobuf.CodedInputStream input) {}
+    public void WriteTo(Google.Protobuf.CodedOutputStream output) {}
+}
+
+// Serialize a Protobuf message to JSON
+var person = new Person { Name = "Alice", Age = 30, Email = "alice@example.com" };
+string json = ProtobufUtility.ToJson(person);
+Console.WriteLine(json);
+
+// Parse JSON back to a Protobuf message
+var parsedPerson = ProtobufUtility.FromJson<Person>(json);
+Console.WriteLine($"Parsed: {parsedPerson?.Name}, {parsedPerson?.Age}");
+
+// Convert a Protobuf message to byte array
+byte[] bytes = ProtobufUtility.ToBytes(person);
+Console.WriteLine($"Message size: {bytes.Length} bytes");
+
+// Parse a byte array back to a Protobuf message
+var fromBytes = ProtobufUtility.FromBytes<Person>(bytes);
+Console.WriteLine($"From bytes: {fromBytes?.Name}");
+
+// Get the size of a serialized message
+int messageSize = ProtobufUtility.GetMessageSize(person);
+Console.WriteLine($"Message size: {messageSize} bytes");
+
+// Convert a Protobuf message to a dictionary for inspection
+var personDict = ProtobufUtility.ToDict(person);
+Console.WriteLine($"Dictionary has {personDict.Count} entries");
+
+// Clone a Protobuf message (deep copy)
+var clonedPerson = ProtobufUtility.Clone(person);
+Console.WriteLine($"Cloned: {ProtobufUtility.AreEqual(person, clonedPerson)}");
+
+// Merge multiple Protobuf messages
+var person2 = new Person { Name = "Alice Updated", Age = 31 };
+var mergedPerson = ProtobufUtility.Merge(person, person2);
+Console.WriteLine($"Merged name: {mergedPerson.Name}");
+
+// Validate a Protobuf message
+var (isValid, errors) = ProtobufUtility.Validate(person);
+Console.WriteLine($"Valid: {isValid}, Errors: {errors.Count}");
+
+// Compress and decompress a Protobuf message
+string compressed = ProtobufUtility.CompressMessage(person);
+Console.WriteLine($"Compressed size: {compressed.Length} chars");
+var decompressedPerson = ProtobufUtility.DecompressMessage<Person>(compressed);
+Console.WriteLine($"Decompressed: {decompressedPerson?.Name}");
+
+// Get metadata about a Protobuf message type
+var metadata = ProtobufUtility.GetMessageMetadata<Person>();
+Console.WriteLine($"Message: {metadata.Name} ({metadata.FieldCount} fields)");
+foreach (var field in metadata.Fields)
+{
+    Console.WriteLine($"  - {field.Name}: {field.Type} (Required: {field.IsRequired})");
+}
+```
+
 ## JsonUtility
 
 The `JsonUtility` class provides comprehensive JSON serialization and deserialization utilities for consistent JSON handling across the gRPC-Web Bridge application. It supports various serialization options, type-safe deserialization, dynamic object parsing, JSON merging, property manipulation, and schema validation with comprehensive error handling throughout.
