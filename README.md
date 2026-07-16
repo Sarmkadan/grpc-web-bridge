@@ -470,6 +470,31 @@ eventBus.Unsubscribe<UserCreatedEvent>(HandleUserCreatedAsync);
 eventBus.ClearSubscribers();
 ```
 
+## GrpcResponse
+
+The `GrpcResponse` class encapsulates the response from a gRPC service call, holding the payload, status information, and metadata. It provides methods to easily construct successful or failed responses, manage header/trailing metadata, and validate response integrity for client consumption.
+
+Example usage:
+
+```csharp
+// Create a new response for a specific request ID
+var response = new GrpcResponse(requestId: "req-abc-123", payload: new byte[0]);
+
+// Set success status with a JSON payload
+byte[] successPayload = Encoding.UTF8.GetBytes("{\"result\":\"success\"}");
+response.SetSuccess(successPayload, SerializationFormat.Json);
+
+// Add custom metadata headers
+response.AddMetadata("X-Service-Id", "order-service");
+response.AddMetadata("X-Processed-At", DateTime.UtcNow.ToString("O"));
+
+// Access response status
+Console.WriteLine($"Response status: {response.Status}");
+
+// Validate response before serialization
+response.Validate();
+```
+
 ## Docker Support
 
 The gRPC-Web Bridge can be run in Docker containers for easy deployment and scaling.
