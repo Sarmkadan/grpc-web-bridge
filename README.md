@@ -1207,6 +1207,88 @@ string payloadHash = request.GetPayloadHash();
 request.SetPayload(Encoding.UTF8.GetBytes("{\"userId\": \"12345\", \"name\": \"John Doe\"}"), SerializationFormat.Json);
 ```
 
+## GrpcService
+
+The `GrpcService` class represents a gRPC service with its metadata, configuration, and available methods. It serves as a container for service information including endpoint details, service status, and method definitions, enabling the gRPC-Web Bridge to route requests to appropriate gRPC services.
+
+Example usage:
+
+```csharp
+// Create a new gRPC service instance
+var userService = new GrpcService(
+    name: "UserService",
+    packageName: "com.example.grpc",
+    endpoint: "user-service.example.com",
+    port: 50051
+)
+{
+    Description = "Handles user authentication and profile management",
+    UseTls = true,
+    Status = ServiceStatus.Serving
+};
+
+// Add methods to the service
+userService.AddMethod(new GrpcMethod(
+    name: "GetUser",
+    methodType: MethodType.Unary,
+    inputType: "GetUserRequest",
+    outputType: "UserResponse"
+));
+
+userService.AddMethod(new GrpcMethod(
+    name: "CreateUser",
+    methodType: MethodType.Unary,
+    inputType: "CreateUserRequest",
+    outputType: "UserResponse"
+));
+
+userService.AddMethod(new GrpcMethod(
+    name: "StreamUserUpdates",
+    methodType: MethodType.ServerStreaming,
+    inputType: "UserFilter",
+    outputType: "UserUpdate"
+));
+
+// Access service properties
+Console.WriteLine($"Service: {userService.FullName}");
+Console.WriteLine($"Endpoint: {userService.Endpoint}:{userService.Port}");
+Console.WriteLine($"Status: {userService.Status}");
+Console.WriteLine($"Created: {userService.CreatedAt}");
+
+// Manage metadata
+userService.SetMetadata("environment", "production");
+userService.SetMetadata("version", "1.2.3");
+userService.SetMetadata("team", "backend-platform");
+
+string? environment = userService.GetMetadata("environment");
+Console.WriteLine($"Environment: {environment}");
+
+// Check if service has specific methods
+bool hasGetUser = userService.HasMethod("GetUser");
+bool hasNonExistentMethod = userService.HasMethod("NonExistentMethod");
+
+// Retrieve a method by name
+var getUserMethod = userService.GetMethod("GetUser");
+if (getUserMethod != null)
+{
+    Console.WriteLine($"Found method: {getUserMethod.Name} ({getUserMethod.MethodType})");
+}
+
+// Remove a method
+userService.RemoveMethod("CreateUser");
+
+// Validate service configuration
+try
+{
+    userService.Validate();
+    Console.WriteLine("Service configuration is valid");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Validation error: {ex.Message}");
+}
+```
+
 ## ServiceDiscoveryClient
 
 The `ServiceDiscoveryClient` class provides service discovery and health monitoring capabilities for gRPC services in the gRPC-Web Bridge. It enables dynamic registration and deregistration of services, discovery of available service instances, health checks via heartbeats, and automatic cache refresh for service instances.
