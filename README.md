@@ -20,6 +20,15 @@ cd src/GrpcWebBridge
 dotnet run
 ```
 
+## Architecture
+
+The bridge is a single ASP.NET Core app: middleware pipeline (error handling,
+content-type validation, logging) in front of `BridgeController`, protocol
+translation and streaming services behind it, and a pooled gRPC channel
+manager talking to backends. The full breakdown - components, design
+decisions with trade-offs, extension points, known limitations - lives in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Configuration
 
 Configure the bridge in `appsettings.json`:
