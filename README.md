@@ -1097,6 +1097,61 @@ metricsWorker.ClearHistory();
 metricsWorker.Stop();
 ```
 
+## HealthCheckWorker
+
+The `HealthCheckWorker` class is a background worker that periodically checks the health status of registered services. It monitors service availability, response times, and error rates, maintaining a health status for each service with configurable intervals and timeouts. The worker provides methods to retrieve current health status, service statistics, and historical health data for monitoring and alerting purposes.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddHealthCheckWorker(options =>
+{
+    options.CheckIntervalSeconds = 30;
+    options.TimeoutMs = 5000;
+    options.InitialDelaySeconds = 5;
+    options.ServiceId = "grpc-web-bridge";
+    options.ServiceName = "gRPC-Web Bridge";
+});
+
+// In your ASP.NET Core application startup
+var healthCheckWorker = app.Services.GetRequiredService<HealthCheckWorker>();
+
+// Start the health check worker (typically done automatically by IHostedService)
+// healthCheckWorker.Start(); // Not needed - runs automatically
+
+// Get current health status for all services
+var healthStatus = healthCheckWorker.GetHealthStatus();
+Console.WriteLine($"Overall health: {healthStatus.IsHealthy}");
+Console.WriteLine($"Service ID: {healthStatus.ServiceId}");
+Console.WriteLine($"Service Name: {healthStatus.ServiceName}");
+Console.WriteLine($"Last checked: {healthStatus.Timestamp}");
+
+// Access individual service health
+if (healthStatus.Services.TryGetValue("UserService", out var userServiceHealth))
+{
+    Console.WriteLine($"UserService health: {(userServiceHealth.IsHealthy ? "HEALTHY" : "UNHEALTHY")}");
+    Console.WriteLine($"Response time: {userServiceHealth.ResponseTimeMs}ms");
+    Console.WriteLine($"Error count: {userServiceHealth.ErrorCount}");
+}
+
+// Get statistics for monitoring
+var statistics = healthCheckWorker.GetStatistics();
+Console.WriteLine($"Total checks performed: {statistics.totalChecks}");
+Console.WriteLine($"Successful checks: {statistics.successfulChecks}");
+Console.WriteLine($"Failed checks: {statistics.failedChecks}");
+Console.WriteLine($"Average response time: {statistics.averageResponseTimeMs}ms");
+
+// Access configuration properties
+int interval = healthCheckWorker.CheckIntervalSeconds;
+int timeout = healthCheckWorker.CheckTimeoutMs;
+int initialDelay = healthCheckWorker.InitialDelaySeconds;
+string serviceId = healthCheckWorker.ServiceId;
+string serviceName = healthCheckWorker.ServiceName;
+bool isHealthy = healthCheckWorker.IsHealthy;
+DateTime timestamp = healthCheckWorker.Timestamp;
+```
+
 ## StreamCleanupWorker
 
 The `StreamCleanupWorker` class is a background worker that periodically cleans up idle and stale streaming connections to prevent memory leaks. It monitors active streams and removes those that have been inactive beyond configurable thresholds, including streams with no activity (stale streams) and streams that have exceeded their idle timeout. The worker also triggers garbage collection when a threshold of removed streams is reached, helping maintain system stability under heavy streaming loads.
