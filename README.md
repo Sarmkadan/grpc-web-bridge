@@ -1463,6 +1463,72 @@ bool unregistered = serviceRegistry.UnregisterService("com.example.grpc.UserServ
 Console.WriteLine($"Service unregistered: {unregistered}");
 ```
 
+## AuthenticationService
+
+The `AuthenticationService` class handles authentication and authorization for gRPC requests in the gRPC-Web Bridge. It supports multiple authentication schemes including Bearer tokens (JWT), API keys, and custom authentication methods. The service provides role-based authorization, context validation, caching for performance optimization, and generates appropriate error responses for failed authentication attempts.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<AuthenticationService>();
+
+// In your middleware or controller
+var authService = app.Services.GetRequiredService<AuthenticationService>();
+
+// Authenticate with Bearer token (JWT)
+var bearerToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMzQ1Iiwicm9sZXMiOlsiYWRtaW4iLCJ1c2VyIl0sIm5hbWUiOiJKb2huIERvZSIsImV4cCI6MTc5OTk5OTk5OSwiaWF0IjoxNjk5OTk5OTk5fQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+var bearerContext = authService.AuthenticateBearer(bearerToken);
+
+Console.WriteLine($"Authenticated user: {bearerContext.UserId}");
+Console.WriteLine($"Roles: {string.Join(", ", bearerContext.Roles)}");
+
+// Authenticate with API key
+var apiKeyContext = authService.AuthenticateApiKey(
+    apiKey: "sk_live_abc123xyz789",
+    userId: "user-456"
+);
+
+Console.WriteLine($"API key authenticated for user: {apiKeyContext.UserId}");
+
+// Authenticate with custom credentials
+var customContext = authService.AuthenticateCustom(
+    userId: "user-789",
+    credentials: new Dictionary<string, string>
+    {
+        {"email", "user@example.com"},
+        {"department", "engineering"}
+    }
+);
+
+Console.WriteLine($"Custom authenticated user: {customContext.UserId}");
+
+// Validate authentication context
+bool isValid = authService.ValidateContext(bearerContext);
+Console.WriteLine($"Context valid: {isValid}");
+
+// Check for specific role
+bool isAdmin = authService.AuthorizeRole(bearerContext, "admin");
+Console.WriteLine($"Is admin: {isAdmin}");
+
+// Check for any role in a list
+bool hasRequiredRole = authService.AuthorizeAnyRole(bearerContext, "admin", "moderator");
+Console.WriteLine($"Has required role: {hasRequiredRole}");
+
+// Extract bearer token from authorization header
+string? authHeader = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+string? extractedToken = authService.ExtractBearerToken(authHeader);
+Console.WriteLine($"Extracted token: {extractedToken != null}");
+
+// Get cached context (useful for subsequent requests)
+var cachedContext = authService.GetCachedContext(bearerContext.Id);
+Console.WriteLine($"Retrieved cached context: {cachedContext != null}");
+
+// Create authentication failure response
+var failureResponse = authService.CreateAuthFailureResponse(Guid.NewGuid().ToString());
+Console.WriteLine($"Created auth failure response: {failureResponse.StatusCode}");
+```
+
 ## RateLimitingMiddleware
 
 The `RateLimitingMiddleware` class provides request rate limiting using a sliding window token bucket algorithm. It enforces both per-client and global rate limits to protect backend services from abuse and overload. The middleware tracks request timestamps per client IP and path, allowing you to configure requests per second, window size, and retry-after periods for rate-limited clients.
