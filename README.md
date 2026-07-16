@@ -1636,6 +1636,58 @@ app.UseRateLimiting(new RateLimitingOptions
 
 The `StreamCleanupWorker` class is a background worker that periodically cleans up idle and stale streaming connections to prevent memory leaks. It monitors active streams and removes those that have been inactive beyond configurable thresholds, including streams with no activity (stale streams) and streams that have exceeded their idle timeout. The worker also triggers garbage collection when a threshold of removed streams is reached, helping maintain system stability under heavy streaming loads.
 
+## StreamingService
+
+The `StreamingService` class manages gRPC streaming sessions for the gRPC-Web Bridge, enabling bidirectional communication between gRPC-Web clients and gRPC services. It handles stream creation, message queuing and processing, heartbeat monitoring, and automatic cleanup of idle or completed streams. The service provides statistics tracking, stream state management, and supports both unary and streaming method types with configurable timeouts and heartbeats.
+
+Example usage:
+
+```csharp
+// Create and configure a streaming service
+var streamingService = new StreamingService(
+    streamId: Guid.NewGuid().ToString(),
+    methodType: MethodType.ServerStreaming,
+    serviceName: "UserService",
+    methodName: "StreamUserUpdates"
+);
+
+// Create a new stream
+var newStream = streamingService.CreateStream();
+Console.WriteLine($"Created stream: {newStream.StreamId}");
+
+// Enqueue messages for streaming to clients
+streamingService.EnqueueMessage(streamingService.StreamId, new StreamMessage(
+    streamId: streamingService.StreamId,
+    messageType: StreamMessageType.Data,
+    sequenceNumber: 1,
+    data: Encoding.UTF8.GetBytes("{\"userId\": \"user-123\", \"status\": \"active\"}")
+));
+
+// Dequeue messages for processing
+var dequeuedMessage = streamingService.DequeueMessage(streamingService.StreamId);
+if (dequeuedMessage != null)
+{
+    Console.WriteLine($"Dequeued message {dequeuedMessage.SequenceNumber}: {Encoding.UTF8.GetString(dequeuedMessage.Data)}");
+}
+
+// Send heartbeat to keep stream alive
+streamingService.SendHeartbeat(streamingService.StreamId);
+
+// Get stream statistics for monitoring
+var stats = streamingService.GetStreamStatistics();
+Console.WriteLine($"Stream {streamingService.StreamId}: {stats.MessageCount} messages, " +
+                 $"State: {streamingService.State}, Created: {streamingService.CreatedAt}");
+
+// Get all active stream IDs
+var allStreamIds = streamingService.GetAllStreamIds();
+Console.WriteLine($"Active streams: {string.Join(", ", allStreamIds)}");
+
+// Close stream when complete
+streamingService.CloseStream(streamingService.StreamId);
+```
+
+## StreamCleanupWorker
+
 Example usage:
 
 ```csharp
