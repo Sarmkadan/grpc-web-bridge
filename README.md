@@ -470,6 +470,83 @@ eventBus.Unsubscribe<UserCreatedEvent>(HandleUserCreatedAsync);
 eventBus.ClearSubscribers();
 ```
 
+## GrpcMethod
+
+The `GrpcMethod` class represents a single gRPC method definition with full metadata, including method type, input/output message types, parameters, and timeout configuration. It provides comprehensive method information for protocol translation, service discovery, and client integration scenarios.
+
+Example usage:
+
+```csharp
+// Create a new gRPC method definition
+var method = new GrpcMethod(
+    name: "GetUser",
+    fullName: "user.v1.UserService/GetUser",
+    type: MethodType.Unary,
+    inputMessage: "GetUserRequest",
+    outputMessage: "UserResponse"
+)
+{
+    Description = "Retrieves a user profile by their unique identifier",
+    TimeoutMilliseconds = 5000,
+    IsDeprecated = false
+};
+
+// Add input parameters
+method.AddInputParameter(new MethodParameter(
+    name: "userId",
+    type: "string",
+    isRequired: true,
+    description: "The unique identifier of the user to retrieve"
+));
+
+method.AddInputParameter(new MethodParameter(
+    name: "includeDetails",
+    type: "bool",
+    isRequired: false,
+    defaultValue: "false",
+    description: "Whether to include detailed user information"
+));
+
+// Add output parameters
+method.AddOutputParameter(new MethodParameter(
+    name: "user",
+    type: "User",
+    isRequired: true,
+    description: "The retrieved user profile"
+));
+
+method.AddOutputParameter(new MethodParameter(
+    name: "metadata",
+    type: "ResponseMetadata",
+    isRequired: false,
+    description: "Additional response metadata"
+));
+
+// Access method properties
+Console.WriteLine($"Method: {method.Name}");
+Console.WriteLine($"Full name: {method.FullName}");
+Console.WriteLine($"Type: {method.Type}");
+Console.WriteLine($"Input: {method.InputMessageType}");
+Console.WriteLine($"Output: {method.OutputMessageType}");
+Console.WriteLine($"Timeout: {method.TimeoutMilliseconds}ms");
+Console.WriteLine($"Deprecated: {method.IsDeprecated}");
+Console.WriteLine($"Description: {method.Description}");
+Console.WriteLine($"Created: {method.CreatedAt}");
+Console.WriteLine($"Parameters: {method.InputParameters.Count} input, {method.OutputParameters.Count} output");
+
+// Validate method configuration
+method.Validate();
+
+// Update method (e.g., after adding parameters)
+method.UpdatedAt = DateTime.UtcNow;
+
+// Remove a parameter if needed
+method.RemoveInputParameter("includeDetails");
+
+// String representation
+Console.WriteLine(method.ToString()); // "user.v1.UserService/GetUser (Unary)"
+```
+
 ## GrpcResponse
 
 The `GrpcResponse` class encapsulates the response from a gRPC service call, holding the payload, status information, and metadata. It provides methods to easily construct successful or failed responses, manage header/trailing metadata, and validate response integrity for client consumption.
