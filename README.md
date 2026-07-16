@@ -41,6 +41,78 @@ Configure the bridge in `appsettings.json`:
 }
 ```
 
+## DependencyInjection
+
+The `DependencyInjection` class provides extension methods for configuring gRPC-Web Bridge services in the ASP.NET Core dependency injection container. These methods simplify service registration for core components, authentication, Swagger documentation, CORS policies, Prometheus metrics, and distributed tracing. Each extension method follows the standard .NET DI pattern, returning the `IServiceCollection` for method chaining.
+
+Example usage:
+
+```csharp
+// Basic setup with default options
+builder.Services.AddGrpcWebBridge();
+
+// Custom configuration via delegate
+builder.Services.AddGrpcWebBridge(options =>
+{
+    options.Configuration.EnableSwagger = true;
+    options.Configuration.EnableMetrics = true;
+    options.Configuration.EnableCors = true;
+});
+
+// Add Swagger documentation
+builder.Services.AddGrpcWebBridgeSwagger(
+    title: "gRPC-Web Bridge API",
+    version: "1.0.0"
+);
+
+// Add CORS configuration
+builder.Services.AddGrpcWebBridgeCors();
+
+// Add authentication with JWT Bearer tokens
+builder.Services.AddGrpcWebBridgeAuthentication(options =>
+{
+    options.Authority = "https://auth.example.com";
+    options.Audience = "grpc-web-bridge";
+});
+
+// Add Prometheus metrics
+builder.Services.AddGrpcWebBridgePrometheus();
+
+// Add OpenTelemetry distributed tracing
+builder.Services.AddGrpcWebBridgeTracing(
+    serviceName: "grpc-web-bridge",
+    instanceName: "production-instance-1",
+    configureBuilder: builder => builder.AddConsoleExporter()
+);
+
+// Core services are automatically registered:
+// - ProtocolTranslationService
+// - StreamingService  
+// - AuthenticationService
+// - ServiceRegistry
+// - ServiceRepository
+// - GrpcConnectionManager
+// - StreamCleanupService (as IHostedService)
+
+var app = builder.Build();
+
+// Use Swagger in development
+if (app.Environment.IsDevelopment())
+{
+    app.UseGrpcWebBridgeSwagger();
+}
+
+// Use CORS policy
+app.UseCors("AllowGrpcWeb");
+
+// Use authentication and authorization
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Expose Prometheus metrics endpoint
+app.MapMetrics();
+```
+
 ## BridgeConfiguration
 
 The `BridgeConfiguration` class defines all runtime configuration settings for the gRPC-Web bridge server. It controls logging, authentication, CORS policies, streaming behavior, message sizes, compression, and service defaults. This configuration object is typically loaded from application settings and validated before the bridge starts processing requests.
