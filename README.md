@@ -713,6 +713,72 @@ var keyValueUpdatedException = configException.WithKeyValue(
 Console.WriteLine(keyValueUpdatedException.GetFormattedMessage());
 ```
 
+## BackpressureController
+
+The `BackpressureController` class implements a credit-based backpressure mechanism for streaming scenarios. It prevents unbounded heap growth by enforcing a configurable credit window that tracks in-flight message count between producers and consumers. The controller uses a `SemaphoreSlim` for async-friendly credit acquisition and a lock-free `FlowControlWindow` for utilization tracking, with all public methods designed for concurrent access.
+
+Example usage:
+
+```csharp
+// Create a backpressure controller with flow control configuration
+var logger = new Logger<BackpressureController>(new LoggerFactory());
+var options = new FlowControlOptions
+{
+    InitialWindowSize = 100,
+    MaxWindowSize = 1000,
+    Mode = FlowControlMode.Enabled,
+    BackpressureThreshold = 0.8, // 80% utilization
+    MaxProducerWaitTime = TimeSpan.FromSeconds(30)
+};
+
+var controller = new BackpressureController(
+    streamId: "stream-123",
+    options: options,
+    logger: logger
+);
+
+// Consume credits before sending messages (synchronous)
+bool creditsAvailable = controller.TryConsumeCredit(5);
+if (creditsAvailable)
+{
+    Console.WriteLine($"Successfully acquired credits. Available: {controller.AvailableCredits}");
+    
+    // Send messages...
+    
+    // Release credits when processing completes
+    controller.ReleaseCredit(5);
+}
+
+// Consume credits asynchronously with cancellation support
+try
+{
+    await controller.ConsumeCreditAsync(3, cancellationToken);
+    
+    // Send messages...
+    
+    // Release credits when done
+    controller.ReleaseCredit(3);
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("Credit acquisition was cancelled");
+}
+
+// Reset the flow control window when needed
+controller.ResetWindow();
+
+// Monitor backpressure state
+Console.WriteLine($"Stream ID: {controller.StreamId}");
+Console.WriteLine($"Available Credits: {controller.AvailableCredits}");
+Console.WriteLine($"Window Utilization: {controller.WindowUtilization:P0}");
+Console.WriteLine($"Is Throttled: {controller.IsThrottled}");
+Console.WriteLine($"Total Produced: {controller.TotalProduced}");
+Console.WriteLine($"Total Consumed: {controller.TotalConsumed}");
+
+// Dispose when the stream is complete
+controller.Dispose();
+```
+
 ## BackpressureControllerExtensions
 
 The `BackpressureControllerExtensions` class provides extension methods for managing credit-based flow control in streaming scenarios. It enables efficient backpressure handling by allowing atomic consumption and release of credits, monitoring window utilization, and generating formatted status strings for observability.
