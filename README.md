@@ -1020,9 +1020,86 @@ var httpPayload = benchmarks.TranslateGrpcToHttpAuto(testResponse);
 Console.WriteLine($"HTTP payload translated: {httpPayload.Length} bytes");
 ```
 
+## MetricsCollectionWorker
+
+The `MetricsCollectionWorker` class is a background worker that periodically collects system and application metrics including CPU usage, memory consumption, thread count, garbage collection statistics, and request metrics. It maintains a history of metrics snapshots for trend analysis and alerting purposes, and provides methods to retrieve aggregated metrics and manage the metrics history.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddMetricsCollectionWorker(options =>
+{
+    options.CollectionIntervalSeconds = 30;
+    options.MaxSnapshotsToKeep = 1000;
+    options.CpuAlertThresholdPercent = 90.0;
+    options.MemoryAlertThresholdMb = 2048.0;
+    options.ErrorRateAlertThresholdPercent = 5.0;
+});
+
+// In your ASP.NET Core application startup
+var metricsWorker = app.Services.GetRequiredService<MetricsCollectionWorker>();
+
+// Start the metrics collection worker
+metricsWorker.Start();
+
+// Get aggregated metrics for monitoring dashboards
+var aggregatedMetrics = metricsWorker.GetAggregatedMetrics();
+Console.WriteLine($"Current CPU: {aggregatedMetrics.CpuUsagePercent}%");
+Console.WriteLine($"Current Memory: {aggregatedMetrics.MemoryUsageMb}MB");
+Console.WriteLine($"Current Threads: {aggregatedMetrics.ThreadCount}");
+Console.WriteLine($"Total Requests: {aggregatedMetrics.TotalRequests}");
+Console.WriteLine($"Error Rate: {aggregatedMetrics.ErrorRate}%");
+
+// Get the latest metrics snapshot
+var latestSnapshot = metricsWorker.GetSnapshotHistory().LastOrDefault();
+if (latestSnapshot != null)
+{
+    Console.WriteLine($"Latest snapshot at {latestSnapshot.Timestamp}: " +
+                     $"CPU={latestSnapshot.CpuUsagePercent}%, " +
+                     $"Memory={latestSnapshot.MemoryUsageMb}MB, " +
+                     $"Threads={latestSnapshot.ThreadCount}");
+}
+
+// Access request metrics for performance monitoring
+if (metricsWorker.RequestMetrics != null)
+{
+    Console.WriteLine($"Request metrics available:");
+    Console.WriteLine($"  - Total requests: {metricsWorker.RequestMetrics.TotalRequests}");
+    Console.WriteLine($"  - Total errors: {metricsWorker.RequestMetrics.TotalErrors}");
+    Console.WriteLine($"  - Error rate: {metricsWorker.RequestMetrics.ErrorRate}%");
+}
+
+// Get historical metrics for trend analysis
+var snapshotHistory = metricsWorker.GetSnapshotHistory();
+Console.WriteLine($"Total snapshots collected: {snapshotHistory.Count}");
+
+// Check if any alert thresholds are exceeded
+if (metricsWorker.CpuUsagePercent > metricsWorker.CpuAlertThresholdPercent)
+{
+    Console.WriteLine($"ALERT: CPU usage {metricsWorker.CpuUsagePercent}% exceeds threshold {metricsWorker.CpuAlertThresholdPercent}%");
+}
+
+if (metricsWorker.MemoryUsageMb > metricsWorker.MemoryAlertThresholdMb)
+{
+    Console.WriteLine($"ALERT: Memory usage {metricsWorker.MemoryUsageMb}MB exceeds threshold {metricsWorker.MemoryAlertThresholdMb}MB");
+}
+
+if (metricsWorker.ErrorRate > metricsWorker.ErrorRateAlertThresholdPercent)
+{
+    Console.WriteLine($"ALERT: Error rate {metricsWorker.ErrorRate}% exceeds threshold {metricsWorker.ErrorRateAlertThresholdPercent}%");
+}
+
+// Clear old history when needed (e.g., during maintenance)
+metricsWorker.ClearHistory();
+
+// Stop the worker when application shuts down
+metricsWorker.Stop();
+```
+
 ## MetricsCollectionWorkerExtensions
 
-The `MetricsCollectionWorkerExtensions` class provides extension methods for `MetricsCollectionWorker` that enable advanced metrics analysis, filtering, and reporting capabilities. It includes utilities for filtering snapshots by time range, calculating peak usage statistics, analyzing trends over time windows, and generating alert summaries based on configurable thresholds.
+The `MetricsCollectionWorkerExtensions` class provides extension methods for `MetricsCollectionWorker" that enable advanced metrics analysis, filtering, and reporting capabilities. It includes utilities for filtering snapshots by time range, calculating peak usage statistics, analyzing trends over time windows, and generating alert summaries based on configurable thresholds.
 
 Example usage:
 
