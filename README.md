@@ -634,6 +634,55 @@ Console.WriteLine($"Response status: {response.Status}");
 response.Validate();
 ```
 
+## MethodParameter
+
+The `MethodParameter` class represents a single parameter in a gRPC method signature, encapsulating metadata about parameter names, types, field numbers, and serialization requirements. It is used extensively in method definitions to provide complete type information for protocol translation and client integration scenarios.
+
+Example usage:
+
+```csharp
+// Create a required method parameter
+var userIdParameter = new MethodParameter(
+    name: "userId",
+    typeName: "string",
+    fieldNumber: 1,
+    isRequired: true)
+{
+    Description = "The unique identifier of the user to retrieve",
+    Format = SerializationFormat.Protobuf
+};
+
+// Create an optional repeated parameter
+var tagsParameter = new MethodParameter(
+    name: "tags",
+    typeName: "string",
+    fieldNumber: 2,
+    isRequired: false)
+{
+    Description = "List of tags to filter results by",
+    IsRepeated = true,
+    Format = SerializationFormat.Json
+};
+
+// Access parameter properties
+Console.WriteLine($"Parameter: {userIdParameter.Name} ({userIdParameter.TypeName})");
+Console.WriteLine($"Field number: {userIdParameter.FieldNumber}");
+Console.WriteLine($"Required: {userIdParameter.IsRequired}");
+Console.WriteLine($"Repeated: {userIdParameter.IsRepeated}");
+Console.WriteLine($"Description: {userIdParameter.Description}");
+Console.WriteLine($"Format: {userIdParameter.Format}");
+
+// Validate parameter configuration
+userIdParameter.Validate();
+
+// String representation
+Console.WriteLine(userIdParameter.ToString()); // "userId: string (field 1)"
+
+// Equality comparison
+var sameParameter = new MethodParameter("userId", "string", 1);
+Console.WriteLine($"Parameters equal: {userIdParameter.Equals(sameParameter)}"); // true
+```
+
 ## Docker Support
 
 The gRPC-Web Bridge can be run in Docker containers for easy deployment and scaling.
