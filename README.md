@@ -820,6 +820,37 @@ Console.WriteLine($"High throughput configuration: Initial={highThroughputOption
 Console.WriteLine($"Low latency configuration: Initial={lowLatencyOptions.InitialWindowSize}, Max={lowLatencyOptions.MaxWindowSize}");
 ```
 
+## StreamDiagnosticsOptions
+
+The `StreamDiagnosticsOptions` record configures the behavior of the `StreamDiagnosticsService`, which periodically collects aggregate metrics from all active bidirectional streams and publishes diagnostic events. It controls how often diagnostics are collected, when streams are considered stale, and what backpressure thresholds trigger warnings.
+
+Example usage:
+
+```csharp
+// Create a production-ready diagnostics configuration
+var diagnosticsOptions = new StreamDiagnosticsOptions
+{
+    CollectionInterval = TimeSpan.FromSeconds(30),  // Collect every 30 seconds
+    StaleStreamThreshold = TimeSpan.FromMinutes(10),  // Mark streams idle for 10+ minutes as stale
+    BackpressureWarnThreshold = 0.15  // Warn when backpressure events exceed 15% of messages
+};
+
+// Register the service with ASP.NET Core DI
+builder.Services.AddSingleton<StreamDiagnosticsService>();
+builder.Services.AddHostedService<StreamDiagnosticsService>();
+
+// Or configure with options pattern
+builder.Services.Configure<StreamDiagnosticsOptions>(options =>
+{
+    options.CollectionInterval = TimeSpan.FromSeconds(30);
+    options.StaleStreamThreshold = TimeSpan.FromMinutes(10);
+    options.BackpressureWarnThreshold = 0.15;
+});
+
+// The service will automatically start and publish StreamingDiagnosticsEvent
+// to the application EventBus every CollectionInterval seconds
+```
+
 ## BackpressureControllerExtensions
 
 The `BackpressureControllerExtensions` class provides extension methods for managing credit-based flow control in streaming scenarios. It enables efficient backpressure handling by allowing atomic consumption and release of credits, monitoring window utilization, and generating formatted status strings for observability.
