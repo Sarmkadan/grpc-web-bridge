@@ -1529,6 +1529,93 @@ var failureResponse = authService.CreateAuthFailureResponse(Guid.NewGuid().ToStr
 Console.WriteLine($"Created auth failure response: {failureResponse.StatusCode}");
 ```
 
+## ProtocolTranslationService
+
+The `ProtocolTranslationService` class handles protocol translation between gRPC, gRPC-Web, and other protocol formats (JSON, Protocol Buffers). It provides bidirectional conversion capabilities for seamless communication between gRPC clients and REST/gRPC-Web endpoints, including metadata translation, format conversion, request validation, and error handling.
+
+This service is the core component that enables the gRPC-Web Bridge to translate between different protocol formats while maintaining compatibility with downstream gRPC services.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<ProtocolTranslationService>();
+
+// In your ASP.NET Core middleware or controller
+var translationService = app.Services.GetRequiredService<ProtocolTranslationService>();
+
+// Create a gRPC request from HTTP data
+var httpRequestBody = Encoding.UTF8.GetBytes("{\"userId\": \"123\"}");
+var grpcRequest = translationService.TranslateHttpToGrpc(
+    serviceName: "UserService",
+    methodName: "GetUser",
+    httpBody: httpRequestBody,
+    format: SerializationFormat.Json
+);
+
+Console.WriteLine($"Created gRPC request: {grpcRequest.Id}");
+
+// Validate the request
+translationService.ValidateRequest(grpcRequest);
+
+// Translate metadata between protocols
+var metadata = new Dictionary<string, string>
+{
+    {"authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."},
+    {"content-type", "application/json"},
+    {"x-custom-header", "custom-value"}
+};
+
+var translatedMetadata = translationService.TranslateMetadata(metadata);
+Console.WriteLine($"Translated {translatedMetadata.Count} metadata headers");
+
+// Convert between formats
+var protobufData = new byte[] { 0x0A, 0x04, 0x74, 0x65, 0x73, 0x74 }; // Protobuf format
+var jsonData = translationService.ConvertProtobufToJson(protobufData);
+Console.WriteLine($"Converted Protobuf to JSON: {Encoding.UTF8.GetString(jsonData)}");
+
+var base64Json = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"test\":\"value\"}"));
+var convertedBack = translationService.ConvertJsonToProtobuf(Encoding.UTF8.GetBytes(base64Json));
+Console.WriteLine($"Converted JSON back to Protobuf: {convertedBack.Length} bytes");
+
+// Translate and invoke a gRPC service asynchronously
+var authContext = new AuthenticationContext(
+    userId: "user-123",
+    scheme: AuthenticationScheme.Bearer,
+    token: "valid-token-here"
+);
+
+var response = await translationService.TranslateAndInvokeAsync(
+    grpcRequest,
+    authContext,
+    cancellationToken: CancellationToken.None
+);
+
+if (response.Status == GrpcStatusCode.Ok)
+{
+    Console.WriteLine($"Service invocation successful: {response.Id}");
+    
+    // Convert response back to HTTP format
+    var httpResponse = translationService.TranslateGrpcToHttp(
+        response,
+        SerializationFormat.Json
+    );
+    
+    Console.WriteLine($"HTTP response: {Encoding.UTF8.GetString(httpResponse)}");
+}
+else
+{
+    Console.WriteLine($"Service invocation failed: {response.Status} - {response.StatusMessage}");
+}
+
+// Create an error response for failed operations
+var errorResponse = translationService.CreateErrorResponse(
+    requestId: Guid.NewGuid().ToString(),
+    statusCode: GrpcStatusCode.Internal,
+    message: "Service temporarily unavailable"
+);
+```
+
 ## RateLimitingMiddleware
 
 The `RateLimitingMiddleware` class provides request rate limiting using a sliding window token bucket algorithm. It enforces both per-client and global rate limits to protect backend services from abuse and overload. The middleware tracks request timestamps per client IP and path, allowing you to configure requests per second, window size, and retry-after periods for rate-limited clients.
