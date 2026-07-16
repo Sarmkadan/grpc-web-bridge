@@ -1154,6 +1154,59 @@ catch (Exception ex)
 ```
 
 
+## GrpcRequest
+
+The `GrpcRequest` class represents a gRPC request intercepted or created by the bridge. It encapsulates all metadata, payload, and routing information needed for protocol translation between gRPC and gRPC-Web clients. The class provides fluent APIs for building requests, managing metadata, and validating request integrity before processing.
+
+Example usage:
+
+```csharp
+// Create a new gRPC request with service and method names
+var request = new GrpcRequest(
+    serviceName: "UserService",
+    methodName: "GetUserById",
+    payload: Encoding.UTF8.GetBytes("{\"userId\": \"12345\"}")
+);
+
+// Set request identifiers for tracing and correlation
+request.RequestId = Guid.NewGuid().ToString("N");
+request.TraceId = Guid.NewGuid().ToString("N");
+request.UserId = "user-123";
+
+// Configure request behavior
+request.TimeoutMilliseconds = 5000; // 5 second timeout
+request.MethodType = MethodType.Unary;
+
+// Add metadata for downstream services
+request.AddMetadata("x-request-id", request.RequestId);
+request.AddMetadata("x-user-id", request.UserId);
+request.AddMetadata("x-trace-id", request.TraceId);
+request.AddMetadata("authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...");
+
+// Validate the request before processing
+request.Validate();
+
+// Access request properties for routing and processing
+Console.WriteLine($"Processing request: {request.FullMethodName}");
+Console.WriteLine($"Service: {request.ServiceName}, Method: {request.MethodName}");
+Console.WriteLine($"Payload size: {request.Payload.Length} bytes");
+Console.WriteLine($"Timeout: {request.TimeoutMilliseconds}ms");
+
+// Retrieve metadata for downstream service calls
+string? authHeader = request.GetMetadata("authorization");
+string? userId = request.GetMetadata("x-user-id");
+
+// Check if metadata exists
+bool hasTraceId = request.HasMetadata("x-trace-id");
+
+// Get payload for deserialization
+byte[] payloadCopy = request.GetPayloadCopy();
+string payloadHash = request.GetPayloadHash();
+
+// Update payload if needed (e.g., after transformation)
+request.SetPayload(Encoding.UTF8.GetBytes("{\"userId\": \"12345\", \"name\": \"John Doe\"}"), SerializationFormat.Json);
+```
+
 ## ServiceDiscoveryClient
 
 The `ServiceDiscoveryClient` class provides service discovery and health monitoring capabilities for gRPC services in the gRPC-Web Bridge. It enables dynamic registration and deregistration of services, discovery of available service instances, health checks via heartbeats, and automatic cache refresh for service instances.
