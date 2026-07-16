@@ -500,6 +500,247 @@ public class UserController : ControllerBase
 // }
 ```
 
+## ErrorHandlingMiddlewareTests
+
+The `ErrorHandlingMiddlewareTests` class provides comprehensive unit tests for the `ErrorHandlingMiddleware` class, verifying that it correctly handles various exception types and returns appropriate HTTP status codes with structured error responses. The tests cover exception-to-status-code mappings, response structure validation, and proper middleware pipeline behavior, ensuring the error handling middleware behaves as expected across different error scenarios.
+
+Example usage:
+
+```csharp
+// Example test setup
+public sealed class ErrorHandlingMiddlewareTests
+{
+    private static ErrorHandlingMiddleware CreateMiddleware(RequestDelegate next)
+        => new(next, NullLogger<ErrorHandlingMiddleware>.Instance);
+
+    private static DefaultHttpContext CreateContext()
+    {
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+        context.Request.Path = "/grpc/test";
+        context.TraceIdentifier = "trace-123";
+        return context;
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithServiceRegistrationException_Returns400()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new ServiceRegistrationException("Registration failed"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Service Registration Failed", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithStreamingException_Returns500()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new StreamingException("Stream broken"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Streaming Operation Failed", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithProtocolException_Returns400()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new ProtocolException("Bad protocol"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Protocol Translation Failed", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithGrpcWebBridgeException_Returns500()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new GrpcWebBridgeException("Bridge error"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Bridge Operation Failed", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithArgumentNullException_Returns400()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new ArgumentNullException("myParam"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Invalid Request", body);
+        Assert.Contains("myParam", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithArgumentException_Returns400()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new ArgumentException("Bad argument"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Invalid Argument", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithUnauthorizedAccessException_Returns401()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new UnauthorizedAccessException());
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Unauthorized", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithTimeoutException_Returns504()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new TimeoutException("Timed out"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status504GatewayTimeout, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Operation Timeout", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithOperationCanceledException_Returns400()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new OperationCanceledException("Cancelled"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Operation Cancelled", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithUnknownException_Returns500WithInternalServerError()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new InvalidProgramException("Unknown error"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("Internal Server Error", body);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ErrorResponse_ContainsExpectedJsonFields()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new ArgumentException("test arg error"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        using var doc = JsonDocument.Parse(body);
+        var root = doc.RootElement;
+
+        Assert.True(root.TryGetProperty("success", out _));
+        Assert.True(root.TryGetProperty("error", out _));
+        Assert.True(root.TryGetProperty("message", out _));
+        Assert.True(root.TryGetProperty("timestamp", out _));
+        Assert.True(root.TryGetProperty("path", out _));
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenNoException_CallsNextAndDoesNotModifyResponse()
+    {
+        // Arrange
+        bool nextCalled = false;
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => 
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.True(nextCalled);
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_SetsContentTypeToJson()
+    {
+        // Arrange
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new Exception("test"));
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.Contains("application/json", context.Response.ContentType);
+    }
+}
+```
+
 ## CorrelationIdManager
 
 The `CorrelationIdManager` class provides distributed tracing and correlation ID management for tracking requests across multiple services and components. It enables request lifecycle tracking, metadata storage, and comprehensive observability through trace hierarchies and statistics.
