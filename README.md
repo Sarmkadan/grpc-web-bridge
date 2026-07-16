@@ -166,6 +166,41 @@ Console.WriteLine($"Max streams: {config.MaxStreamCount}");
 Console.WriteLine($"Compression: {config.CompressResponses} (level {config.CompressionLevel})");
 ```
 
+## StartupConfiguration
+
+The `StartupConfiguration` class provides service initialization and system information retrieval for the gRPC-Web bridge. It handles the startup sequence by registering default services, validating configuration, and providing runtime system information including instance identification, environment details, and resource limits.
+
+Example usage:
+
+```csharp
+// Create startup configuration (typically done via dependency injection)
+var services = new ServiceCollection();
+services.AddLogging(configure => configure.AddConsole());
+
+var serviceProvider = services.BuildServiceProvider();
+var startupConfig = new StartupConfiguration(
+    serviceProvider,
+    serviceProvider.GetRequiredService<ILogger<StartupConfiguration>>()
+);
+
+// Initialize the bridge with default services
+await startupConfig.InitializeAsync();
+
+// Validate configuration before starting the bridge
+var options = new GrpcWebBridgeOptions("Production", "production-bridge-01");
+startupConfig.ValidateConfiguration(options);
+
+// Get system information for monitoring and logging
+var systemInfo = startupConfig.GetSystemInfo();
+
+Console.WriteLine($"Instance: {systemInfo.InstanceName} ({systemInfo.InstanceId})");
+Console.WriteLine($"Environment: {systemInfo.Environment}");
+Console.WriteLine($"Version: {systemInfo.Version}");
+Console.WriteLine($"Start Time: {systemInfo.StartTime:yyyy-MM-dd HH:mm:ss}");
+Console.WriteLine($"Max Streams: {systemInfo.MaxStreamCount}");
+Console.WriteLine($"Max Message Size: {systemInfo.MaxMessageSize / 1024 / 1024}MB");
+```
+
 ## Usage Examples
 
 The repository includes comprehensive usage examples demonstrating how to integrate with the gRPC-Web Bridge:
