@@ -744,6 +744,76 @@ string formattedXml = formattedXmlFormatter.Format(xmlData);
 Console.WriteLine(formattedXml);
 ```
 
+## JsonUtility
+
+The `JsonUtility` class provides comprehensive JSON serialization and deserialization utilities for consistent JSON handling across the gRPC-Web Bridge application. It supports various serialization options, type-safe deserialization, dynamic object parsing, JSON merging, property manipulation, and schema validation with comprehensive error handling throughout.
+
+Example usage:
+
+```csharp
+// Serialize an object to JSON string
+var user = new { Name = "Alice", Age = 30, Email = "alice@example.com" };
+string json = JsonUtility.Serialize(user);
+Console.WriteLine(json); // {"name":"Alice","age":30,"email":"alice@example.com"}
+
+// Serialize with indentation for debugging
+string indentedJson = JsonUtility.Serialize(user, indented: true);
+Console.WriteLine(indentedJson);
+
+// Serialize with custom options
+var customOptions = new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+    WriteIndented = true
+};
+string customJson = JsonUtility.SerializeWithOptions(user, customOptions);
+
+// Deserialize JSON to a strongly-typed object
+string jsonData = "{\"name\":\"Bob\",\"age\":25,\"email\":\"bob@example.com\"}";
+var deserializedUser = JsonUtility.Deserialize<User>(jsonData);
+Console.WriteLine(deserializedUser?.Name); // Bob
+
+// Deserialize to dynamic dictionary for flexible property access
+string settingsJson = "{\"timeout\":30000,\"retries\":3,\"enabled\":true}";
+var settingsDict = JsonUtility.DeserializeToDictionary(settingsJson);
+if (settingsDict != null && settingsDict.TryGetValue("timeout", out var timeout))
+{
+    Console.WriteLine($"Timeout: {timeout}"); // Timeout: 30000
+}
+
+// Try to deserialize with error handling
+bool success = JsonUtility.TryDeserialize(jsonData, out User? result, out string? error);
+if (success && result != null)
+{
+    Console.WriteLine($"Deserialized user: {result.Name}");
+}
+else
+{
+    Console.WriteLine($"Deserialization failed: {error}");
+}
+
+// Merge two JSON objects
+string baseConfig = "{\"timeout\":10000,\"retries\":2}";
+string overrideConfig = "{\"timeout\":30000,\"enabled\":true}";
+string merged = JsonUtility.MergeJson(baseConfig, overrideConfig);
+Console.WriteLine(merged); // {"timeout":30000,"retries":2,"enabled":true}
+
+// Get a property value from JSON
+string userJson = "{\"user\":{\"name\":\"Charlie\",\"age\":35}}";
+var nameValue = JsonUtility.GetPropertyValue(userJson, "user.name");
+Console.WriteLine(nameValue); // "Charlie"
+
+// Set a property value in JSON
+string configJson = "{\"service\":{\"name\":\"UserService\"}}";
+string updatedConfig = JsonUtility.SetPropertyValue(configJson, "service.timeout", 5000);
+Console.WriteLine(updatedConfig); // {"service":{"name":"UserService","timeout":5000}}
+
+// Validate required properties in JSON
+string requestJson = "{\"userId\":\"123\",\"action\":\"create\"}";
+bool isValid = JsonUtility.ValidateRequired(requestJson, "userId", "action");
+Console.WriteLine(isValid); // true
+```
+
 ## ConfigurationExceptionExtensions
 
 Example usage:
