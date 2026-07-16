@@ -212,6 +212,76 @@ if (authContext.IsExpired)
 }
 ```
 
+## ErrorHandlingMiddleware
+
+The `ErrorHandlingMiddleware` class provides global error handling for the gRPC-Web Bridge application. It catches unhandled exceptions during request processing, converts them to appropriate HTTP responses with structured error details, and ensures consistent error formatting across all endpoints. The middleware maps various exception types to appropriate HTTP status codes and provides detailed error information including timestamps, request paths, and trace identifiers for debugging.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddControllers();
+
+// In Program.cs - register the error handling middleware
+var app = builder.Build();
+
+// Add error handling middleware at the beginning of the pipeline
+// This should be registered before other middleware that might throw exceptions
+app.UseErrorHandling();
+
+// Your other middleware and endpoints
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();
+
+// Example controller that might throw exceptions
+[ApiController]
+[Route("api/[controller]")]
+public class UserController : ControllerBase
+{
+    private readonly ILogger<UserController> _logger;
+    
+    public UserController(ILogger<UserController> logger)
+    {
+        _logger = logger;
+    }
+    
+    [HttpGet("{userId}")]
+    public async Task<IActionResult> GetUser(string userId)
+    {
+        // If an exception occurs, ErrorHandlingMiddleware will catch it
+        // and return a structured JSON error response
+        var user = await _userService.GetUserAsync(userId);
+        return Ok(user);
+    }
+    
+    [HttpPost]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+    {
+        // Validation errors, service exceptions, etc. will be handled
+        var result = await _userService.CreateUserAsync(request);
+        return CreatedAtAction(nameof(GetUser), new { userId = result.Id }, result);
+    }
+}
+
+// Example of the structured error response format:
+// {
+//   "success": false,
+//   "error": "Invalid Request",
+//   "message": "Required parameter missing: userId",
+//   "details": {
+//     "exception": "ArgumentNullException",
+//     "paramName": "userId"
+//   },
+//   "path": "/api/user",
+//   "traceId": "00-1234567890abcdef1234567890abcdef-1234567890abcdef-00",
+//   "timestamp": "2024-07-16T10:30:00Z"
+// }
+```
+
 ## CorrelationIdManager
 
 The `CorrelationIdManager` class provides distributed tracing and correlation ID management for tracking requests across multiple services and components. It enables request lifecycle tracking, metadata storage, and comprehensive observability through trace hierarchies and statistics.
