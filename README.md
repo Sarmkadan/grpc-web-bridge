@@ -622,6 +622,88 @@ string formattedMessage = configException.GetFormattedMessage();
 Console.WriteLine(formattedMessage);
 ```
 
+## CsvFormatter
+
+The `CsvFormatter` class provides comprehensive CSV (Comma-Separated Values) export and import utilities for converting between tabular data and CSV format. It supports both strongly-typed object serialization/deserialization and dynamic dictionary-based operations, with proper escaping and RFC 4180 compliance for handling special characters, quotes, and delimiters.
+
+The formatter supports customizable delimiters, encodings, and includes validation utilities to ensure CSV data integrity before processing.
+
+Example usage:
+
+```csharp
+// Define a data model for CSV serialization
+public class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public bool IsActive { get; set; }
+}
+
+// Create CSV formatter with default options
+var csvFormatter = new CsvFormatter();
+
+// Serialize a collection of objects to CSV string
+var users = new List<User>
+{
+    new User { Id = 1, Name = "Alice", Email = "alice@example.com", CreatedAt = DateTime.UtcNow, IsActive = true },
+    new User { Id = 2, Name = "Bob", Email = "bob@example.com", CreatedAt = DateTime.UtcNow.AddDays(-1), IsActive = false }
+};
+
+string csv = csvFormatter.ToCsv(users);
+Console.WriteLine(csv);
+
+// Output:
+// Id,Name,Email,CreatedAt,IsActive
+// 1,Alice,alice@example.com,2024-07-17T10:30:00Z,True
+// 2,Bob,bob@example.com,2024-07-16T10:30:00Z,False
+
+// Deserialize CSV back to strongly-typed objects
+var parsedUsers = csvFormatter.FromCsv<User>(csv);
+Console.WriteLine($"Parsed {parsedUsers.Count} users");
+
+// Work with dynamic data using dictionaries
+var dictData = new List<Dictionary<string, string>>
+{
+    new Dictionary<string, string> { { "Id", "1" }, { "Name", "Alice" }, { "Email", "alice@example.com" } },
+    new Dictionary<string, string> { { "Id", "2" }, { "Name", "Bob" }, { "Email", "bob@example.com" } }
+};
+
+// Convert dictionaries to CSV
+string dictCsv = csvFormatter.DictsToCsv(dictData);
+Console.WriteLine(dictCsv);
+
+// Import CSV from file
+var importedUsers = await csvFormatter.ImportFromFileAsync<User>("users.csv");
+Console.WriteLine($"Imported {importedUsers.Count} users from file");
+
+// Export to file
+await csvFormatter.ExportToFileAsync(users, "users_export.csv");
+
+// Validate CSV format before processing
+var (isValid, validationErrors) = csvFormatter.ValidateCsv(csv);
+if (isValid)
+{
+    Console.WriteLine("CSV is valid");
+}
+else
+{
+    Console.WriteLine($"CSV validation failed: {string.Join(", ", validationErrors)}");
+}
+
+// Customize CSV formatter options
+var customOptions = new CsvFormatterOptions
+{
+    Delimiter = ";",
+    Encoding = Encoding.UTF8,
+    IncludeHeaders = true,
+    TrimWhitespace = true
+};
+
+var customCsvFormatter = new CsvFormatter(customOptions);
+```
+
 ## CsvFormatterExtensions
 
 The `CsvFormatterExtensions` class provides extension methods for `CsvFormatter` that enable advanced CSV processing capabilities including file operations, streaming, and batch processing. It supports appending data to existing files, converting collections to CSV streams, merging multiple CSV files, and splitting large CSV files into smaller chunks.
