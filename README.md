@@ -978,6 +978,70 @@ long? length = StreamUtility.GetStreamLength(sampleStream);
 Console.WriteLine($"Stream valid: {isValid}, Length: {length}");
 ```
 
+## CacheUtility
+
+The `CacheUtility` class provides cache key generation and management utilities for consistent cache key formatting, pattern matching, and validation. It includes methods for generating various types of cache keys (method calls, streams, services, authentication), sanitizing key components, and validating key formats.
+
+Example usage:
+
+```csharp
+// Generate a simple cache key from components
+string simpleKey = CacheUtility.GenerateKey("UserService", "GetUser", "123");
+Console.WriteLine($"Simple key: {CacheUtility.FormatKeyForDebug(simpleKey)}");
+
+// Generate a namespaced cache key for grouping related entries
+string namespacedKey = CacheUtility.GenerateNamespacedKey("user", "profile", "123");
+Console.WriteLine($"Namespaced key: {CacheUtility.FormatKeyForDebug(namespacedKey)}");
+
+// Sanitize a key component (removes special characters)
+string sanitized = CacheUtility.SanitizeKeyComponent("user@profile#123");
+Console.WriteLine($"Sanitized: {sanitized}");
+
+// Create a pattern key for prefix matching
+string pattern = CacheUtility.CreatePatternKey("user:*");
+Console.WriteLine($"Pattern: {pattern}");
+
+// Check if a key matches a pattern
+bool matches = CacheUtility.MatchesPattern("user:profile:123", pattern);
+Console.WriteLine($"Pattern match: {matches}");
+
+// Generate a method cache key for service method invocation
+string methodKey = CacheUtility.GenerateMethodCacheKey("UserService", "GetUser", new { UserId = "123", IncludeDetails = true });
+Console.WriteLine($"Method key: {CacheUtility.FormatKeyForDebug(methodKey)}");
+
+// Generate a stream cache key
+string streamKey = CacheUtility.GenerateStreamCacheKey("stream-abc-123");
+Console.WriteLine($"Stream key: {CacheUtility.FormatKeyForDebug(streamKey)}");
+
+// Generate a service cache key
+string serviceKey = CacheUtility.GenerateServiceCacheKey("UserService");
+Console.WriteLine($"Service key: {CacheUtility.FormatKeyForDebug(serviceKey)}");
+
+// Generate an authentication cache key
+string authKey = CacheUtility.GenerateAuthCacheKey("user-123");
+Console.WriteLine($"Auth key: {CacheUtility.FormatKeyForDebug(authKey)}");
+
+// Calculate a hash of a key
+int keyHash = CacheUtility.GetKeyHash(methodKey);
+Console.WriteLine($"Key hash: {keyHash}");
+
+// Estimate the memory size of a cache key
+long keySize = CacheUtility.EstimateKeySize(methodKey);
+Console.WriteLine($"Key size estimate: {keySize} bytes");
+
+// Parse a composite cache key back into components
+string[] components = CacheUtility.ParseKey(methodKey);
+Console.WriteLine($"Parsed components: {string.Join(", ", components)}");
+
+// Validate a cache key
+bool isValid = CacheUtility.IsValidKey(methodKey);
+Console.WriteLine($"Key is valid: {isValid}");
+
+// Format a key for debug output (truncates long keys)
+string debugFormat = CacheUtility.FormatKeyForDebug(methodKey);
+Console.WriteLine($"Debug format: {debugFormat}");
+```
+
 ## JsonUtility
 
 The `JsonUtility` class provides comprehensive JSON serialization and deserialization utilities for consistent JSON handling across the gRPC-Web Bridge application. It supports various serialization options, type-safe deserialization, dynamic object parsing, JSON merging, property manipulation, and schema validation with comprehensive error handling throughout.
