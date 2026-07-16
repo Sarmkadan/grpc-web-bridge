@@ -1273,6 +1273,38 @@ bool isHealthy = healthCheckWorker.IsHealthy;
 DateTime timestamp = healthCheckWorker.Timestamp;
 ```
 
+## RateLimitingMiddleware
+
+The `RateLimitingMiddleware` class provides request rate limiting using a sliding window token bucket algorithm. It enforces both per-client and global rate limits to protect backend services from abuse and overload. The middleware tracks request timestamps per client IP and path, allowing you to configure requests per second, window size, and retry-after periods for rate-limited clients.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.Configure<RateLimitingOptions>(options =>
+{
+    options.RequestsPerSecond = 100;      // 100 requests per second per client
+    options.WindowSizeSeconds = 1;         // 1-second sliding window
+    options.RetryAfterSeconds = 60;        // Wait 60 seconds before retry
+    options.EnableGlobalLimit = true;        // Enable global rate limiting
+    options.GlobalRequestsPerSecond = 10000; // 10,000 total requests per second
+});
+
+// Register the middleware in the pipeline
+var app = builder.Build();
+app.UseRateLimiting(); // Uses default options
+
+// Or with custom configuration:
+app.UseRateLimiting(new RateLimitingOptions
+{
+    RequestsPerSecond = 50,
+    WindowSizeSeconds = 2,
+    RetryAfterSeconds = 30,
+    EnableGlobalLimit = true,
+    GlobalRequestsPerSecond = 5000
+});
+```
+
 ## StreamCleanupWorker
 
 The `StreamCleanupWorker` class is a background worker that periodically cleans up idle and stale streaming connections to prevent memory leaks. It monitors active streams and removes those that have been inactive beyond configurable thresholds, including streams with no activity (stale streams) and streams that have exceeded their idle timeout. The worker also triggers garbage collection when a threshold of removed streams is reached, helping maintain system stability under heavy streaming loads.
