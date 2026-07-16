@@ -751,6 +751,118 @@ await csvFormatter.SplitFileAsync<User>(
 );
 ```
 
+## XmlFormatter
+
+The `XmlFormatter` class provides comprehensive XML serialization, deserialization, and formatting utilities for converting between .NET objects and XML format. It supports strongly-typed object serialization/deserialization, XML validation, XPath querying, file operations, and dictionary-based XML manipulation with configurable formatting options.
+
+The formatter supports customizable indentation, XML declaration control, namespace handling, and various encoding options for generating clean, production-ready XML output.
+
+Example usage:
+
+```csharp
+// Define a data model for XML serialization
+public class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public List<string> Roles { get; set; } = new();
+}
+
+// Create XML formatter with default options
+var xmlFormatter = new XmlFormatter();
+
+// Serialize an object to XML string
+var user = new User
+{
+    Id = 1,
+    Name = "Alice",
+    Email = "alice@example.com",
+    CreatedAt = DateTime.UtcNow,
+    Roles = new List<string> { "admin", "user" }
+};
+
+string xml = xmlFormatter.ToXml(user);
+Console.WriteLine(xml);
+
+// Output:
+// <User>
+//   <Id>1</Id>
+//   <Name>Alice</Name>
+//   <Email>alice@example.com</Email>
+//   <CreatedAt>2024-07-17T10:30:00</CreatedAt>
+//   <Roles>
+//     <string>admin</string>
+//     <string>user</string>
+//   </Roles>
+// </User>
+
+// Deserialize XML back to strongly-typed object
+string xmlData = @"
+<User>
+    <Id>2</Id>
+    <Name>Bob</Name>
+    <Email>bob@example.com</Email>
+    <CreatedAt>2024-07-16T10:30:00</CreatedAt>
+    <Roles>
+        <string>user</string>
+    </Roles>
+</User>
+";
+var parsedUser = xmlFormatter.FromXml<User>(xmlData);
+Console.WriteLine($"Parsed user: {parsedUser?.Name} ({parsedUser?.Email})");
+
+// Format XML with indentation for readability
+string formattedXml = xmlFormatter.FormatXml(xml);
+Console.WriteLine(formattedXml);
+
+// Validate XML content before processing
+var (isValid, validationErrors) = xmlFormatter.ValidateXml(xml);
+if (isValid)
+{
+    Console.WriteLine("XML is valid");
+}
+else
+{
+    Console.WriteLine($"XML validation failed: {string.Join(", ", validationErrors)}");
+}
+
+// Extract value using XPath
+string userName = xmlFormatter.GetElementValueByXPath(xml, "//Name");
+Console.WriteLine($"User name: {userName}");
+
+// Export to file
+await xmlFormatter.ExportToFileAsync(user, "user.xml");
+
+// Import from file
+var importedUser = await xmlFormatter.ImportFromFileAsync<User>("user.xml");
+Console.WriteLine($"Imported user: {importedUser?.Name}");
+
+// Convert XML to dictionary for dynamic access
+var userDict = xmlFormatter.XmlToDictionary(xml);
+foreach (var kvp in userDict)
+{
+    Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+}
+
+// Minify XML by removing unnecessary whitespace
+string minified = XmlFormatter.MinifyXml(xml);
+Console.WriteLine($"Minified length: {minified.Length} characters");
+
+// Customize XML formatter options
+var customOptions = new XmlFormatter.XmlFormatterOptions
+{
+    Indent = true,
+    IndentChars = "  ", // 2 spaces
+    OmitXmlDeclaration = false,
+    OmitNamespaces = true,
+    Encoding = System.Text.Encoding.UTF8
+};
+
+var customXmlFormatter = new XmlFormatter(customOptions);
+```
+
 ## XmlFormatterExtensions
 
 The `XmlFormatterExtensions` class provides extension methods for `XmlFormatter` that enable advanced XML processing capabilities including validation, LINQ-to-XML conversion, and XPath querying. It supports creating formatted XML strings with various options, validating XML content, extracting data using XPath expressions, and converting between XML formats and LINQ-to-XML objects.
