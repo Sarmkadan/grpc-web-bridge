@@ -1097,6 +1097,44 @@ metricsWorker.ClearHistory();
 metricsWorker.Stop();
 ```
 
+## StreamCleanupWorker
+
+The `StreamCleanupWorker` class is a background worker that periodically cleans up idle and stale streaming connections to prevent memory leaks. It monitors active streams and removes those that have been inactive beyond configurable thresholds, including streams with no activity (stale streams) and streams that have exceeded their idle timeout. The worker also triggers garbage collection when a threshold of removed streams is reached, helping maintain system stability under heavy streaming loads.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddStreamCleanupWorker(options =>
+{
+    options.CleanupIntervalSeconds = 30;
+    options.IdleTimeoutDuration = TimeSpan.FromMinutes(2);
+    options.StaleStreamDuration = TimeSpan.FromMinutes(5);
+    options.GcTriggerThreshold = 5;
+});
+
+// In your ASP.NET Core application startup
+var cleanupWorker = app.Services.GetRequiredService<StreamCleanupWorker>();
+
+// Start the stream cleanup worker (typically done automatically by IHostedService)
+// cleanupWorker.Start(); // Not needed - runs automatically
+
+// Get cleanup statistics for monitoring
+var statistics = cleanupWorker.GetStatistics();
+Console.WriteLine($"Total cleanups run: {statistics.totalCleanupsRun}");
+Console.WriteLine($"Total streams removed: {statistics.totalStreamsRemoved}");
+Console.WriteLine($"Average streams per cleanup: {statistics.averageStreamsPerCleanup:F2}");
+Console.WriteLine($"Current cleanup interval: {statistics.cleanupInterval}s");
+Console.WriteLine($"Idle timeout: {statistics.idleTimeout}s");
+Console.WriteLine($"Stale stream timeout: {statistics.staleStreamTimeout}s");
+
+// Access configuration properties
+int interval = cleanupWorker.CleanupIntervalSeconds;
+TimeSpan idleTimeout = cleanupWorker.IdleTimeoutDuration;
+TimeSpan staleTimeout = cleanupWorker.StaleStreamDuration;
+int gcThreshold = cleanupWorker.GcTriggerThreshold;
+```
+
 ## MetricsCollectionWorkerExtensions
 
 The `MetricsCollectionWorkerExtensions` class provides extension methods for `MetricsCollectionWorker" that enable advanced metrics analysis, filtering, and reporting capabilities. It includes utilities for filtering snapshots by time range, calculating peak usage statistics, analyzing trends over time windows, and generating alert summaries based on configurable thresholds.
