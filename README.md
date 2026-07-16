@@ -1025,6 +1025,84 @@ Console.WriteLine($"Stream valid: {isValid}, Length: {length}");
 
 ## CacheUtility
 
+The `CacheUtility` class provides cache key generation and management utilities for consistent cache key formatting, pattern matching, and validation.
+
+## DateTimeUtility
+
+The `DateTimeUtility` class provides comprehensive date and time manipulation utilities for the gRPC-Web Bridge. It offers methods for ISO 8601 conversion, Unix timestamp handling, timezone conversions, relative time formatting, period calculations, business day counting, age calculation, and various date validation utilities.
+
+Example usage:
+
+```csharp
+// Convert DateTime to ISO 8601 string
+var now = DateTime.UtcNow;
+string iso8601Date = DateTimeUtility.ToIso8601(now);
+Console.WriteLine($"ISO 8601: {iso8601Date}");
+
+// Parse ISO 8601 string back to DateTime
+DateTime? parsedDate = DateTimeUtility.FromIso8601(iso8601Date);
+Console.WriteLine($"Parsed date: {parsedDate}");
+
+// Convert to Unix timestamp
+long unixTimestamp = DateTimeUtility.ToUnixTimestamp(now);
+Console.WriteLine($"Unix timestamp: {unixTimestamp}");
+
+// Convert Unix timestamp back to DateTime
+DateTime fromTimestamp = DateTimeUtility.FromUnixTimestamp(unixTimestamp);
+Console.WriteLine($"From timestamp: {fromTimestamp}");
+
+// Get human-readable relative time
+var yesterday = DateTime.UtcNow.AddDays(-1);
+string relativeTime = DateTimeUtility.ToRelativeTime(yesterday);
+Console.WriteLine($"Relative time: {relativeTime}");
+
+// Convert between timezones
+var utcTime = DateTime.UtcNow;
+DateTime easternTime = DateTimeUtility.ConvertToTimeZone(utcTime, "Eastern Standard Time");
+Console.WriteLine($"Eastern time: {easternTime}");
+
+// Get period start/end dates
+var today = DateTime.Today;
+DateTime monthStart = DateTimeUtility.GetPeriodStart(today, DateTimePeriod.Month);
+DateTime monthEnd = DateTimeUtility.GetPeriodEnd(today, DateTimePeriod.Month);
+Console.WriteLine($"Month: {monthStart:yyyy-MM-dd} to {monthEnd:yyyy-MM-dd}");
+
+// Calculate business days between dates
+int businessDays = DateTimeUtility.GetBusinessDaysBetween(
+    new DateTime(2024, 1, 1),
+    new DateTime(2024, 1, 31)
+);
+Console.WriteLine($"Business days in Jan 2024: {businessDays}");
+
+// Calculate age from birthdate
+int age = DateTimeUtility.GetAge(new DateTime(1990, 5, 15));
+Console.WriteLine($"Age: {age} years");
+
+// Check date properties
+bool isWeekend = DateTimeUtility.IsWeekend(DateTime.Today);
+bool isToday = DateTimeUtility.IsToday(DateTime.Today);
+bool isFuture = DateTimeUtility.IsFuture(DateTime.Today.AddDays(1));
+bool isPast = DateTimeUtility.IsPast(DateTime.Today.AddDays(-1));
+Console.WriteLine($"Is weekend: {isWeekend}, Is today: {isToday}, Is future: {isFuture}, Is past: {isPast}");
+
+// Round to nearest interval
+var rounded = DateTimeUtility.RoundTo(DateTime.UtcNow, TimeSpan.FromMinutes(15));
+Console.WriteLine($"Rounded to 15min: {rounded}");
+
+// Format DateTime
+string formatted = DateTimeUtility.Format(DateTime.UtcNow, "yyyy-MM-dd HH:mm:ss");
+Console.WriteLine($"Formatted: {formatted}");
+
+// Get duration string
+string duration = DateTimeUtility.GetDurationString(
+    DateTime.UtcNow.AddHours(-2),
+    DateTime.UtcNow
+);
+Console.WriteLine($"Duration: {duration}");
+```
+
+## CacheUtility
+
 The `CacheUtility` class provides cache key generation and management utilities for consistent cache key formatting, pattern matching, and validation. It includes methods for generating various types of cache keys (method calls, streams, services, authentication), sanitizing key components, and validating key formats.
 
 Example usage:
