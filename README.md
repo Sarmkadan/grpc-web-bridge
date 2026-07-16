@@ -1520,6 +1520,63 @@ catch (Exception ex)
 }
 ```
 
+## StreamMessage
+
+The `StreamMessage` class represents a message in a gRPC streaming session, encapsulating both the payload and metadata required for protocol translation between gRPC and gRPC-Web clients. It supports various serialization formats, compression, error handling, and provides fluent APIs for building and modifying stream messages during bidirectional communication.
+
+Example usage:
+
+```csharp
+// Create a new stream message for a user data stream
+var message = new StreamMessage(
+    streamId: "user-updates-stream-123",
+    messageType: StreamMessageType.Data,
+    sequenceNumber: 1,
+    data: Encoding.UTF8.GetBytes("{\"userId\": \"user-456\", \"status\": \"active\"}")
+);
+
+// Set message metadata
+message.SetMetadata("content-type", "application/json");
+message.SetMetadata("user-id", "user-456");
+message.SetMetadata("priority", "high");
+
+// Configure compression for large payloads
+message.IsCompressed = true;
+message.CompressionLevel = 6;
+
+// Set serialization format
+message.Format = SerializationFormat.Json;
+
+// Add custom headers for downstream processing
+message.Headers = new Dictionary<string, string>
+{
+    {"x-request-id", Guid.NewGuid().ToString("N")},
+    {"x-trace-id", Guid.NewGuid().ToString("N")}
+};
+
+// Set message status for error handling
+message.SetStatus(GrpcStatusCode.OK, "User update processed successfully");
+
+// Access message properties
+Console.WriteLine($"Stream: {message.StreamId}");
+Console.WriteLine($"Sequence: {message.SequenceNumber}");
+Console.WriteLine($"Type: {message.MessageType}");
+Console.WriteLine($"Created: {message.CreatedAt}");
+Console.WriteLine($"Compressed: {message.IsCompressed}");
+Console.WriteLine($"Format: {message.Format}");
+
+// Update message data if needed
+message.SetData(Encoding.UTF8.GetBytes("{\"userId\": \"user-456\", \"status\": \"active\", \"lastLogin\": \"2024-07-16T10:30:00Z\"}"), SerializationFormat.Json);
+
+// Create a heartbeat message
+var heartbeat = new StreamMessage(
+    streamId: "heartbeat-stream-789",
+    messageType: StreamMessageType.Heartbeat,
+    sequenceNumber: 0
+);
+heartbeat.SetHeartbeat();
+```
+
 ## ServiceDiscoveryClient
 
 The `ServiceDiscoveryClient` class provides service discovery and health monitoring capabilities for gRPC services in the gRPC-Web Bridge. It enables dynamic registration and deregistration of services, discovery of available service instances, health checks via heartbeats, and automatic cache refresh for service instances.
