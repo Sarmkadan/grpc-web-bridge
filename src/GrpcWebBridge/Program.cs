@@ -83,6 +83,8 @@ services.AddControllers();
 var app = builder.Build();
 
 // Configure middleware
+// Error handling goes first so every exception below it becomes a proper JSON error response.
+app.UseErrorHandling();
 app.UseGrpcWebContentTypeValidation();
 app.UseRequestLogging();
 app.UseRouting();
