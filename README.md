@@ -1616,6 +1616,57 @@ var errorResponse = translationService.CreateErrorResponse(
 );
 ```
 
+## GrpcConnectionManager
+
+The `GrpcConnectionManager` class manages gRPC connections to backend services, providing connection pooling, lifecycle management, and metrics tracking for gRPC channels. It handles connection creation, retrieval, health monitoring, and cleanup while maintaining performance metrics including request counts, data transfer volumes, and connection durations.
+
+Example usage:
+
+```csharp
+// Create a connection manager (typically injected via dependency injection)
+var connectionManager = new GrpcConnectionManager(logger);
+
+// Define a gRPC service
+var userService = new GrpcService(
+    name: "UserService",
+    packageName: "user.v1",
+    endpoint: "user-service.example.com",
+    port: 50051
+)
+{
+    Description = "Handles user authentication and profile management",
+    UseTls = true,
+    Status = ServiceStatus.Serving
+};
+
+// Get or create a channel for the service
+var channel = connectionManager.GetOrCreateChannel(userService);
+Console.WriteLine($"Channel created for {userService.FullName}");
+
+// Test connection health
+bool isHealthy = await connectionManager.TestConnectionAsync(userService);
+Console.WriteLine($"Connection healthy: {isHealthy}");
+
+// Get metrics for monitoring
+var metrics = connectionManager.GetMetrics(userService.FullName);
+if (metrics != null)
+{
+    Console.WriteLine($"Connection duration: {metrics.GetConnectionDuration().TotalSeconds:F2}s");
+    Console.WriteLine($"Requests: {metrics.RequestCount}");
+    Console.WriteLine($"Created: {metrics.CreatedAt}");
+    Console.WriteLine($"Last used: {metrics.LastUsedAt}");
+}
+
+// Close a specific channel when no longer needed
+await connectionManager.CloseChannelAsync(userService);
+
+// Close all channels during application shutdown
+await connectionManager.CloseAllChannelsAsync();
+
+// Dispose the connection manager (automatically closes all channels)
+await connectionManager.DisposeAsync();
+```
+
 ## RateLimitingMiddleware
 
 The `RateLimitingMiddleware` class provides request rate limiting using a sliding window token bucket algorithm. It enforces both per-client and global rate limits to protect backend services from abuse and overload. The middleware tracks request timestamps per client IP and path, allowing you to configure requests per second, window size, and retry-after periods for rate-limited clients.
