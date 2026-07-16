@@ -261,6 +261,77 @@ These examples show:
 
 See the `examples/` directory for complete, runnable code snippets.
 
+## CacheManager
+
+The `CacheManager` class provides an in-memory caching solution with TTL (Time-To-Live) support and comprehensive statistics tracking. It's designed for caching frequently accessed data to improve performance while supporting expiration policies and automatic cleanup of stale entries. The cache automatically removes expired entries during periodic cleanup cycles.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<CacheManager>();
+
+// In your service or controller
+var cacheManager = app.Services.GetRequiredService<CacheManager>();
+
+// Store a value with default TTL (5 minutes)
+cacheManager.Set("user:123:profile", userProfile);
+
+// Store a value with custom TTL (30 seconds)
+cacheManager.Set("config:api-endpoint", apiEndpoint, TimeSpan.FromSeconds(30));
+
+// Retrieve a value from cache
+if (cacheManager.TryGet("user:123:profile", out UserProfile? cachedProfile))
+{
+    Console.WriteLine($"Retrieved from cache: {cachedProfile?.Name}");
+}
+else
+{
+    Console.WriteLine("Cache miss - fetching from source");
+    // Fetch from database or API
+    var freshProfile = await userService.GetProfileAsync("123");
+    cacheManager.Set("user:123:profile", freshProfile);
+}
+
+// Get or set with factory pattern (automatic caching)
+var settings = await cacheManager.GetOrSetAsync(
+    "app:settings",
+    async () => await configService.LoadSettingsAsync(),
+    TimeSpan.FromHours(1)
+);
+
+// Check if key exists
+bool exists = cacheManager.Contains("user:123:profile");
+
+// Get remaining TTL for a cache entry
+TimeSpan? ttl = cacheManager.GetTimeToLive("user:123:profile");
+if (ttl.HasValue)
+{
+    Console.WriteLine($"TTL remaining: {ttl.Value.TotalSeconds:F0} seconds");
+}
+
+// Remove specific entry
+cacheManager.Remove("user:123:profile");
+
+// Remove entries matching pattern (e.g., all user profiles)
+cacheManager.RemovePattern("user:*");
+
+// Clear entire cache (useful for testing or during maintenance)
+cacheManager.Clear();
+
+// Get cache statistics for monitoring
+var stats = cacheManager.GetStatistics();
+Console.WriteLine($"Cache entries: {stats.EntryCount}");
+Console.WriteLine($"Total hits: {stats.TotalHits}");
+Console.WriteLine($"Average hits per entry: {stats.AverageHitsPerEntry:F2}");
+
+// Update expiration for existing entry
+cacheManager.SetExpiration("temp:data", TimeSpan.FromMinutes(10));
+
+// Dispose when application shuts down (automatically cleans up resources)
+cacheManager.Dispose();
+```
+
 ## RequestContextManager
 
 The `RequestContextManager` class provides ambient request context management for tracking request-scoped data across async operations. It enables correlation logging, cross-cutting concerns, and request lifecycle tracking without explicit parameter passing. The manager uses `AsyncLocal` storage to maintain context per-request and automatically cleans up when requests complete.
