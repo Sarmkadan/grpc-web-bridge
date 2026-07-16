@@ -958,6 +958,105 @@ string decryptedData = CryptographyUtility.DecryptAes256(encryptedData, encrypti
 Console.WriteLine($"Decrypted: {decryptedData}");
 ```
 
+## ValidationUtility
+
+The `ValidationUtility` class provides comprehensive validation utilities for validating input data in the gRPC-Web Bridge. It includes methods for validating strings, emails, URLs, IP addresses, service IDs, method names, ranges, ports, and custom patterns, with consistent error message formatting and support for both individual and batch validation scenarios.
+
+Example usage:
+
+```csharp
+// Validate a required non-empty string
+var (isValid, error) = ValidationUtility.ValidateNotEmpty("user@example.com", "Email");
+if (!isValid)
+{
+    Console.WriteLine($"Validation failed: {error}");
+    return;
+}
+
+// Validate string length (between 3 and 50 characters)
+var (lengthValid, lengthError) = ValidationUtility.ValidateStringLength("abc", 3, 50, "Username");
+if (!lengthValid)
+{
+    Console.WriteLine($"Length validation failed: {lengthError}");
+}
+
+// Validate an email address format
+var (emailValid, emailError) = ValidationUtility.ValidateEmail("invalid-email", "EmailAddress");
+if (!emailValid)
+{
+    Console.WriteLine($"Email validation failed: {emailError}");
+}
+
+// Validate a URL format
+var (urlValid, urlError) = ValidationUtility.ValidateUrl("not-a-url", "ServiceUrl");
+if (!urlValid)
+{
+    Console.WriteLine($"URL validation failed: {urlError}");
+}
+
+// Validate an IP address
+var (ipValid, ipError) = ValidationUtility.ValidateIpAddress("999.999.999.999", "ServerIp");
+if (!ipValid)
+{
+    Console.WriteLine($"IP address validation failed: {ipError}");
+}
+
+// Validate a service ID format
+var (serviceIdValid, serviceIdError) = ValidationUtility.ValidateServiceId("invalid-service-id", "ServiceId");
+if (!serviceIdValid)
+{
+    Console.WriteLine($"Service ID validation failed: {serviceIdError}");
+}
+
+// Validate a method name format
+var (methodValid, methodError) = ValidationUtility.ValidateMethodName("InvalidMethodName123!", "MethodName");
+if (!methodValid)
+{
+    Console.WriteLine($"Method name validation failed: {methodError}");
+}
+
+// Validate a numeric range
+var (rangeValid, rangeError) = ValidationUtility.ValidateRange(150, 0, 100, "Percentage");
+if (!rangeValid)
+{
+    Console.WriteLine($"Range validation failed: {rangeError}");
+}
+
+// Validate a port number (0-65535)
+var (portValid, portError) = ValidationUtility.ValidatePort(70000, "Port");
+if (!portValid)
+{
+    Console.WriteLine($"Port validation failed: {portError}");
+}
+
+// Validate a collection has required keys
+var dict = new Dictionary<string, string> { { "key1", "value1" } };
+var (keysValid, keysError) = ValidationUtility.ValidateRequiredKeys(dict, new[] { "key1", "key2" }, "RequiredKeys");
+if (!keysValid)
+{
+    Console.WriteLine($"Required keys validation failed: {keysError}");
+}
+
+// Validate against a regex pattern
+var (patternValid, patternError) = ValidationUtility.ValidatePattern("abc123", "^[a-z]+\\d+$", "CustomPattern");
+if (!patternValid)
+{
+    Console.WriteLine($"Pattern validation failed: {patternError}");
+}
+
+// Sanitize user input to prevent XSS and injection attacks
+string maliciousInput = "<script>alert('xss')</script>";
+string sanitized = ValidationUtility.SanitizeInput(maliciousInput);
+Console.WriteLine($"Sanitized input: {sanitized}");
+
+// Validate a JWT token format
+var (jwtValid, jwtError) = ValidationUtility.ValidateJwtFormat("invalid.jwt.token", "AuthToken");
+if (!jwtValid)
+{
+    Console.WriteLine($"JWT validation failed: {jwtError}");
+}
+```
+
 ## StreamUtility
 
 The `StreamUtility` class provides comprehensive stream handling utilities for efficient data transfer operations in the gRPC-Web Bridge. It includes methods for chunked copying, compression/decompression, Base64 conversion, hashing, and multi-destination streaming (teeing) with optimized memory management and retry logic for robust data transfer operations.
