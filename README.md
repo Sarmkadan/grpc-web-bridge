@@ -1573,6 +1573,138 @@ string debugFormat = CacheUtility.FormatKeyForDebug(methodKey);
 Console.WriteLine($"Debug format: {debugFormat}");
 ```
 
+## JsonFormatter
+
+The `JsonFormatter` class provides comprehensive JSON formatting utilities for converting .NET objects to JSON strings with various formatting options. It supports minification, pretty printing, key sorting, field extraction, flattening/unflattening of nested structures, and validation utilities for ensuring JSON data integrity.
+
+Example usage:
+
+```csharp
+// Define a sample data model
+public class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public List<string> Roles { get; set; } = new();
+    public Address? Address { get; set; }
+}
+
+public class Address
+{
+    public string Street { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string Country { get; set; } = string.Empty;
+}
+
+// Create a JSON formatter instance
+var jsonFormatter = new JsonFormatter
+{
+    PrettyPrint = true,
+    SortKeys = true,
+    MaxDepth = 10,
+    IncludeNullValues = false
+};
+
+// Serialize an object to JSON string
+var user = new User
+{
+    Id = 1,
+    Name = "Alice Johnson",
+    Email = "alice.johnson@example.com",
+    CreatedAt = DateTime.UtcNow,
+    Roles = new List<string> { "admin", "user", "moderator" },
+    Address = new Address
+    {
+        Street = "123 Main St",
+        City = "New York",
+        Country = "USA"
+    }
+};
+
+string formattedJson = jsonFormatter.Format(user);
+Console.WriteLine(formattedJson);
+
+// Output:
+// {
+//   "Address": {
+//     "City": "New York",
+//     "Country": "USA",
+//     "Street": "123 Main St"
+//   },
+//   "CreatedAt": "2024-07-17T10:30:00Z",
+//   "Email": "alice.johnson@example.com",
+//   "Id": 1,
+//   "Name": "Alice Johnson",
+//   "Roles": [
+//     "admin",
+//     "moderator",
+//     "user"
+//   ]
+// }
+
+// Serialize with sorted keys (alternative method)
+string sortedJson = jsonFormatter.FormatWithSortedKeys(user);
+
+// Create a minified JSON string
+var minifiedFormatter = new JsonFormatter { PrettyPrint = false };
+string minifiedJson = minifiedFormatter.Format(user);
+Console.WriteLine($"Minified length: {minifiedJson.Length} characters");
+
+// Create a pretty-printed JSON string
+var prettyFormatter = new JsonFormatter { PrettyPrint = true };
+string prettyJson = prettyFormatter.Format(user);
+
+// Validate JSON formatting
+var (isValid, validationErrors) = jsonFormatter.Validate(user);
+if (isValid)
+{
+    Console.WriteLine("JSON formatting is valid");
+}
+else
+{
+    Console.WriteLine($"Validation errors: {string.Join(", ", validationErrors)}");
+}
+
+// Check if two JSON objects are equal
+var user2 = new User
+{
+    Id = 1,
+    Name = "Alice Johnson",
+    Email = "alice.johnson@example.com",
+    CreatedAt = DateTime.UtcNow,
+    Roles = new List<string> { "admin", "user", "moderator" },
+    Address = new Address
+    {
+        Street = "123 Main St",
+        City = "New York",
+        Country = "USA"
+    }
+};
+
+bool areEqual = jsonFormatter.AreEqual(user, user2);
+Console.WriteLine($"Objects are equal: {areEqual}");
+
+// Extract fields from JSON object
+dynamic fields = jsonFormatter.ExtractFields(user);
+Console.WriteLine($"Extracted {fields.Count} top-level fields");
+
+// Flatten a nested object structure
+dynamic flattened = jsonFormatter.Flatten(user);
+Console.WriteLine($"Flattened object has {flattened.Count} properties");
+
+// Unflatten a flattened structure
+dynamic unflattened = jsonFormatter.Unflatten(flattened);
+
+// Use static methods for quick formatting
+string minifiedOutput = JsonFormatter.Minify(user);
+string prettyOutput = JsonFormatter.PrettyPrint(user);
+
+// Format specifically for documentation purposes
+string docFormatted = jsonFormatter.FormatForDocumentation(user);
+```
+
 ## JsonUtility
 
 The `JsonUtility` class provides comprehensive JSON serialization and deserialization utilities for consistent JSON handling across the gRPC-Web Bridge application. It supports various serialization options, type-safe deserialization, dynamic object parsing, JSON merging, property manipulation, and schema validation with comprehensive error handling throughout.
