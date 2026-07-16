@@ -779,6 +779,47 @@ Console.WriteLine($"Total Consumed: {controller.TotalConsumed}");
 controller.Dispose();
 ```
 
+## FlowControlOptions
+
+The `FlowControlOptions` class defines configuration settings for the bidirectional streaming engine's flow-control and backpressure subsystem. It controls message throughput, memory usage, and latency characteristics by managing credit windows, channel capacities, and adaptive behavior. This immutable record is typically configured once at application startup and shared across all streaming operations.
+
+Example usage:
+
+```csharp
+// Create a production-ready flow control configuration with high throughput
+var flowControlOptions = new FlowControlOptions
+{
+    InitialWindowSize = 256,
+    MaxWindowSize = 1024,
+    InboundChannelCapacity = 512,
+    OutboundChannelCapacity = 512,
+    BackpressureThreshold = 0.90, // 90% utilization
+    CreditReplenishmentBatch = 64,
+    Mode = FlowControlMode.Adaptive,
+    MaxProducerWaitTime = TimeSpan.FromSeconds(30),
+    AdaptiveAdjustmentInterval = TimeSpan.FromSeconds(5),
+    EmitBackpressureEvents = true
+};
+
+// Validate configuration before use
+flowControlOptions.Validate();
+
+// Use with bidirectional streaming engine
+var engine = new BidirectionalStreamingEngine(
+    loggerFactory: loggerFactory,
+    options: flowControlOptions,
+    eventBus: eventBus,
+    maxStreams: 200
+);
+
+// Or use built-in presets for common scenarios
+var highThroughputOptions = FlowControlOptions.HighThroughput;
+var lowLatencyOptions = FlowControlOptions.LowLatency;
+
+Console.WriteLine($"High throughput configuration: Initial={highThroughputOptions.InitialWindowSize}, Max={highThroughputOptions.MaxWindowSize}");
+Console.WriteLine($"Low latency configuration: Initial={lowLatencyOptions.InitialWindowSize}, Max={lowLatencyOptions.MaxWindowSize}");
+```
+
 ## BackpressureControllerExtensions
 
 The `BackpressureControllerExtensions` class provides extension methods for managing credit-based flow control in streaming scenarios. It enables efficient backpressure handling by allowing atomic consumption and release of credits, monitoring window utilization, and generating formatted status strings for observability.
