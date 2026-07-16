@@ -166,6 +166,46 @@ Console.WriteLine($"Max streams: {config.MaxStreamCount}");
 Console.WriteLine($"Compression: {config.CompressResponses} (level {config.CompressionLevel})");
 ```
 
+## GrpcWebBridgeOptions
+
+The `GrpcWebBridgeOptions` class provides a fluent interface for configuring the gRPC-Web bridge server. It allows you to programmatically configure all aspects of the bridge including environment settings, streaming behavior, message sizes, compression, authentication, CORS policies, and service defaults using a clean, method-chaining API.
+
+This options class serves as the primary configuration mechanism when registering the bridge services in your ASP.NET Core application's dependency injection container.
+
+Example usage:
+
+```csharp
+// Create options with environment and instance name
+var options = new GrpcWebBridgeOptions("Production", "user-service-bridge-01");
+
+// Configure bridge for production environment
+options.WithProduction()
+    .WithMaxStreamCount(200)
+    .WithStreamIdleTimeout(60)
+    .WithMaxMessageSize(8 * 1024 * 1024) // 8MB
+    .WithDefaultTimeout(30000) // 30 seconds
+    .WithCompression(true, compressionLevel: 6)
+    .WithRequiredAuthentication()
+    .AddAllowedOrigins(
+        "https://app.example.com",
+        "https://api.example.com"
+    )
+    .AddCustomHeader("X-Service-Version", "2.1.0")
+    .AddCustomHeader("X-Environment", "production");
+
+// Validate configuration before use
+options.Validate();
+
+// Use with dependency injection in Program.cs
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddGrpcWebBridge(opt =>
+{
+    opt.Configuration = options.Configuration;
+    opt.Configuration.EnableSwagger = true;
+    opt.Configuration.EnableMetrics = true;
+});
+```
+
 ## StartupConfiguration
 
 The `StartupConfiguration` class provides service initialization and system information retrieval for the gRPC-Web bridge. It handles the startup sequence by registering default services, validating configuration, and providing runtime system information including instance identification, environment details, and resource limits.
