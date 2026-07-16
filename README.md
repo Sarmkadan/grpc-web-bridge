@@ -2084,6 +2084,70 @@ await engine.DisposeAsync();
 
 The `StreamCleanupWorker` class is a background worker that periodically cleans up idle and stale streaming connections to prevent memory leaks. It monitors active streams and removes those that have been inactive beyond configurable thresholds, including streams with no activity (stale streams) and streams that have exceeded their idle timeout. The worker also triggers garbage collection when a threshold of removed streams is reached, helping maintain system stability under heavy streaming loads.
 
+## StreamingSession
+
+The `StreamingSession` class represents a persistent streaming session in the gRPC-Web Bridge, tracking user identity, client origin, authentication context, and session metadata throughout the lifetime of a streaming operation. It provides session lifecycle management, activity tracking, and metadata storage for diagnostic and monitoring purposes.
+
+Example usage:
+
+```csharp
+// Create a streaming session manager
+var sessionManager = new StreamingSessionManager();
+
+// Create a new streaming session for a user
+var session = sessionManager.CreateSession(
+    userId: "user-12345",
+    clientOrigin: "https://app.example.com",
+    authContextId: "auth-abc-123",
+    metadata: new Dictionary<string, string>
+    {
+        {"tracking-id", Guid.NewGuid().ToString()},
+        {"device-type", "web"},
+        {"version", "2.1.0"}
+    }
+);
+
+Console.WriteLine($"Created session: {session.SessionId}");
+Console.WriteLine($"User: {session.UserId}");
+Console.WriteLine($"Client origin: {session.ClientOrigin}");
+Console.WriteLine($"Created at: {session.CreatedAt}");
+Console.WriteLine($"Active sessions: {sessionManager.GetActiveSessions().Count}");
+
+// Associate a stream with the session
+bool streamAssociated = sessionManager.AssociateStream(
+    session.SessionId,
+    streamId: "stream-xyz-789",
+    streamType: "bidirectional"
+);
+
+Console.WriteLine($"Stream associated: {streamAssociated}");
+
+// Get session for a specific stream
+var sessionForStream = sessionManager.GetSessionForStream("stream-xyz-789");
+if (sessionForStream != null)
+{
+    Console.WriteLine($"Found session for stream: {sessionForStream.SessionId}");
+}
+
+// Update session activity
+sessionManager.UpdateSessionActivity(session.SessionId);
+
+// Get session summaries for monitoring
+var summaries = sessionManager.GetSessionSummaries();
+foreach (var summary in summaries)
+{
+    Console.WriteLine($"Session {summary.SessionId}: " +
+        $"User={summary.UserId}, " +
+        $"Active={summary.IsActive}, " +
+        $"LastActivity={summary.LastActivityAt}, " +
+        $"Streams={summary.StreamCount}");
+}
+
+// Close session when complete
+bool sessionClosed = await sessionManager.CloseSessionAsync(session.SessionId);
+Console.WriteLine($"Session closed: {sessionClosed}");
+```
+
 ## StreamingService
 
 The `StreamingService` class manages gRPC streaming sessions for the gRPC-Web Bridge, enabling bidirectional communication between gRPC-Web clients and gRPC services. It handles stream creation, message queuing and processing, heartbeat monitoring, and automatic cleanup of idle or completed streams. The service provides statistics tracking, stream state management, and supports both unary and streaming method types with configurable timeouts and heartbeats.
