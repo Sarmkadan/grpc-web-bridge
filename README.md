@@ -32,6 +32,59 @@ Configure the bridge in `appsettings.json`:
 }
 ```
 
+## BridgeConfiguration
+
+The `BridgeConfiguration` class defines all runtime configuration settings for the gRPC-Web bridge server. It controls logging, authentication, CORS policies, streaming behavior, message sizes, compression, and service defaults. This configuration object is typically loaded from application settings and validated before the bridge starts processing requests.
+
+Example usage:
+
+```csharp
+// Create a production configuration with custom instance name
+var config = new BridgeConfiguration(
+    environment: "Production",
+    instanceName: "user-service-bridge"
+);
+
+// Configure bridge behavior
+config.EnableLogging = true;
+config.EnableSwagger = true;
+config.EnableMetrics = true;
+config.EnableCors = true;
+config.RequireAuthentication = true;
+
+// Configure streaming behavior
+config.MaxStreamCount = 100;
+config.StreamIdleTimeoutSeconds = 30;
+config.StreamHeartbeatIntervalSeconds = 10;
+
+// Configure message limits
+config.MaxMessageSize = 4 * 1024 * 1024; // 4MB
+config.DefaultTimeoutMilliseconds = 30000; // 30 seconds
+
+// Configure compression
+config.CompressResponses = true;
+config.CompressionLevel = 6;
+
+// Configure CORS
+config.AllowedOrigins = new List<string> { "https://example.com", "https://api.example.com" };
+config.AllowedMethods = new List<string> { "GET", "POST", "PUT", "DELETE", "OPTIONS" };
+
+// Add custom headers
+config.AddCustomHeader("X-Service-Version", "1.2.3");
+config.AddCustomHeader("X-Environment", "production");
+
+// Set service defaults
+config.SetServiceDefault("UserService", new { MaxRetries = 3, Timeout = 5000 });
+
+// Validate configuration before use
+config.Validate();
+
+Console.WriteLine($"Bridge configured: {config.InstanceName ?? config.InstanceId}");
+Console.WriteLine($"Environment: {config.Environment}");
+Console.WriteLine($"Max streams: {config.MaxStreamCount}");
+Console.WriteLine($"Compression: {config.CompressResponses} (level {config.CompressionLevel})");
+```
+
 ## Usage Examples
 
 The repository includes comprehensive usage examples demonstrating how to integrate with the gRPC-Web Bridge:
