@@ -1388,6 +1388,81 @@ if (methodDescriptorResult.IsSuccess)
 }
 ```
 
+## ServiceRegistry
+
+The `ServiceRegistry` class provides centralized service registration, discovery, and health monitoring for gRPC services in the gRPC-Web Bridge. It maintains an in-memory registry of available services with their endpoints, ports, and method definitions, enabling dynamic service discovery and load balancing. The registry supports service status tracking, metadata caching for performance optimization, and comprehensive service management capabilities.
+
+Example usage:
+
+```csharp
+// Create service registry (typically injected via dependency injection)
+var serviceRegistry = new ServiceRegistry(logger);
+
+// Register a gRPC service
+var userService = new GrpcService(
+    name: "UserService",
+    packageName: "com.example.grpc",
+    endpoint: "user-service.example.com",
+    port: 50051
+)
+{
+    Description = "Handles user authentication and profile management",
+    UseTls = true,
+    Status = ServiceStatus.Serving
+};
+
+// Add methods to the service
+userService.AddMethod(new GrpcMethod(
+    name: "GetUser",
+    methodType: MethodType.Unary,
+    inputType: "GetUserRequest",
+    outputType: "UserResponse"
+));
+
+userService.AddMethod(new GrpcMethod(
+    name: "CreateUser",
+    methodType: MethodType.Unary,
+    inputType: "CreateUserRequest",
+    outputType: "UserResponse"
+));
+
+// Register the service
+serviceRegistry.RegisterService(userService);
+
+// Retrieve a service by full name
+var retrievedService = serviceRegistry.GetService("com.example.grpc.UserService");
+if (retrievedService != null)
+{
+    Console.WriteLine($"Service found: {retrievedService.FullName}");
+    Console.WriteLine($"Endpoint: {retrievedService.Endpoint}:{retrievedService.Port}");
+    Console.WriteLine($"Methods: {retrievedService.Methods.Count}");
+}
+
+// Check service health status
+var healthStatus = serviceRegistry.GetHealthStatus("com.example.grpc.UserService");
+Console.WriteLine($"Health status: {healthStatus}");
+
+// List all registered services
+var allServices = serviceRegistry.ListServices();
+Console.WriteLine($"Total services registered: {allServices.Count()}");
+
+// Update service status
+serviceRegistry.UpdateServiceStatus("com.example.grpc.UserService", ServiceStatus.NotServing);
+
+// Get cached metadata for performance optimization
+var metadata = serviceRegistry.GetCachedMetadata("com.example.grpc.UserService");
+if (metadata != null)
+{
+    Console.WriteLine($"Cached at: {metadata.CachedAt}");
+    Console.WriteLine($"Expires at: {metadata.ExpiresAt}");
+    Console.WriteLine($"Method count: {metadata.MethodCount}");
+}
+
+// Unregister service when no longer needed
+bool unregistered = serviceRegistry.UnregisterService("com.example.grpc.UserService");
+Console.WriteLine($"Service unregistered: {unregistered}");
+```
+
 ## RateLimitingMiddleware
 
 The `RateLimitingMiddleware` class provides request rate limiting using a sliding window token bucket algorithm. It enforces both per-client and global rate limits to protect backend services from abuse and overload. The middleware tracks request timestamps per client IP and path, allowing you to configure requests per second, window size, and retry-after periods for rate-limited clients.
