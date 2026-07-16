@@ -1339,6 +1339,55 @@ builder.Services.AddRouteHeaderTransformHook(
 );
 ```
 
+## ReflectionService
+
+The `ReflectionService` provides runtime information about the services and methods available in the gRPC Web Bridge. It enables clients to discover available services and their descriptors without requiring pre-compiled protocol buffer definitions.
+
+Example usage:
+
+```csharp
+// Create a reflection service instance
+var reflectionService = new ReflectionService();
+
+// List all available service names
+var serviceNamesResult = await reflectionService.ListServiceNamesAsync();
+if (serviceNamesResult.IsSuccess)
+{
+    foreach (var serviceName in serviceNamesResult.Value)
+    {
+        Console.WriteLine($"Service: {serviceName}");
+    }
+}
+
+// Get descriptor for a specific service
+var userServiceDescriptorResult = await reflectionService.GetServiceDescriptorAsync("UserService");
+if (userServiceDescriptorResult.IsSuccess)
+{
+    var serviceDescriptor = userServiceDescriptorResult.Value;
+    Console.WriteLine($"Service: {serviceDescriptor.Name}");
+    Console.WriteLine($"Methods: {serviceDescriptor.Methods.Count}");
+}
+
+// Get all service descriptors
+var allDescriptorsResult = await reflectionService.GetAllDescriptorsAsync();
+if (allDescriptorsResult.IsSuccess)
+{
+    foreach (var descriptor in allDescriptorsResult.Value)
+    {
+        Console.WriteLine($"Service: {descriptor.FullName} ({descriptor.Methods.Count} methods)");
+    }
+}
+
+// Get descriptor for a specific method
+var methodDescriptorResult = await reflectionService.GetMethodDescriptorAsync("UserService", "GetUser");
+if (methodDescriptorResult.IsSuccess)
+{
+    var methodDescriptor = methodDescriptorResult.Value;
+    Console.WriteLine($"Method: {methodDescriptor.FullName}");
+    Console.WriteLine($"Type: {methodDescriptor.MethodType}");
+}
+```
+
 ## RateLimitingMiddleware
 
 The `RateLimitingMiddleware` class provides request rate limiting using a sliding window token bucket algorithm. It enforces both per-client and global rate limits to protect backend services from abuse and overload. The middleware tracks request timestamps per client IP and path, allowing you to configure requests per second, window size, and retry-after periods for rate-limited clients.
