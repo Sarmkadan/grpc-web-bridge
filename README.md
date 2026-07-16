@@ -819,6 +819,100 @@ foreach (var field in metadata.Fields)
 }
 ```
 
+## ReflectionUtility
+
+The `ReflectionUtility` class provides comprehensive reflection utilities for runtime type inspection, dynamic method invocation, and property manipulation. It simplifies working with .NET reflection APIs by offering strongly-typed, exception-safe methods for common reflection scenarios including method discovery, property access, interface checking, type hierarchy traversal, and custom attribute retrieval.
+
+Example usage:
+
+```csharp
+// Define a sample model class
+public class UserModel
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public List<string> Roles { get; } = new();
+    
+    public void AddRole(string role) => Roles.Add(role);
+    public string GetDisplayName() => $"{Name} ({Email})" ;
+}
+
+// Usage examples
+
+// 1. Get all public methods of a type
+var methods = ReflectionUtility.GetPublicMethods(typeof(UserModel));
+Console.WriteLine($"Public methods: {methods.Count}");
+
+// 2. Get methods with a specific filter (e.g., no parameters)
+var parameterlessMethods = ReflectionUtility.GetPublicMethods(
+    typeof(UserModel),
+    m => m.GetParameters().Length == 0
+);
+
+// 3. Get all public properties
+var properties = ReflectionUtility.GetPublicProperties(typeof(UserModel));
+Console.WriteLine($"Properties: {string.Join(", ", properties.Select(p => p.Name))}");
+
+// 4. Check if type implements an interface
+bool implementsIList = ReflectionUtility.ImplementsInterface(
+    typeof(List<string>),
+    typeof(IList<>)
+);
+
+// 5. Get generic type arguments
+var genericArgs = ReflectionUtility.GetGenericArguments(typeof(List<string>));
+Console.WriteLine($"Generic args count: {genericArgs.Count}");
+
+// 6. Invoke a method dynamically
+var user = new UserModel { Id = 1, Name = "Alice", Email = "alice@example.com" };
+ReflectionUtility.InvokeMethod(user, "AddRole", "admin");
+ReflectionUtility.InvokeMethod(user, "GetDisplayName");
+
+// 7. Get and set property values
+var userId = ReflectionUtility.GetPropertyValue(user, "Id");
+ReflectionUtility.SetPropertyValue(user, "Name", "Alice Updated");
+
+// 8. Convert object to dictionary
+var userDict = ReflectionUtility.ObjectToDictionary(user);
+foreach (var kvp in userDict)
+{
+    Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+}
+
+// 9. Create instance dynamically
+var newUserType = ReflectionUtility.FindType("GrpcWebBridge.Utilities.ReflectionUtility+UserModel")
+    ?? typeof(UserModel);
+var newUser = ReflectionUtility.CreateInstance(newUserType) as UserModel;
+
+// 10. Get custom attributes
+var attrs = ReflectionUtility.GetCustomAttributes<ObsoleteAttribute>(
+    typeof(UserModel).GetMethod("GetDisplayName")!
+);
+
+// 11. Check if type is primitive or value type
+bool isPrimitive = ReflectionUtility.IsPrimitiveOrValueType(typeof(int));
+bool isString = ReflectionUtility.IsPrimitiveOrValueType(typeof(string));
+
+// 12. Get type hierarchy
+var hierarchy = ReflectionUtility.GetTypeHierarchy(typeof(List<string>));
+Console.WriteLine($"Type hierarchy depth: {hierarchy.Count}");
+
+// 13. Find type by name
+var foundType = ReflectionUtility.FindType("System.String");
+Console.WriteLine($"Found type: {foundType?.Name}");
+
+// 14. Get assembly version
+var assemblyVersion = ReflectionUtility.GetAssemblyVersion(typeof(UserModel));
+Console.WriteLine($"Assembly version: {assemblyVersion}");
+
+// 15. Check if method is async
+var isAsync = ReflectionUtility.IsAsyncMethod(
+    typeof(UserModel).GetMethod("AddRole")!
+);
+```
+
 ## JsonUtility
 
 The `JsonUtility` class provides comprehensive JSON serialization and deserialization utilities for consistent JSON handling across the gRPC-Web Bridge application. It supports various serialization options, type-safe deserialization, dynamic object parsing, JSON merging, property manipulation, and schema validation with comprehensive error handling throughout.
