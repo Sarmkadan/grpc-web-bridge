@@ -794,6 +794,73 @@ if (alertSummary.recentAlerts.Count > 0)
 }
 ```
 
+## GrpcServiceDescriptor
+
+The `GrpcServiceDescriptor` class represents a registered gRPC service as discovered through the reflection API. It contains all metadata required for clients to understand and invoke the service without prior knowledge of the proto descriptor file, including service identity, endpoint configuration, and method definitions.
+
+Example usage:
+
+```csharp
+// Create a service descriptor from reflection discovery
+var serviceDescriptor = new GrpcServiceDescriptor
+{
+    FullName = "example.v1.UserService",
+    Name = "UserService",
+    PackageName = "example.v1",
+    Description = "Handles user authentication, profile management, and authorization",
+    Endpoint = "user-service.example.com",
+    Port = 50051,
+    UseTls = true,
+    Methods = [
+        new MethodDescriptor
+        {
+            Name = "GetUser",
+            FullName = "example.v1.UserService/GetUser",
+            ServiceFullName = "example.v1.UserService",
+            MethodType = "Unary",
+            IsClientStreaming = false,
+            IsServerStreaming = false,
+            InputMessageType = "GetUserRequest",
+            OutputMessageType = "UserResponse",
+            IsDeprecated = false,
+            Description = "Retrieves a user by their unique identifier",
+            TimeoutMilliseconds = 5000
+        },
+        new MethodDescriptor
+        {
+            Name = "StreamUserUpdates",
+            FullName = "example.v1.UserService/StreamUserUpdates",
+            ServiceFullName = "example.v1.UserService",
+            MethodType = "ServerStreaming",
+            IsClientStreaming = false,
+            IsServerStreaming = true,
+            InputMessageType = "UserFilter",
+            OutputMessageType = "UserUpdate",
+            IsDeprecated = false,
+            Description = "Streams real-time user profile updates matching the filter criteria",
+            TimeoutMilliseconds = 30000
+        }
+    ]
+};
+
+// Access service metadata for client configuration
+Console.WriteLine($"Service: {serviceDescriptor.FullName}");
+Console.WriteLine($"Endpoint: {serviceDescriptor.Endpoint}:{serviceDescriptor.Port}");
+Console.WriteLine($"TLS enabled: {serviceDescriptor.UseTls}");
+Console.WriteLine($"Methods available: {serviceDescriptor.Methods.Count}");
+
+// Find a specific method by name
+var getUserMethod = serviceDescriptor.Methods.FirstOrDefault(m => m.Name == "GetUser");
+if (getUserMethod != null)
+{
+    Console.WriteLine($"Method: {getUserMethod.FullName}");
+    Console.WriteLine($"Type: {getUserMethod.MethodType}");
+    Console.WriteLine($"Input: {getUserMethod.InputMessageType}");
+    Console.WriteLine($"Output: {getUserMethod.OutputMessageType}");
+    Console.WriteLine($"Timeout: {getUserMethod.TimeoutMilliseconds}ms");
+}
+```
+
 ## ServiceRegistrationException
 
 The `ServiceRegistrationException` class represents exceptions thrown during service registration and discovery processes in the gRPC-Web Bridge. It allows for detailed error context by including the affected service name and endpoint, enabling robust error handling for service connectivity issues.
