@@ -1273,6 +1273,72 @@ bool isHealthy = healthCheckWorker.IsHealthy;
 DateTime timestamp = healthCheckWorker.Timestamp;
 ```
 
+## IRouteHeaderTransformHook
+
+The `IRouteHeaderTransformHook` interface defines a contract for per-route header transformation hooks. Implementations can inspect and rewrite HTTP request and response headers before they reach downstream gRPC services or after responses return. This is useful for adding authentication headers, modifying content types, adding tracing metadata, or implementing custom routing logic based on headers.
+
+Example usage:
+
+```csharp
+// Create a custom hook implementation
+public class CustomHeaderTransformHook : IRouteHeaderTransformHook
+{
+    public string? RoutePrefix => "/api/v1/";
+
+    public async Task TransformRequestAsync(
+        IHeaderDictionary requestHeaders,
+        Dictionary<string, string> grpcMetadata,
+        CancellationToken cancellationToken)
+    {
+        // Add custom headers to the request
+        requestHeaders["X-Custom-Request-Id"] = Guid.NewGuid().ToString();
+        
+        // Add metadata for downstream gRPC services
+        grpcMetadata["authorization"] = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+        grpcMetadata["x-user-id"] = "user-123";
+        
+        // Remove sensitive headers
+        requestHeaders.Remove("X-Internal-Header");
+    }
+
+    public async Task TransformResponseAsync(
+        IHeaderDictionary responseHeaders,
+        CancellationToken cancellationToken)
+    {
+        // Add security headers to the response
+        responseHeaders["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+        responseHeaders["X-Content-Type-Options"] = "nosniff";
+        responseHeaders["X-Frame-Options"] = "DENY";
+    }
+}
+
+// Register the hook in Program.cs
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddRouteHeaderTransformHook<CustomHeaderTransformHook>();
+
+// Use the middleware in the pipeline (typically before UseRouting)
+var app = builder.Build();
+app.UseRouteHeaderTransforms();
+app.UseRouting();
+app.UseEndpoints(...);
+
+// Or use a delegate-based hook for simple transformations
+builder.Services.AddRouteHeaderTransformHook(
+    routePrefix: "/api/secure/",
+    transformRequest: async (headers, metadata, ct) =>
+    {
+        if (headers.TryGetValue("Authorization", out var authValue))
+        {
+            metadata["auth-token"] = authValue.ToString();
+        }
+    },
+    transformResponse: async (headers, ct) =>
+    {
+        headers["Cache-Control"] = "no-store";
+    }
+);
+```
+
 ## RateLimitingMiddleware
 
 The `RateLimitingMiddleware` class provides request rate limiting using a sliding window token bucket algorithm. It enforces both per-client and global rate limits to protect backend services from abuse and overload. The middleware tracks request timestamps per client IP and path, allowing you to configure requests per second, window size, and retry-after periods for rate-limited clients.
