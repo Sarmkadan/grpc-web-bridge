@@ -155,6 +155,63 @@ bool isActive = contextManager.IsContextActive();
 contextManager.Clear();
 ```
 
+## AuthenticationContext
+
+The `AuthenticationContext` class represents authentication state for requests and streaming operations in the gRPC-Web Bridge. It encapsulates user identity, authentication scheme, roles, claims, and token information, providing utilities for role-based authorization, claim management, and expiration handling.
+
+Example usage:
+
+```csharp
+// Create an authenticated context for a user
+var authContext = new AuthenticationContext(
+    userId: "user-12345",
+    scheme: AuthenticationScheme.Bearer,
+    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMzQ1Iiwicm9sZXMiOlsiYWRtaW4iLCJ1c2VyIl0sIm5hbWUiOiJKb2huIERvZSIsImV4cCI6MTc5OTk5OTk5OSwiaWF0IjoxNjk5OTk5OTk5fQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+);
+
+// Add roles to the user
+authContext.AddRole("admin");
+authContext.AddRole("user");
+
+// Add claims
+authContext.AddClaim("email", "john.doe@example.com");
+authContext.AddClaim("department", "engineering");
+
+// Check roles
+authContext.HasRole("admin"); // true
+authContext.HasAnyRole("user", "guest"); // true
+authContext.HasAllRoles("admin", "user"); // true
+
+// Access user information
+Console.WriteLine($"User: {authContext.UserId} ({authContext.Username ?? "unknown"})");
+Console.WriteLine($"Authenticated: {authContext.IsAuthenticated}");
+Console.WriteLine($"Roles: {string.Join(", ", authContext.Roles)}");
+Console.WriteLine($"Claims: {authContext.Claims.Count} claims");
+
+// Set expiration (e.g., 30 minutes from now)
+authContext.SetExpiration(minutesFromNow: 30);
+Console.WriteLine($"Expires in: {authContext.GetRemainingTime().TotalMinutes:F0} minutes");
+
+// Add custom data for application-specific needs
+authContext.AddCustomData("preferences", new { theme = "dark", notifications = true });
+
+// Validate the context before use
+authContext.Validate();
+
+// Create an anonymous context for unauthenticated requests
+var anonymousContext = new AuthenticationContext
+{
+    Scheme = AuthenticationScheme.None,
+    IsAuthenticated = false
+};
+
+// Check if expired
+if (authContext.IsExpired)
+{
+    Console.WriteLine("Token has expired!");
+}
+```
+
 ## CorrelationIdManager
 
 The `CorrelationIdManager` class provides distributed tracing and correlation ID management for tracking requests across multiple services and components. It enables request lifecycle tracking, metadata storage, and comprehensive observability through trace hierarchies and statistics.
