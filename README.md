@@ -1398,6 +1398,77 @@ Example usage:
 // Configure services in Program.cs
 builder.Services.Configure<RateLimitingOptions>(options =>
 {
+    options.RequestsPerSecond = 100; // 100 requests per second per client
+    options.WindowSizeSeconds = 1; // 1-second sliding window
+    options.RetryAfterSeconds = 60; // Wait 60 seconds before retry
+    options.EnableGlobalLimit = true; // Enable global rate limiting
+    options.GlobalRequestsPerSecond = 10000; // 10,000 total requests per second
+});
+
+// Register the middleware in the pipeline
+var app = builder.Build();
+app.UseRateLimiting(); // Uses default options
+
+// Or with custom configuration:
+app.UseRateLimiting(new RateLimitingOptions
+{
+    RequestsPerSecond = 50,
+    WindowSizeSeconds = 2,
+    RetryAfterSeconds = 30,
+    EnableGlobalLimit = true,
+    GlobalRequestsPerSecond = 5000
+});
+```
+
+## RetryPolicyOptions
+
+The `RetryPolicyOptions` class defines configuration options for retry policies used by the `RetryPolicyExecutor` to implement resilient request execution with configurable retry behavior. It controls maximum retry attempts, delay strategies, retryable status codes, and provides tracking information about retry execution.
+
+Example usage:
+
+```csharp
+// Create retry policy options with sensible defaults
+var retryOptions = new RetryPolicyOptions
+{
+    MaxAttempts = 5,
+    BaseDelay = TimeSpan.FromSeconds(1),
+    MaxDelay = TimeSpan.FromSeconds(30),
+    BackoffMultiplier = 2.0,
+    RetryableStatusCodes = new HashSet<GrpcStatusCode>
+    {
+        GrpcStatusCode.Unavailable,
+        GrpcStatusCode.DeadlineExceeded,
+        GrpcStatusCode.ResourceExhausted
+    }
+};
+
+// Execute a retryable operation
+var retryExecutor = new RetryPolicyExecutor();
+var outcome = await retryExecutor.ExecuteAsync<string>(async () =>
+{
+    // Your gRPC or HTTP call here
+    var response = await client.GetUserAsync(userId);
+    return response.User;
+}, retryOptions);
+
+// Check the result
+if (outcome.Succeeded)
+{
+    Console.WriteLine($"Success after {outcome.Attempts} attempts: {outcome.Result}");
+    Console.WriteLine($"Total delay: {outcome.TotalDelay.TotalSeconds:F2}s");
+}
+else
+{
+    Console.WriteLine($"Failed after {outcome.Attempts} attempts: {outcome.LastException?.Message}");
+}
+```
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.Configure<RateLimitingOptions>(options =>
+{
     options.RequestsPerSecond = 100;      // 100 requests per second per client
     options.WindowSizeSeconds = 1;         // 1-second sliding window
     options.RetryAfterSeconds = 60;        // Wait 60 seconds before retry
