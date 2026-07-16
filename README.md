@@ -1102,6 +1102,76 @@ if (resetResponse.IsSuccessStatusCode)
 }
 ```
 
+## BridgeController
+
+The `BridgeController` class serves as the main REST endpoint interface for the gRPC-Web Bridge, implementing protocol translation between HTTP/gRPC-Web and gRPC services. It handles method invocation, streaming operations, and batch requests, providing a unified API for clients to interact with backend gRPC services through familiar REST conventions.
+
+The controller routes requests to the appropriate gRPC service endpoints, manages authentication context, tracks performance metrics, and ensures proper resource cleanup for streaming operations.
+
+Example usage:
+
+```csharp
+// Create a bridge client (typically via HttpClient)
+var httpClient = new HttpClient { BaseAddress = new Uri("https://localhost:5001") };
+
+// Single method invocation
+var invokeResponse = await httpClient.PostAsJsonAsync("api/bridge/invoke", new
+{
+    ServiceId = "UserService",
+    MethodName = "GetUser",
+    Payload = new { UserId = "123" },
+    Headers = new Dictionary<string, string> { { "X-Request-Id", Guid.NewGuid().ToString() } },
+    TimeoutMs = 30000
+});
+
+// Streaming messages to a gRPC service
+var streamResponse = await httpClient.PostAsJsonAsync("api/bridge/stream", new
+{
+    ServiceId = "ChatService",
+    MethodName = "StreamMessages",
+    InitialMessage = new { RoomId = "general", UserId = "user-456" }
+});
+
+// Process streaming responses
+using var stream = await streamResponse.Content.ReadAsStreamAsync();
+using var reader = new StreamReader(stream);
+while (!reader.EndOfStream)
+{
+    var line = await reader.ReadLineAsync();
+    if (line != null)
+    {
+        var message = JsonSerializer.Deserialize<StreamMessage>(line);
+        Console.WriteLine($"Received: {message?.Data}");
+    }
+}
+
+// Batch invoke multiple methods
+var batchResponse = await httpClient.PostAsJsonAsync("api/bridge/batch", new
+{
+    Operations = new List<object>
+    {
+        new
+        {
+            ServiceId = "UserService",
+            MethodName = "GetUser",
+            Payload = new { UserId = "1" }
+        },
+        new
+        {
+            ServiceId = "OrderService",
+            MethodName = "GetOrders",
+            Payload = new { UserId = "1", Status = "completed" }
+        },
+        new
+        {
+            ServiceId = "NotificationService",
+            MethodName = "SendNotification",
+            Payload = new { UserId = "1", Message = "Welcome!" }
+        }
+    }
+});
+```
+
 ## StreamUtility
 
 The `StreamUtility` class provides comprehensive stream handling utilities for efficient data transfer operations in the gRPC-Web Bridge. It includes methods for chunked copying, compression/decompression, Base64 conversion, hashing, and multi-destination streaming (teeing) with optimized memory management and retry logic for robust data transfer operations.
