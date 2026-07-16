@@ -820,6 +820,58 @@ Console.WriteLine($"High throughput configuration: Initial={highThroughputOption
 Console.WriteLine($"Low latency configuration: Initial={lowLatencyOptions.InitialWindowSize}, Max={lowLatencyOptions.MaxWindowSize}");
 ```
 
+## StreamingExtensions
+
+The `StreamingExtensions` class provides extension methods for registering the bidirectional streaming subsystem into the ASP.NET Core dependency injection container. These methods simplify the setup of the streaming engine, session manager, flow controllers, and diagnostics services, with support for both default and preset configurations.
+
+Example usage:
+
+```csharp
+// Basic setup with default flow control options
+builder.Services.AddBidirectionalStreaming();
+
+// Custom flow control configuration via delegate
+builder.Services.AddBidirectionalStreaming(options => options with
+{
+    Mode = FlowControlMode.Adaptive,
+    InitialWindowSize = 128,
+    MaxWindowSize = 512
+});
+
+// Configure with explicit FlowControlOptions
+var flowControlOptions = new FlowControlOptions
+{
+    Mode = FlowControlMode.Enabled,
+    InitialWindowSize = 256,
+    MaxWindowSize = 1024,
+    BackpressureThreshold = 0.90
+};
+builder.Services.AddBidirectionalStreaming(flowControlOptions);
+
+// Add streaming diagnostics with custom intervals
+builder.Services.AddStreamingDiagnostics(
+    diagnosticsInterval: TimeSpan.FromSeconds(30),
+    staleThreshold: TimeSpan.FromMinutes(10),
+    backpressureWarnThreshold: 0.15
+);
+
+// Use high-throughput preset (registers engine + diagnostics)
+builder.Services.AddHighThroughputBidirectionalStreaming();
+
+// Use low-latency preset (registers engine + diagnostics with shorter intervals)
+builder.Services.AddLowLatencyBidirectionalStreaming();
+
+// In Program.cs after building the app
+var app = builder.Build();
+
+// The registered services include:
+// - IBidirectionalStreamingEngine (BidirectionalStreamingEngine)
+// - StreamingSessionManager
+// - FlowControlOptions (if provided)
+// - StreamDiagnosticsService (if AddStreamingDiagnostics called)
+// - AdaptiveFlowController (if FlowControlMode.Adaptive)
+```
+
 ## StreamDiagnosticsOptions
 
 The `StreamDiagnosticsOptions` record configures the behavior of the `StreamDiagnosticsService`, which periodically collects aggregate metrics from all active bidirectional streams and publishes diagnostic events. It controls how often diagnostics are collected, when streams are considered stale, and what backpressure thresholds trigger warnings.
