@@ -1983,6 +1983,62 @@ app.UseRateLimiting(new RateLimitingOptions
 });
 ```
 
+## BidirectionalStreamingEngine
+
+The `BidirectionalStreamingEngine` class is the central engine that owns the full lifecycle of all bidirectional gRPC streams within a single bridge instance. It manages stream creation, message queuing, backpressure control, and automatic cleanup while publishing stream lifecycle events to the application's `EventBus` for diagnostics and session management.
+
+The engine enforces a global ceiling on concurrent stream count and provides thread-safe access to all operations. It tracks comprehensive metrics for each stream including message counts, backpressure events, and throughput statistics.
+
+Example usage:
+
+```csharp
+// Create the bidirectional streaming engine (typically via dependency injection)
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var eventBus = new EventBus(loggerFactory.CreateLogger<EventBus>());
+var engine = new BidirectionalStreamingEngine(
+    loggerFactory,
+    options: new FlowControlOptions
+    {
+        InitialWindowSize = 100,
+        MaxWindowSize = 1000,
+        Mode = FlowControlMode.Enabled
+    },
+    eventBus: eventBus,
+    maxStreams: 200
+);
+
+// Open a new bidirectional stream
+var stream = await engine.OpenStreamAsync(
+    streamId: Guid.NewGuid().ToString(),
+    methodType: MethodType.Duplex
+);
+
+Console.WriteLine($"Opened stream: {stream.StreamId}");
+Console.WriteLine($"Active streams: {engine.ActiveStreamCount}");
+
+// Get metrics for all active streams
+var allMetrics = engine.GetAllMetrics();
+foreach (var (streamId, metrics) in allMetrics)
+{
+    Console.WriteLine($"Stream {streamId}: " +
+        $"MessagesIn={metrics.MessagesIn}, MessagesOut={metrics.MessagesOut}, " +
+        $"BackpressureEvents={metrics.BackpressureEvents}");
+}
+
+// Get a specific stream
+var existingStream = engine.GetStream(stream.StreamId);
+if (existingStream != null)
+{
+    Console.WriteLine($"Found stream: {existingStream.StreamId}");
+}
+
+// Close the stream when done
+await engine.CloseStreamAsync(stream.StreamId, GrpcStatusCode.Ok);
+
+// Dispose the engine when the application shuts down
+await engine.DisposeAsync();
+```
+
 ## StreamCleanupWorker
 
 The `StreamCleanupWorker` class is a background worker that periodically cleans up idle and stale streaming connections to prevent memory leaks. It monitors active streams and removes those that have been inactive beyond configurable thresholds, including streams with no activity (stale streams) and streams that have exceeded their idle timeout. The worker also triggers garbage collection when a threshold of removed streams is reached, helping maintain system stability under heavy streaming loads.
