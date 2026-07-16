@@ -2179,6 +2179,58 @@ bool sessionClosed = await sessionManager.CloseSessionAsync(session.SessionId);
 Console.WriteLine($"Session closed: {sessionClosed}");
 ```
 
+## BidirectionalStreamContext
+
+The `BidirectionalStreamContext` class represents the execution context for a bidirectional gRPC stream, managing the complete lifecycle from creation to disposal. It handles message channels for both inbound and outbound communication, flow control, backpressure management, metrics collection, and graceful stream termination with configurable timeouts and cleanup policies. This context is the central state container for all bidirectional streaming operations in the gRPC-Web Bridge.
+
+Example usage:
+
+```csharp
+// Create a bidirectional stream context for duplex communication
+var streamContext = new BidirectionalStreamContext(
+    streamId: Guid.NewGuid().ToString(),
+    methodType: MethodType.Duplex,
+    maxSize: 1024 * 1024 // 1MB max message size
+)
+{
+    CreatedAt = DateTime.UtcNow
+};
+
+Console.WriteLine($"Created stream context: {streamContext.StreamId}");
+Console.WriteLine($"Method type: {streamContext.MethodType}");
+Console.WriteLine($"Created at: {streamContext.CreatedAt}");
+
+// Send a message through the outbound channel
+await streamContext.OutboundChannel.Writer.WriteAsync(new StreamMessage(
+    streamId: streamContext.StreamId,
+    messageType: StreamMessageType.Data,
+    sequenceNumber: 1,
+    data: Encoding.UTF8.GetBytes("{\"message\": \"Hello from client!\"}")
+));
+
+// Receive a message from the inbound channel
+if (streamContext.InboundChannel.Reader.TryRead(out var receivedMessage))
+{
+    Console.WriteLine($"Received message: {Encoding.UTF8.GetString(receivedMessage.Data)}");
+}
+
+// Monitor stream state and metrics
+Console.WriteLine($"Stream state: {streamContext.State}");
+Console.WriteLine($"Messages in: {streamContext.Metrics?.MessagesIn}");
+Console.WriteLine($"Messages out: {streamContext.Metrics?.MessagesOut}");
+
+// Check flow control status
+Console.WriteLine($"Window utilization: {streamContext.WindowUtilization:P0}");
+Console.WriteLine($"Available credits: {streamContext.AvailableCredits}");
+
+// Close the stream gracefully with a status
+streamContext.FinalStatus = GrpcStatusCode.Ok;
+streamContext.CloseReason = "Client completed operation";
+
+// Dispose the context when done (automatically cleans up resources)
+await streamContext.DisposeAsync();
+```
+
 ## StreamingService
 
 The `StreamingService` class manages gRPC streaming sessions for the gRPC-Web Bridge, enabling bidirectional communication between gRPC-Web clients and gRPC services. It handles stream creation, message queuing and processing, heartbeat monitoring, and automatic cleanup of idle or completed streams. The service provides statistics tracking, stream state management, and supports both unary and streaming method types with configurable timeouts and heartbeats.
