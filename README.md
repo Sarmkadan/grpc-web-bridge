@@ -56,3 +56,22 @@ await repoTests.GetByIdAsync_WithNonExistentId_ReturnsNull();
 // Get services by package
 await repoTests.GetByPackageAsync_ReturnsServicesForPackage();
 ```
+
+## CacheManagerTests
+The `CacheManagerTests` class contains a thorough set of unit tests that verify the behavior of the `CacheManager` caching component, covering basic set/get operations, TTL handling, pattern‑based removal, and statistics tracking. Although intended for automated testing, its public members can be instantiated and called manually to demonstrate cache interactions.
+
+```csharp
+using GrpcWebBridge.Tests;
+
+// Create the test fixture (which also creates a CacheManager instance)
+var cacheTests = new CacheManagerTests();
+
+// Basic set and get verification
+cacheTests.Set_AndTryGet_WithSameKey_ReturnsCachedValue();
+
+// Verify behavior when a key does not exist
+cacheTests.TryGet_WithNonExistentKey_ReturnsFalse();
+
+// Clean up resources when done
+cacheTests.Dispose();
+```
