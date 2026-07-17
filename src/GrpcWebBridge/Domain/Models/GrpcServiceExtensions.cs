@@ -17,9 +17,16 @@ public static class GrpcServiceExtensions
     public static string GetFullEndpoint(this GrpcService service)
     {
         ArgumentNullException.ThrowIfNull(service);
-        var scheme = service.UseTls ? "https" : "http";
-        return $"{scheme}://{service.Endpoint}:{service.Port}";
+        return $"{GetScheme(service)}://{service.Endpoint}:{service.Port}";
     }
+
+    /// <summary>
+    /// Gets the appropriate URI scheme based on TLS configuration.
+    /// </summary>
+    /// <param name="service">The <see cref="GrpcService"/> instance.</param>
+    /// <returns><c>"https"</c> if TLS is enabled, otherwise <c>"http"</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is <c>null</c>.</exception>
+    private static string GetScheme(this GrpcService service) => service.UseTls ? "https" : "http";
 
     /// <summary>
     /// Retrieves a metadata value by <paramref name="key"/>, or returns <paramref name="defaultValue"/>
@@ -47,6 +54,6 @@ public static class GrpcServiceExtensions
     public static IReadOnlyCollection<string> GetAllMetadataKeys(this GrpcService service)
     {
         ArgumentNullException.ThrowIfNull(service);
-        return service.Metadata.Keys;
+        return service.Metadata.Keys.ToList().AsReadOnly();
     }
 }
