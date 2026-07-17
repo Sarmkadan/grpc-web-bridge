@@ -133,3 +133,37 @@ catch (ArgumentException ex)
     Console.WriteLine($"Validation failed: {ex.Message}");
 }
 ```
+
+## DateTimeUtilityJsonExtensions
+
+The `DateTimeUtilityJsonExtensions` class provides System.Text.Json serialization and deserialization extensions for `DateTime` and `DateTime?` values. These methods enable round-trip serialization of date/time values using ISO 8601 format, which is compatible with the DateTimeUtility operations.
+
+For example, you can serialize a DateTime to JSON, deserialize it back, and handle potential parsing errors:
+
+```csharp
+// Create a DateTime value
+DateTime now = DateTime.UtcNow;
+
+// Serialize to JSON string
+string json = now.ToJson(indented: true);
+Console.WriteLine(json);
+
+// Deserialize from JSON
+DateTime? restoredDate = json.FromJson();
+Console.WriteLine($"Restored date: {restoredDate}");
+
+// Try to deserialize with error handling
+if (json.TryFromJson(out var safeDate))
+{
+  Console.WriteLine($"Successfully deserialized: {safeDate}");
+}
+else
+{
+  Console.WriteLine("Failed to deserialize date");
+}
+
+// Serialize nullable DateTime
+DateTime? nullableDate = DateTime.Now;
+string nullableJson = nullableDate.ToJson();
+Console.WriteLine(nullableJson);
+```
