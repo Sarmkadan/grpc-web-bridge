@@ -1,32 +1,20 @@
 // existing content ...
 
-// ... other sections ...
-
-// ## FlowControlOptionsEdgeCaseTests
-// The `FlowControlOptionsEdgeCaseTests` class provides comprehensive unit tests for the edge cases and boundary values of `FlowControlOptions`.
-// It validates the behavior of flow control settings for gRPC-Web bridge streaming, ensuring correct handling of extreme values for window sizes, thresholds, and batch sizes.
-// Example usage:
-
+## HealthCheckControllerTests
+The `HealthCheckControllerTests` class provides a set of unit tests for the `HealthCheckController` class, covering various scenarios such as health status, liveness, readiness, and resource metrics. It ensures that the controller behaves correctly under different conditions, such as when services are registered or not, and when they are healthy or unhealthy. Here's an example of how to use some of its public members:
 ```csharp
-var options = new FlowControlOptions
-{
-    InitialWindowSize = 64,
-    MaxWindowSize = 1024,
-    InboundChannelCapacity = 512,
-    OutboundChannelCapacity = 256,
-    BackpressureThreshold = 0.8,
-    CreditReplenishmentBatch = 16,
-    MaxProducerWaitTime = TimeSpan.FromSeconds(30),
-    AdaptiveAdjustmentInterval = TimeSpan.FromSeconds(5)
-};
-
-try
-{
-    options.Validate();
-    Console.WriteLine("Flow control options are valid.");
-}
-catch (ArgumentOutOfRangeException ex)
-{
-    Console.WriteLine($"Validation error: {ex.Message}");
-}
+var tests = new HealthCheckControllerTests();
+tests.GetHealthStatus_WithNoServicesRegistered_Returns200Healthy();
+tests.GetHealthStatus_WhenAllServicesHealthy_Returns200();
+tests.GetHealthStatus_WhenMoreThan20PercentUnhealthy_Returns503();
+tests.GetLivenessStatus_AlwaysReturns200();
+tests.GetLivenessStatus_ResponseContainsAliveTrue();
+tests.GetReadinessStatus_WithNoServices_Returns503();
+tests.GetReadinessStatus_WithServingService_Returns200();
+tests.GetDetailedDiagnostics_Returns200();
+tests.GetDetailedDiagnostics_ResponseValueIsNotNull();
+tests.GetServiceHealthStatus_WithRegisteredServices_Returns200();
+tests.GetServiceHealthStatus_WithNoServices_Returns200WithEmptyList();
+tests.GetResourceMetrics_Returns200();
+tests.GetResourceMetrics_ResponseValueIsNotNull();
 ```
