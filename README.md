@@ -838,6 +838,30 @@ int serviceCount = serviceRegistry.RegisteredServiceCount;
 Console.WriteLine($"Currently registered services: {serviceCount}");
 ```
 
+## ReflectionServiceTests
+
+The `ReflectionServiceTests` class provides a suite of unit tests for the `ReflectionService`, covering service discovery, descriptor retrieval, and method mapping functionality. These tests ensure the `ReflectionService` behaves correctly under various conditions, including successful operations and error scenarios with invalid inputs or non-existent services.
+
+Example usage:
+
+```csharp
+// Example usage of test suite components
+var tests = new ReflectionServiceTests();
+
+// Validate listing services
+await tests.ListServiceNamesAsync_WhenServicesExist_ReturnsOrderedNames();
+
+// Validate retrieving service descriptors
+await tests.GetServiceDescriptorAsync_ForExistingService_ReturnsDescriptor();
+
+// Validate retrieving method descriptors
+await tests.GetMethodDescriptorAsync_ForExistingMethod_ReturnsDescriptor();
+
+// Validate error handling for missing services
+await tests.GetServiceDescriptorAsync_ForNonExistingService_ReturnsFailure();
+```
+
+
 ## CryptographyUtilityTests
 
 The `CryptographyUtilityTests` class provides comprehensive unit tests for the `CryptographyUtility` class, covering password hashing, token generation, cryptographic hash functions (SHA-256), HMAC computation (HMAC-SHA256), and AES-256 encryption/decryption operations. The tests verify correct behavior for both happy paths and edge cases including empty inputs, invalid lengths, and tampered ciphertexts.
