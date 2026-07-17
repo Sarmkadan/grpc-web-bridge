@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Globalization;
 
@@ -168,10 +168,7 @@ public static class GrpcServiceValidation
     /// </summary>
     /// <param name="value">The service to check</param>
     /// <returns>True if valid, otherwise false</returns>
-    public static bool IsValid(this GrpcService? value)
-    {
-        return value is not null && Validate(value).Count == 0;
-    }
+    public static bool IsValid(this GrpcService? value) => value is not null && Validate(value).Count == 0;
 
     /// <summary>
     /// Ensures that a <see cref="GrpcService"/> instance is valid, throwing an exception if not.
@@ -188,37 +185,31 @@ public static class GrpcServiceValidation
         {
             throw new ArgumentException(
                 $"GrpcService is invalid:{Environment.NewLine}- {
-                    string.Join($"{Environment.NewLine}- ", problems)}");
+                string.Join($"{Environment.NewLine}- ", problems)}");
         }
     }
 
     /// <summary>
     /// Validates that a string is a valid .NET package name.
     /// </summary>
+    /// <param name="packageName">The package name to validate</param>
+    /// <returns>True if valid, otherwise false</returns>
     private static bool IsValidPackageName(string packageName)
     {
         if (string.IsNullOrWhiteSpace(packageName))
             return false;
 
         // .NET package names are alphanumeric with dots and dashes
-        foreach (var c in packageName)
-        {
-            if (!char.IsLetterOrDigit(c) && c != '.' && c != '-')
-                return false;
-        }
+        if (!packageName.All(c => char.IsLetterOrDigit(c) || c == '.' || c == '-'))
+            return false;
 
         // Cannot start or end with dot or dash
-        if (packageName.StartsWith('.') || packageName.StartsWith('-') ||
-            packageName.EndsWith('.') || packageName.EndsWith('-'))
-        {
+        if (packageName.StartsWith('.') || packageName.StartsWith('-') || packageName.EndsWith('.') || packageName.EndsWith('-'))
             return false;
-        }
 
         // Cannot have consecutive dots or dashes
         if (packageName.Contains("..") || packageName.Contains("--"))
-        {
             return false;
-        }
 
         return true;
     }
@@ -226,6 +217,8 @@ public static class GrpcServiceValidation
     /// <summary>
     /// Validates that a string is a valid hostname or IP address.
     /// </summary>
+    /// <param name="endpoint">The endpoint to validate</param>
+    /// <returns>True if valid, otherwise false</returns>
     private static bool IsValidEndpoint(string endpoint)
     {
         if (string.IsNullOrWhiteSpace(endpoint))
@@ -242,6 +235,8 @@ public static class GrpcServiceValidation
     /// <summary>
     /// Validates that a string is a valid IPv4 address.
     /// </summary>
+    /// <param name="ip">The IP address to validate</param>
+    /// <returns>True if valid, otherwise false</returns>
     private static bool IsValidIpAddress(string ip)
     {
         if (string.IsNullOrWhiteSpace(ip))
@@ -251,21 +246,14 @@ public static class GrpcServiceValidation
         if (parts.Length != 4)
             return false;
 
-        foreach (var part in parts)
-        {
-            if (!int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var num) ||
-                num < 0 || num > 255)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return parts.All(part => int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var num) && num >= 0 && num <= 255);
     }
 
     /// <summary>
     /// Validates that a string is a valid hostname.
     /// </summary>
+    /// <param name="hostname">The hostname to validate</param>
+    /// <returns>True if valid, otherwise false</returns>
     private static bool IsValidHostname(string hostname)
     {
         if (string.IsNullOrWhiteSpace(hostname) || hostname.Length > 253)
@@ -278,21 +266,8 @@ public static class GrpcServiceValidation
         if (labels.Length == 0 || labels.Any(string.IsNullOrWhiteSpace))
             return false;
 
-        foreach (var label in labels)
-        {
-            if (label.Length == 0 || label.Length > 63)
-                return false;
-
-            if (label.StartsWith('-') || label.EndsWith('-'))
-                return false;
-
-            foreach (var c in label)
-            {
-                if (!char.IsLetterOrDigit(c) && c != '-')
-                    return false;
-            }
-        }
-
-        return true;
+        return labels.All(label => label.Length > 0 && label.Length <= 63 &&
+            !label.StartsWith('-') && !label.EndsWith('-') &&
+            label.All(c => char.IsLetterOrDigit(c) || c == '-'));
     }
 }
