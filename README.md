@@ -781,6 +781,55 @@ public sealed class ErrorHandlingMiddlewareTests
 }
 ```
 
+## ClientRateLimitTests
+
+The `ClientRateLimitTests` class provides comprehensive unit tests for the `ClientRateLimit` class, which implements a sliding-window rate limiter for tracking client requests. The tests verify rate limiting behavior, request counting, stale state detection, and thread safety under concurrent access scenarios.
+
+Example usage:
+
+```csharp
+// Create a new rate limiter instance
+var rateLimit = new ClientRateLimit();
+
+// Allow requests within rate limit (5 requests per second)
+for (int i = 0; i < 5; i++)
+{
+    bool allowed = rateLimit.AllowRequest(5, 1); // maxRequests=5, windowSeconds=1
+    Console.WriteLine($"Request {i + 1} allowed: {allowed}");
+}
+
+// Check request count
+int count = rateLimit.GetRequestCount(10); // windowSeconds=10
+Console.WriteLine($"Total requests in last 10 seconds: {count}");
+
+// Check if stale (no requests made yet)
+bool isStale = rateLimit.IsStale(TimeSpan.FromSeconds(1));
+Console.WriteLine($"Is stale: {isStale}");
+
+// Make some requests
+rateLimit.AllowRequest(100, 60); // 100 requests per 60 seconds
+rateLimit.AllowRequest(100, 60);
+rateLimit.AllowRequest(100, 60);
+
+// Check count again
+count = rateLimit.GetRequestCount(60);
+Console.WriteLine($"Total requests in last 60 seconds: {count}");
+
+// Check stale status after recent activity
+isStale = rateLimit.IsStale(TimeSpan.FromMinutes(5));
+Console.WriteLine($"Is stale after activity: {isStale}");
+
+// Test concurrent access safety
+var concurrentLimit = new ClientRateLimit();
+Parallel.For(0, 200, _ =>
+{
+    concurrentLimit.AllowRequest(1000, 60);
+});
+
+int finalCount = concurrentLimit.GetRequestCount(60);
+Console.WriteLine($"Concurrent requests processed: {finalCount}");
+```
+
 ## ContentTypeValidationMiddlewareTests
 
 The `ContentTypeValidationMiddlewareTests` class provides comprehensive unit tests for the `ContentTypeValidationMiddleware` class, verifying that it correctly validates content types for gRPC-Web requests. The tests ensure that only valid gRPC and gRPC-Web content types are allowed to pass through the middleware, while invalid content types result in HTTP 415 (Unsupported Media Type) responses with JSON error bodies.
