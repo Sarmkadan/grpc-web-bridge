@@ -58,21 +58,21 @@ public static class CacheUtilityJsonExtensions
     /// Attempts to deserialize a CacheStatistics instance from a JSON string.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">Receives the deserialized CacheStatistics instance if successful, otherwise null.</param>
+    /// <param name="value">Receives the deserialized CacheStatistics instance if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
-    public static bool TryFromJson(string json, out CacheStatistics? value)
+    public static bool TryFromJson(string json, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out CacheStatistics? value)
     {
         value = null;
 
         if (string.IsNullOrEmpty(json))
         {
-            return true;
+            return false;
         }
 
         try
         {
             value = JsonSerializer.Deserialize<CacheStatistics>(json, _jsonOptions);
-            return true;
+            return value is not null;
         }
         catch (JsonException)
         {
