@@ -33,12 +33,13 @@ public static class GrpcWebBridgeExceptionExtensions
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        var contextString = string.Join(", ", exception.Context.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
-        return contextString;
+        return exception.Context.Count == 0
+            ? string.Empty
+            : string.Join(", ", exception.Context.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
     }
 
     /// <summary>
-    /// Creates a new exception with the same message and inner exception as the original exception, 
+    /// Creates a new exception with the same message and inner exception as the original exception,
     /// but with a different error code.
     /// </summary>
     /// <param name="exception">The exception to create a new exception from.</param>
