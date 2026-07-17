@@ -5,6 +5,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -97,10 +98,16 @@ public static class StreamCleanupWorkerJsonExtensions
     /// </summary>
     private sealed class TimeSpanConverter : JsonConverter<TimeSpan>
     {
+        private static readonly string[] _formats = [
+            "c", "g", "G",
+            "hh\\:mm\\:ss", "hh\\:mm\\:ss\\.fff",
+            @"hh\:mm\:ss", @"hh\:mm\:ss\.fff"
+        ];
+
         public override TimeSpan Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             var str = reader.GetString();
-            if (str is null || !TimeSpan.TryParse(str, out var result))
+            if (str is null || !TimeSpan.TryParse(str, CultureInfo.InvariantCulture, out var result))
             {
                 throw new JsonException($"Invalid TimeSpan format: {str}");
             }
