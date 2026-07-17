@@ -243,3 +243,60 @@ catch (Exception ex)
     logger.LogError(ex, "Example failed");
 }
 ```
+
+## BasicUsageExample
+`BasicUsageExample` is a minimal, self‑contained demonstration of how to interact with a running gRPC‑Web Bridge using plain `HttpClient`.  
+It shows how to check the bridge health endpoint, perform a simple unary RPC call, and retrieve bridge metrics, all wrapped in async methods that can be called from any .NET application.
+
+**Typical usage**
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using GrpcWebBridge.Examples;
+
+namespace DemoApp
+{
+    internal class Program
+    {
+        // The entry point can be async in .NET 5+.
+        public static async Task Main(string[] args)
+        {
+            // Replace with the URL of your running bridge instance
+            const string bridgeUrl = "http://localhost:5000";
+
+            var example = new BasicUsageExample(bridgeUrl);
+
+            // 1️⃣ Check that the bridge is up
+            bool healthy = await example.CheckBridgeHealthAsync();
+            Console.WriteLine(healthy
+                ? "✅ Bridge is healthy"
+                : "❌ Bridge is not reachable");
+
+            // 2️⃣ Perform a simple unary call (replace with real service/method)
+            var response = await example.MakeSimpleCallAsync(
+                serviceName: "DemoService",
+                methodName: "GetInfo",
+                requestData: new { id = 1 });
+
+            Console.WriteLine(response != null
+                ? $"✅ RPC response: {response}"
+                : "❌ RPC call failed");
+
+            // 3️⃣ Retrieve and display bridge metrics
+            string? metrics = await example.GetBridgeMetricsAsync();
+            if (metrics != null)
+            {
+                Console.WriteLine("📊 Bridge metrics:");
+                Console.WriteLine(metrics);
+            }
+            else
+            {
+                Console.WriteLine("❌ Could not fetch metrics");
+            }
+        }
+    }
+}
+```
+
+The example above demonstrates the three core public members of `BasicUsageExample` (`CheckBridgeHealthAsync`, `MakeSimpleCallAsync`, `GetBridgeMetricsAsync`) together with its constructor and the static async `Main` entry point. It can be copied into a console project and run as‑is, assuming a bridge instance is reachable at the supplied URL.
