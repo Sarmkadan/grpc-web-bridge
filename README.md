@@ -2,10 +2,56 @@
 
 ## GoalTracker Integration
 
-... (rest of the content remains the same)
+При работе над задачей, привязанной к цели в GoalTracker, в конце сессии залогируй чат:
+
+```bash
+# 1. Получить токен (кешируй - валиден 30 дней)
+TOKEN=$(curl -s -X POST https://tracker.sarmkadan.com/api/auth/login \
+ -H 'Content-Type: application/json' \
+ -d '{"username":"vlad","password":"GoalTracker2026!Vlad"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
+
+# 2. Залогировать сессию (GOAL_ID = id цели из трекера)
+curl -s -X POST https://tracker.sarmkadan.com/api/goals/GOAL_ID/log \
+ -H "Authorization: Bearer $TOKEN" \
+ -H 'Content-Type: application/json' \
+ -d '{"sessionId":"SESSION_ID","summary":"краткое описание что сделано"}'
+```
+
+**Правила:**
+- `SESSION_ID` - текущий session id (виден в `claude --resume`). Если неизвестен - используй timestamp вида `manual-2026-06-01-1430`
+- `summary` - 1-3 предложения что конкретно сделано в этой сессии. Без воды, только факты
+- Логировать в КОНЦЕ сессии, когда работа завершена
+- Если Влад явно указал goal ID или название цели - логировать. Если нет - спросить "залогировать в GoalTracker?"
+- Не логировать сессии которые не связаны ни с какой целью
+
+**Список целей:** `GET https://tracker.sarmkadan.com/api/goals` (с Bearer токеном)
+
+**Добавить шаг к цели:**
+```bash
+curl -s -X POST https://tracker.sarmkadan.com/api/goals/GOAL_ID/steps \
+ -H "Authorization: Bearer $TOKEN" \
+ -H 'Content-Type: application/json' \
+ -d '{"description":"описание шага"}'
+```
+
+---
+
+# README
+
+This document provides an overview of the gRPC Web Bridge project, including setup instructions, architecture, and usage examples.
 
 ## StreamingExceptionExtensions
+
 The `StreamingExceptionExtensions` class provides a set of extension methods for working with `StreamingException` instances. These methods allow you to determine the state of a stream, add context to an exception, and retrieve stream-related context. For example, you can use the `IsTerminalState` method to check if a stream is in a terminal state, or use the `WithContext` method to add additional context to an exception:
+
+```csharp
+// Example usage of StreamingExceptionExtensions
+var exception = new StreamingException("Stream failed");
+if (exception.IsTerminalState(StreamState.Completed))
+{
+    Console.WriteLine("Stream is in terminal state");
+}
+```
 
 ## GrpcRequestExtensions
 
@@ -155,15 +201,62 @@ Console.WriteLine($"Restored date: {restoredDate}");
 // Try to deserialize with error handling
 if (json.TryFromJson(out var safeDate))
 {
-  Console.WriteLine($"Successfully deserialized: {safeDate}");
+    Console.WriteLine($"Successfully deserialized: {safeDate}");
 }
 else
 {
-  Console.WriteLine("Failed to deserialize date");
+    Console.WriteLine("Failed to deserialize date");
 }
 
 // Serialize nullable DateTime
 DateTime? nullableDate = DateTime.Now;
 string nullableJson = nullableDate.ToJson();
 Console.WriteLine(nullableJson);
+```
+
+## ServiceRegistryTestsExtensions
+
+The `ServiceRegistryTestsExtensions` class provides extension methods for `ServiceRegistryTests` that simplify testing of service registry functionality. These methods create test services, manage registry state, and provide utilities for service discovery and health checks, making it easier to write comprehensive unit tests for service registration and discovery scenarios.
+
+For example, you can create a test registry, register services, and perform various registry operations:
+
+```csharp
+// Create a test registry
+var registry = new ServiceRegistryTests().CreateTestRegistry();
+
+// Create and register a test service
+var service = new ServiceRegistryTests().CreateAndRegisterTestService(
+    "TestService",
+    "TestPackage");
+
+// Create and register multiple test services
+var services = new ServiceRegistryTests().CreateAndRegisterTestServices(
+    3,
+    "MyPackage");
+
+// Check if a service exists
+bool exists = new ServiceRegistryTests().ServiceExists(
+    registry,
+    "TestPackage.TestService");
+
+// Get a service or throw if not found
+var foundService = new ServiceRegistryTests().GetServiceOrThrow(
+    registry,
+    "TestPackage.TestService");
+
+// Update service status and get the updated service
+var updatedService = new ServiceRegistryTests().UpdateAndGetServiceStatus(
+    registry,
+    "TestPackage.TestService",
+    ServiceStatus.Maintenance);
+
+// Get service health status
+var healthStatus = new ServiceRegistryTests().GetServiceHealthStatus(
+    registry,
+    "TestPackage.TestService");
+
+// List all services by package
+var packageServices = new ServiceRegistryTests().ListServicesByPackage(
+    registry,
+    "MyPackage");
 ```
