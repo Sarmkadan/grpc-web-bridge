@@ -3,31 +3,34 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace GrpcWebBridge.Tests;
 
 /// <summary>
-/// Provides System.Text.Json serialization extensions for <see cref="ContentTypeValidationMiddlewareTests"/>.
+/// Provides System.Text.Json serialization extensions for <see cref="ContentTypeValidationMiddlewareTests"/> test data.
 /// </summary>
 public static class ContentTypeValidationMiddlewareTestsJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
+        WriteIndented = false,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
     private static readonly JsonSerializerOptions _jsonOptionsIndented = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
+        WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
     /// <summary>
-    /// Serializes the specified <see cref="ContentTypeValidationMiddlewareTests"/> instance to a JSON string.
+    /// Serializes the specified <see cref="ContentTypeValidationMiddlewareTests"/> instance to a JSON string using camelCase property naming.
     /// </summary>
     /// <param name="value">The value to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation.</param>
