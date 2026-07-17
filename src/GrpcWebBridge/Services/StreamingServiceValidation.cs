@@ -19,7 +19,7 @@ public static class StreamingServiceValidation
     /// </summary>
     /// <param name="value">The StreamingService instance to validate.</param>
     /// <returns>An empty list if valid, or a list of human-readable problems if invalid.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if value is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static IReadOnlyList<string> Validate(this StreamingService? value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -51,14 +51,15 @@ public static class StreamingServiceValidation
     /// </summary>
     /// <param name="value">The StreamingService instance to check.</param>
     /// <returns>True if valid, false otherwise.</returns>
-    public static bool IsValid(this StreamingService? value) => value.Validate().Count == 0;
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    public static bool IsValid(this StreamingService? value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures a StreamingService instance is valid, throwing an exception if not
     /// </summary>
     /// <param name="value">The StreamingService instance to validate.</param>
-    /// <exception cref="ArgumentNullException">Thrown if value is null.</exception>
-    /// <exception cref="ArgumentException">Thrown if value contains validation problems.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> contains validation problems.</exception>
     public static void EnsureValid(this StreamingService? value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -82,7 +83,7 @@ public static class StreamValidation
     /// </summary>
     /// <param name="value">The Stream instance to validate.</param>
     /// <returns>An empty list if valid, or a list of human-readable problems if invalid.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if value is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static IReadOnlyList<string> Validate(this Stream? value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -157,14 +158,15 @@ public static class StreamValidation
     /// </summary>
     /// <param name="value">The Stream instance to check.</param>
     /// <returns>True if valid, false otherwise.</returns>
-    public static bool IsValid(this Stream? value) => value.Validate().Count == 0;
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    public static bool IsValid(this Stream? value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures a Stream instance is valid, throwing an exception if not
     /// </summary>
     /// <param name="value">The Stream instance to validate.</param>
-    /// <exception cref="ArgumentNullException">Thrown if value is null.</exception>
-    /// <exception cref="ArgumentException">Thrown if value contains validation problems.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> contains validation problems.</exception>
     public static void EnsureValid(this Stream? value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -188,7 +190,7 @@ public static class StreamStatisticsValidation
     /// </summary>
     /// <param name="value">The StreamStatistics instance to validate.</param>
     /// <returns>An empty list if valid, or a list of human-readable problems if invalid.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if value is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static IReadOnlyList<string> Validate(this StreamStatistics? value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -253,14 +255,15 @@ public static class StreamStatisticsValidation
     /// </summary>
     /// <param name="value">The StreamStatistics instance to check.</param>
     /// <returns>True if valid, false otherwise.</returns>
-    public static bool IsValid(this StreamStatistics? value) => value.Validate().Count == 0;
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    public static bool IsValid(this StreamStatistics? value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures a StreamStatistics instance is valid, throwing an exception if not
     /// </summary>
     /// <param name="value">The StreamStatistics instance to validate.</param>
-    /// <exception cref="ArgumentNullException">Thrown if value is null.</exception>
-    /// <exception cref="ArgumentException">Thrown if value contains validation problems.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> contains validation problems.</exception>
     public static void EnsureValid(this StreamStatistics? value)
     {
         ArgumentNullException.ThrowIfNull(value);
