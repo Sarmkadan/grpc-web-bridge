@@ -833,6 +833,56 @@ var errorBody = await reader.ReadToEndAsync();
 Assert.Contains("Unsupported Media Type", errorBody);
 ```
 
+## RequestLoggingMiddlewareTests
+
+The `RequestLoggingMiddlewareTests` class provides comprehensive unit tests for the `RequestLoggingMiddleware` class, verifying that it correctly logs gRPC-Web requests and responses while maintaining proper middleware pipeline behavior. The tests ensure that logging occurs for various scenarios including successful requests, error conditions, excluded paths, different content types, and authorization scenarios.
+
+The test suite covers:
+- Successful request/response logging with body forwarding
+- Error handling scenarios that don't throw exceptions
+- Excluded path handling (paths like /health, /metrics, /_internal)
+- Various HTTP status codes
+- Authorization header presence
+- JSON request body handling
+- Binary content type scenarios
+- Non-gRPC path handling
+- Constructor validation with valid arguments
+
+Example usage:
+
+```csharp
+// Example test setup
+var logger = NullLogger<RequestLoggingMiddleware>.Instance;
+var httpContextAccessor = new Mock<IHttpContextAccessor>();
+var middleware = new RequestLoggingMiddleware(
+    next: (innerHttpContext) => Task.CompletedTask,
+    logger: logger,
+    httpContextAccessor: httpContextAccessor.Object
+);
+
+// Create a test context with a JSON request
+var context = new DefaultHttpContext();
+context.Request.Method = HttpMethods.Post;
+context.Request.Path = "/grpc/UserService/GetUser";
+context.Request.ContentType = "application/grpc-web+proto";
+context.Request.Headers["Authorization"] = "Bearer test-token";
+context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("{\"userId\":\"123\"}"));
+context.Response.Body = new MemoryStream();
+context.Response.StatusCode = StatusCodes.Status200OK;
+
+// Set up HttpContextAccessor
+var httpContext = new DefaultHttpContext();
+httpContext.Request = context.Request;
+httpContext.Response = context.Response;
+httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
+
+// Invoke the middleware
+await middleware.InvokeAsync(context);
+
+// Assert that the middleware completed without throwing
+Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+```
+
 ## CorrelationIdManager
 
 The `CorrelationIdManager` class provides distributed tracing and correlation ID management for tracking requests across multiple services and components. It enables request lifecycle tracking, metadata storage, and comprehensive observability through trace hierarchies and statistics.
