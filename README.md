@@ -1,18 +1,14 @@
 // existing content ...
 
-## ProtocolTranslationServiceTests
-The `ProtocolTranslationServiceTests` class provides a set of unit tests for the `ProtocolTranslationService` class, ensuring correct behavior in translating HTTP requests to gRPC requests, handling metadata, and creating error responses. Here's an example of how to use some of its public members:
+## TracingServiceTests
+The `TracingServiceTests` class provides a comprehensive set of unit tests for the `TracingService` class, ensuring correct behavior in tracing gRPC calls, protocol translation, authentication, and error handling within the gRPC web bridge. These tests validate the creation and configuration of activities, tags, and status codes. Here's an example of how to use some of its public members:
 ```csharp
-var tests = new ProtocolTranslationServiceTests();
-var payload = "{}".AsBytes();
-var grpcRequest = tests._service.TranslateHttpToGrpc("TestService", "TestMethod", payload, SerializationFormat.Json);
-grpcRequest.ServiceName.Should().Be("TestService");
-grpcRequest.MethodName.Should().Be("TestMethod");
+var tests = new TracingServiceTests();
+tests.Dispose(); // Ensure proper cleanup
 
-var protobuf = tests._service.ConvertJsonToProtobuf(payload);
-protobuf.Should().BeEmpty();
+var sut = new TracingServiceTests();
+using var activity = sut._sut.StartGrpcCallActivity("UserService", "GetUser");
+sut._exported.Should().BeEmpty(); // Verify no activities are exported yet
 
-var response = tests._service.CreateErrorResponse(Guid.NewGuid().ToString(), GrpcStatusCode.NotFound, "Service not found");
-response.Status.Should().Be(GrpcStatusCode.NotFound);
-response.StatusMessage.Should().Be("Service not found");
-```
+sut._tracerProvider.ForceFlush();
+``` 
