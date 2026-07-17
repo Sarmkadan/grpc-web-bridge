@@ -4,6 +4,9 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace GrpcWebBridge.Events;
 
+/// <summary>
+/// Provides JSON serialization and deserialization extensions for <see cref="EventBus"/> instances.
+/// </summary>
 public static class EventBusJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
@@ -24,7 +27,9 @@ public static class EventBusJsonExtensions
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        return JsonSerializer.Serialize(value, indented ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true } : _jsonOptions);
+        return JsonSerializer.Serialize(value, indented
+            ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
+            : _jsonOptions);
     }
 
     /// <summary>
@@ -33,6 +38,7 @@ public static class EventBusJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>The deserialized event bus instance, or <see langword="null"/> if the JSON is empty or whitespace.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized to an <see cref="EventBus"/> instance.</exception>
     public static EventBus? FromJson(string json)
     {
         ArgumentNullException.ThrowIfNull(json);
