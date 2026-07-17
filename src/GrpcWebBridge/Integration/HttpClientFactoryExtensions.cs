@@ -16,7 +16,7 @@ namespace GrpcWebBridge.Integration
         /// <param name="baseAddress">The base address for the client.</param>
         /// <returns>A new <see cref="HttpClient"/> instance.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="baseAddress"/> is null or empty.</exception>
+        /// <exception cref="ConfigurationException">Thrown if <paramref name="baseAddress"/> is null or empty.</exception>
         public static HttpClient GetClientWithBaseAddress(this HttpClientFactory factory, string baseAddress)
         {
             ArgumentNullException.ThrowIfNull(factory);
@@ -35,15 +35,17 @@ namespace GrpcWebBridge.Integration
         /// <param name="timeout">The request timeout.</param>
         /// <returns>A <see cref="Task{TResult}"/> representing the response.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="requestUri"/> is null or empty.</exception>
+        /// <exception cref="ConfigurationException">Thrown if <paramref name="requestUri"/> is null or empty.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="timeout"/> is negative.</exception>
         public static async Task<HttpResponseMessage> SendGetAsyncWithTimeout(this HttpClientFactory factory, string requestUri, TimeSpan timeout)
         {
             ArgumentNullException.ThrowIfNull(factory);
             ArgumentException.ThrowIfNullOrEmpty(requestUri);
+            ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
 
             var client = factory.GetClient();
             client.Timeout = timeout;
-            return await client.GetAsync(requestUri);
+            return await client.GetAsync(requestUri).ConfigureAwait(false);
         }
     }
 }
