@@ -48,3 +48,35 @@ string payloadHash = request.GetPayloadHashHex();
 string logEntry = request.ToLogString(includeMetadata: true);
 Console.WriteLine(logEntry);
 ```
+
+## StreamCleanupWorkerJsonExtensions
+
+The `StreamCleanupWorkerJsonExtensions` class provides System.Text.Json serialization and deserialization extensions for `StreamCleanupWorker` instances. These methods enable round-trip serialization of worker state and configuration, allowing you to persist worker instances to JSON strings and reconstruct them later.
+
+For example, you can serialize a worker to JSON, modify the JSON string, and deserialize it back to a worker instance:
+
+```csharp
+// Create a worker instance
+var worker = new StreamCleanupWorker
+{
+    WorkerId = Guid.NewGuid(),
+    StreamId = Guid.NewGuid(),
+    CleanupInterval = TimeSpan.FromMinutes(5),
+    MaxAge = TimeSpan.FromHours(2),
+    IsActive = true,
+    LastCleanup = DateTime.UtcNow
+};
+
+// Serialize to JSON
+string json = worker.ToJson(indented: true);
+Console.WriteLine(json);
+
+// Deserialize from JSON
+StreamCleanupWorker? restoredWorker = StreamCleanupWorkerJsonExtensions.FromJson(json);
+
+// Try to deserialize with error handling
+if (StreamCleanupWorkerJsonExtensions.TryFromJson(json, out var safeWorker))
+{
+    Console.WriteLine($"Successfully restored worker: {safeWorker?.WorkerId}");
+}
+```
