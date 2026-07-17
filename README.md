@@ -32,4 +32,3 @@ tests.AuthorizeRole_WithContextHoldingMatchingRole_ReturnsTrue();
 tests.ExtractBearerToken_WithBearerPrefix_ReturnsRawToken();
 tests.ExtractBearerToken_WithNullHeader_ReturnsNull();
 ```
-```
