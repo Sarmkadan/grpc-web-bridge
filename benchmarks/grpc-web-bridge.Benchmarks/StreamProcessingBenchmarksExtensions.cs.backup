@@ -10,7 +10,7 @@ namespace GrpcWebBridge.Benchmarks
     public static class StreamProcessingBenchmarksExtensions
     {
         /// <summary>
-        /// Measures the read‑throughput of the 1 KB benchmark in kilobytes per second.
+        /// Measures the read‑throughput of the 1 KB benchmark in kilobytes per second.
         /// </summary>
         /// <param name="benchmarks">The benchmark instance.</param>
         /// <returns>The throughput expressed as kilobytes per second.</returns>
@@ -23,12 +23,12 @@ namespace GrpcWebBridge.Benchmarks
             var data = await benchmarks.ReadStreamToEnd_1KB().ConfigureAwait(false);
             stopwatch.Stop();
 
-            // data.Length is the number of bytes read (should be 1 024).
+            // data.Length is the number of bytes read (should be 1 024).
             return (data.Length / 1024.0) / stopwatch.Elapsed.TotalSeconds;
         }
 
         /// <summary>
-        /// Measures the read‑throughput of the 64 KB benchmark in kilobytes per second.
+        /// Measures the read‑throughput of the 64 KB benchmark in kilobytes per second.
         /// </summary>
         /// <param name="benchmarks">The benchmark instance.</param>
         /// <returns>The throughput expressed as kilobytes per second.</returns>
@@ -45,7 +45,7 @@ namespace GrpcWebBridge.Benchmarks
         }
 
         /// <summary>
-        /// Returns the length of the Base64 string produced by the 1 KB benchmark.
+        /// Returns the length of the Base64 string produced by the 1 KB benchmark.
         /// </summary>
         /// <param name="benchmarks">The benchmark instance.</param>
         /// <returns>The length of the Base64‑encoded string.</returns>
@@ -65,27 +65,32 @@ namespace GrpcWebBridge.Benchmarks
         /// <param name="size">The size identifier: <c>1KB</c>, <c>64KB</c> or <c>1MB</c>.</param>
         /// <returns>The elapsed time in milliseconds.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="benchmarks"/> is <c>null</c>.</exception>
-        /// <exception cref="ArgumentException"><paramref name="size"/> is <c>null</c>, empty or whitespace-only.</exception>
         /// <exception cref="ArgumentException"><paramref name="size"/> is not a recognised identifier.</exception>
         public static async Task<double> MeasureCopyChunkedAsync(this StreamProcessingBenchmarks benchmarks, string size)
         {
             ArgumentNullException.ThrowIfNull(benchmarks);
-            ArgumentException.ThrowIfNullOrWhiteSpace(size);
+            ArgumentException.ThrowIfNullOrEmpty(size);
 
-            Task benchmarkTask = size switch
+            var stopwatch = Stopwatch.StartNew();
+
+            _ = size switch
             {
                 "1KB" => benchmarks.CopyStreamChunked_1KB(),
                 "64KB" => benchmarks.CopyStreamChunked_64KB(),
                 "1MB" => benchmarks.CopyStreamChunked_1MB(),
-                _ => throw new ArgumentException(
-                    $"Unsupported size identifier '{size}'. Use '1KB', '64KB' or '1MB'.",
-                    nameof(size))
+                _ => throw new ArgumentException($"Unsupported size identifier '{size}'. Use '1KB', '64KB' or '1MB'.", nameof(size))
             };
 
-            var stopwatch = Stopwatch.StartNew();
-            await benchmarkTask.ConfigureAwait(false);
-            stopwatch.Stop();
+            // Await the selected task to ensure completion.
+            await (size switch
+            {
+                "1KB" => benchmarks.CopyStreamChunked_1KB(),
+                "64KB" => benchmarks.CopyStreamChunked_64KB(),
+                "1MB" => benchmarks.CopyStreamChunked_1MB(),
+                _ => Task.CompletedTask
+            }).ConfigureAwait(false);
 
+            stopwatch.Stop();
             return stopwatch.Elapsed.TotalMilliseconds;
         }
     }
