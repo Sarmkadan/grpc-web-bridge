@@ -1,7 +1,7 @@
 // existing content ...
 
 ## TracingServiceTests
-The `TracingServiceTests` class provides a comprehensive set of unit tests for the `TracingService` class, ensuring correct behavior in tracing gRPC calls, protocol translation, authentication, and error handling within the gRPC web bridge. These tests validate the creation and configuration of activities, tags, and status codes. Here's an example of how to use some of its public members:
+The `TracingServiceTests` class provides a comprehensive set of unit tests for the `TracingService` class, ensuring correct behavior in tracing gRPC calls, protocol translation, authentication, and error handling within the gRPC web bridge. These tests validate the creation and configuration of activities, tags, and status codes. Here’s an example of how to use some of its public members:
 ```csharp
 var tests = new TracingServiceTests();
 tests.Dispose(); // Ensure proper cleanup
@@ -74,4 +74,50 @@ cacheTests.TryGet_WithNonExistentKey_ReturnsFalse();
 
 // Clean up resources when done
 cacheTests.Dispose();
+```
+
+## JsonUtilityTests
+The `JsonUtilityTests` class contains unit tests that verify the JSON utility functions used throughout the gRPC web bridge. It checks serialization, deserialization, merging, property extraction, required‑field validation, and dictionary conversion, ensuring correct handling of nulls, formatting, and error conditions.
+
+Example usage (calling the public test methods directly):
+
+```csharp
+using GrpcWebBridge.Tests;
+
+// Instantiate the test class
+var jsonTests = new JsonUtilityTests();
+
+// Serialization tests
+jsonTests.Serialize_WithSimpleObject_ReturnsCamelCaseJson();
+jsonTests.Serialize_WithNullObject_ReturnsNullLiteral();
+jsonTests.Serialize_WithIndented_ReturnsFormattedJson();
+jsonTests.Serialize_WithNullProperty_OmitsNullProperty();
+
+// Deserialization tests
+jsonTests.Deserialize_WithValidJson_ReturnsMappedObject();
+jsonTests.Deserialize_WithNullWhitespace_ReturnsDefault();
+jsonTests.Deserialize_WithInvalidJson_ThrowsInvalidOperationException();
+
+// Try‑deserialize tests
+jsonTests.TryDeserialize_WithValidJson_ReturnsTrueAndResult();
+jsonTests.TryDeserialize_WithInvalidJson_ReturnsFalseWithError();
+jsonTests.TryDeserialize_WithEmptyString_ReturnsFalse();
+
+// Merge tests
+jsonTests.MergeJson_SourceOverridesTargetProperty();
+jsonTests.MergeJson_WithEmptySource_ReturnsTarget();
+
+// Property value tests
+jsonTests.GetPropertyValue_WithSimplePath_ReturnsValue();
+jsonTests.GetPropertyValue_WithMissingKey_ReturnsNull();
+jsonTests.GetPropertyValue_WithNestedPath_ReturnsNestedValue();
+
+// Validation tests
+jsonTests.ValidateRequired_WithAllRequiredPresent_ReturnsTrue();
+jsonTests.ValidateRequired_WithMissingRequiredProperty_ReturnsFalse();
+jsonTests.ValidateRequired_WithNullOrEmptyJson_ReturnsFalse();
+
+// Dictionary conversion tests
+jsonTests.DeserializeToDictionary_WithValidJson_ReturnsDict();
+jsonTests.DeserializeToDictionary_WithEmptyJson_ReturnsNull();
 ```
