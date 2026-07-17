@@ -989,6 +989,41 @@ await middleware.InvokeAsync(context);
 Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 ```
 
+## ValidationUtilityTests
+
+The `ValidationUtilityTests` class provides comprehensive unit tests for the `ValidationUtility` class, which offers validation and sanitization utilities for common data validation scenarios. The tests verify email format validation, method name validation, service ID validation, and input sanitization to prevent XSS attacks.
+
+Example usage:
+
+```csharp
+// Example test setup
+var logger = NullLogger<ValidationUtilityTests>.Instance;
+
+// Test email validation with valid format
+var (isValidEmail, emailError) = ValidationUtility.ValidateEmail("user@example.com");
+Console.WriteLine($"Email valid: {isValidEmail}, Error: {emailError}");
+
+// Test email validation with missing domain
+var (isInvalidEmail, invalidEmailError) = ValidationUtility.ValidateEmail("user@");
+Console.WriteLine($"Email invalid: {isInvalidEmail}, Error: {invalidEmailError}");
+
+// Test method name validation (should start with letter)
+var (isValidMethod, methodError) = ValidationUtility.ValidateMethodName("GetUser");
+Console.WriteLine($"Method valid: {isValidMethod}, Error: {methodError}");
+
+// Test method name validation with digit at start (should fail)
+var (isInvalidMethod, invalidMethodError) = ValidationUtility.ValidateMethodName("1GetUser");
+Console.WriteLine($"Method invalid: {isInvalidMethod}, Error: {invalidMethodError}");
+
+// Test service ID validation (allows dots and hyphens)
+var (isValidService, serviceError) = ValidationUtility.ValidateServiceId("my-service.v1");
+Console.WriteLine($"Service ID valid: {isValidService}, Error: {serviceError}");
+
+// Test input sanitization to prevent XSS
+var sanitized = ValidationUtility.SanitizeInput("<script>alert('xss')</script>");
+Console.WriteLine($"Sanitized input: {sanitized}");
+```
+
 ## CorrelationIdManager
 
 The `CorrelationIdManager` class provides distributed tracing and correlation ID management for tracking requests across multiple services and components. It enables request lifecycle tracking, metadata storage, and comprehensive observability through trace hierarchies and statistics.
