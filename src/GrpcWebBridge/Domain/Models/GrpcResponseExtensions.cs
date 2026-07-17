@@ -7,6 +7,7 @@
 
 namespace GrpcWebBridge.Domain.Models;
 
+
 /// <summary>
 /// Provides extension methods for <see cref="GrpcResponse"/> to simplify common operations
 /// </summary>
@@ -19,7 +20,7 @@ public static class GrpcResponseExtensions
     /// <param name="payload">The response payload data</param>
     /// <param name="format">The serialization format of the payload</param>
     /// <returns>A new GrpcResponse instance with Success status</returns>
-    /// <exception cref="ArgumentNullException">Thrown when requestId or payload is null</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestId"/> or <paramref name="payload"/> is null</exception>
     public static GrpcResponse ToSuccessResponse(this string requestId, byte[] payload, SerializationFormat format = SerializationFormat.Protobuf)
     {
         ArgumentNullException.ThrowIfNull(requestId);
@@ -41,8 +42,8 @@ public static class GrpcResponseExtensions
     /// <param name="message">Human-readable error message</param>
     /// <param name="details">Optional detailed error information</param>
     /// <returns>A new GrpcResponse instance with error status</returns>
-    /// <exception cref="ArgumentNullException">Thrown when requestId is null</exception>
-    /// <exception cref="ArgumentException">Thrown when statusCode is Ok</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestId"/> or <paramref name="message"/> is null</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="statusCode"/> is Ok</exception>
     public static GrpcResponse ToErrorResponse(this string requestId, GrpcStatusCode statusCode, string message, string? details = null)
     {
         ArgumentNullException.ThrowIfNull(requestId);
@@ -65,7 +66,8 @@ public static class GrpcResponseExtensions
     /// </summary>
     /// <param name="response">The GrpcResponse instance</param>
     /// <param name="metadata">Dictionary of metadata key-value pairs to add</param>
-    /// <exception cref="ArgumentNullException">Thrown when response or metadata is null</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="response"/> or <paramref name="metadata"/> is null</exception>
+    /// <exception cref="ArgumentException">Thrown when a metadata key is null or whitespace</exception>
     public static void AddMetadata(this GrpcResponse response, Dictionary<string, string> metadata)
     {
         ArgumentNullException.ThrowIfNull(response);
@@ -85,7 +87,8 @@ public static class GrpcResponseExtensions
     /// </summary>
     /// <param name="response">The GrpcResponse instance</param>
     /// <param name="trailingMetadata">Dictionary of trailing metadata key-value pairs to add</param>
-    /// <exception cref="ArgumentNullException">Thrown when response or trailingMetadata is null</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="response"/> or <paramref name="trailingMetadata"/> is null</exception>
+    /// <exception cref="ArgumentException">Thrown when a metadata key is null or whitespace</exception>
     public static void AddTrailingMetadata(this GrpcResponse response, Dictionary<string, string> trailingMetadata)
     {
         ArgumentNullException.ThrowIfNull(response);
