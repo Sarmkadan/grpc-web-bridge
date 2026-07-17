@@ -1,5 +1,37 @@
 // existing content ...
 
+## GrpcWebBridgeOptionsTests
+The `GrpcWebBridgeOptionsTests` class provides a comprehensive set of unit tests for the `GrpcWebBridgeOptions` configuration builder. It verifies the correct behavior of various configuration methods, including environment settings, development, production, and testing defaults, maximum stream count, allowed origins, and compression settings.
+
+Below is a realistic usage example that demonstrates how to use some of its public members:
+```csharp
+using GrpcWebBridge.Tests;
+
+// Create an instance of GrpcWebBridgeOptions
+var options = new GrpcWebBridgeOptions();
+
+// Set the environment to "Staging"
+options = new GrpcWebBridgeOptions("Staging");
+
+// Apply development defaults
+options.WithDevelopment();
+
+// Apply production defaults
+options.WithProduction();
+
+// Apply testing defaults
+options.WithTesting();
+
+// Set the maximum stream count to 500
+options.WithMaxStreamCount(500);
+
+// Add allowed origins
+options.AddAllowedOrigins("https://example.com", "https://app.example.com");
+
+// Enable compression with level 5
+options.WithCompression(true, 5);
+```
+
 ## TracingServiceTests
 The `TracingServiceTests` class provides a comprehensive set of unit tests for the `TracingService` class, ensuring correct behavior in tracing gRPC calls, protocol translation, authentication, and error handling within the gRPC web bridge. These tests validate the creation and configuration of activities, tags, and status codes. Here’s an example of how to use some of its public members:
 ```csharp
