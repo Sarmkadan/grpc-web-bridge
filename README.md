@@ -80,3 +80,56 @@ if (StreamCleanupWorkerJsonExtensions.TryFromJson(json, out var safeWorker))
     Console.WriteLine($"Successfully restored worker: {safeWorker?.WorkerId}");
 }
 ```
+
+## StreamingServiceValidation
+
+The `StreamingServiceValidation` class provides validation extension methods for `StreamingService` instances, allowing you to validate the state of streaming services and their active streams. These methods help ensure that streaming services are in a valid state before operations and provide detailed validation feedback.
+
+For example, you can validate a streaming service instance and check if it's valid:
+
+```csharp
+// Create a streaming service with some streams
+var streamingService = new StreamingService();
+
+// Add some streams
+streamingService.AddStream(new Stream
+{
+    StreamId = Guid.NewGuid().ToString(),
+    MethodType = MethodType.ServerStreaming,
+    State = StreamState.Active,
+    MessageCount = 0,
+    CreatedAt = DateTime.UtcNow,
+    LastActivityTime = DateTime.UtcNow
+});
+
+// Validate the streaming service
+IReadOnlyList<string> validationErrors = streamingService.Validate();
+
+if (validationErrors.Count > 0)
+{
+    Console.WriteLine("Validation failed:");
+    foreach (var error in validationErrors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+else
+{
+    Console.WriteLine("Streaming service is valid!");
+}
+
+// Quick validation check
+bool isValid = streamingService.IsValid();
+Console.WriteLine($"Is valid: {isValid}");
+
+// Ensure validation (throws if invalid)
+try
+{
+    streamingService.EnsureValid();
+    Console.WriteLine("Streaming service passed validation");
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Validation failed: {ex.Message}");
+}
+```
