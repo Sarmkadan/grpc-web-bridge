@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace GrpcWebBridge.Benchmarks;
 
@@ -28,10 +27,30 @@ public static class StreamProcessingBenchmarksValidation
 
         var problems = new List<string>();
 
-        // Validate private fields via public API
-        // The class has no public properties, so we validate through method behavior
-        // Since Setup() initializes the payloads, we can't validate them directly
-        // The validation ensures the instance is in a valid state for benchmarking
+        // Validate that the instance has been properly initialized
+        // The Setup() method should have been called to initialize payloads
+        // We can't directly access private fields, so we validate through behavior
+
+        // Check if payloads are initialized by attempting to use them
+        try
+        {
+            // This will throw if Setup() wasn't called or if payloads are null
+            _ = value.ReadStreamToEnd_1KB();
+            _ = value.ReadStreamToEnd_64KB();
+            _ = value.ReadStreamToEnd_1MB();
+            _ = value.CopyStreamChunked_1KB();
+            _ = value.CopyStreamChunked_64KB();
+            _ = value.CopyStreamChunked_1MB();
+            _ = value.StreamToBase64_1KB();
+        }
+        catch (NullReferenceException)
+        {
+            problems.Add("StreamProcessingBenchmarks instance has uninitialized payloads. Ensure Setup() was called before benchmarking.");
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException and not ArgumentException)
+        {
+            problems.Add($"StreamProcessingBenchmarks instance failed initialization check: {ex.Message}");
+        }
 
         return problems.AsReadOnly();
     }
@@ -41,17 +60,13 @@ public static class StreamProcessingBenchmarksValidation
     /// </summary>
     /// <param name="value">The benchmarks instance to check.</param>
     /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static bool IsValid(this StreamProcessingBenchmarks value)
     {
-        try
-        {
-            _ = Validate(value);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        ArgumentNullException.ThrowIfNull(value);
+
+        var problems = Validate(value);
+        return problems.Count == 0;
     }
 
     /// <summary>
