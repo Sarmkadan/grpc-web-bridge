@@ -1094,6 +1094,49 @@ var sanitized = ValidationUtility.SanitizeInput("<script>alert('xss')</script>")
 Console.WriteLine($"Sanitized input: {sanitized}");
 ```
 
+## DateTimeUtilityTests
+
+The `DateTimeUtilityTests` class provides comprehensive unit tests for the `DateTimeUtility` class, covering date/time conversion utilities including Unix timestamp conversion, relative time formatting, business day calculation, and weekend detection. The tests verify correct behavior for both standard scenarios and edge cases.
+
+Example usage:
+
+```csharp
+// Convert DateTime to Unix timestamp
+var now = DateTime.UtcNow;
+long unixTimestamp = DateTimeUtility.ToUnixTimestamp(now);
+Console.WriteLine($"Unix timestamp: {unixTimestamp}");
+
+// Convert Unix timestamp back to DateTime
+var utcDateTime = DateTimeUtility.FromUnixTimestamp(unixTimestamp);
+Console.WriteLine($"UTC DateTime: {utcDateTime}");
+
+// Get relative time description
+var referenceTime = DateTime.UtcNow;
+var pastTime = referenceTime.AddMinutes(-2);
+string relativeTime = DateTimeUtility.ToRelativeTime(pastTime, referenceTime);
+Console.WriteLine($"Relative time: {relativeTime}"); // "2 minutes ago"
+
+// Calculate business days between dates
+var startDate = new DateTime(2024, 1, 8); // Monday
+var endDate = new DateTime(2024, 1, 12); // Friday
+int businessDays = DateTimeUtility.GetBusinessDaysBetween(startDate, endDate);
+Console.WriteLine($"Business days: {businessDays}"); // 5
+
+// Check if a date is on weekend
+bool isWeekend = DateTimeUtility.IsWeekend(DateTime.Today);
+Console.WriteLine($"Is weekend: {isWeekend}");
+
+// Use in ASP.NET Core application
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<DateTimeUtility>();
+
+var app = builder.Build();
+var dateTimeUtility = app.Services.GetRequiredService<DateTimeUtility>();
+
+// Get current Unix timestamp
+long currentTimestamp = dateTimeUtility.ToUnixTimestamp(DateTime.UtcNow);
+```
+
 ## StreamUtilityTests
 
 The `StreamUtilityTests` class provides comprehensive unit tests for the `StreamUtility` class, covering stream operations including chunked copying, compression/decompression, Base64 conversion, and stream validation. The tests verify correct behavior for both happy paths and edge cases including null inputs, empty streams, invalid chunk sizes, and maximum size limits.
