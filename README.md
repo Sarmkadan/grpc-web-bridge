@@ -153,3 +153,93 @@ jsonTests.ValidateRequired_WithNullOrEmptyJson_ReturnsFalse();
 jsonTests.DeserializeToDictionary_WithValidJson_ReturnsDict();
 jsonTests.DeserializeToDictionary_WithEmptyJson_ReturnsNull();
 ```
+
+## GrpcWebBridgeClientExample
+
+The `GrpcWebBridgeClientExample` class provides a comprehensive .NET client for interacting with the gRPC-Web Bridge. It simplifies making gRPC calls through a RESTful interface, handling service registration, health checks, metrics collection, and error recovery with retry logic.
+
+The client exposes public members for monitoring bridge operations, including service status, request statistics, and performance metrics.
+
+Below is a realistic usage example that demonstrates how to instantiate and use the client:
+
+```csharp
+using System;
+using System.Net.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+// Setup dependency injection
+var services = new ServiceCollection();
+services.AddLogging(builder => builder.AddConsole());
+services.AddHttpClient();
+
+// Add the gRPC-Web Bridge client with configuration
+services.AddGrpcWebBridgeClient(
+    "http://localhost:5000",  // Bridge URL
+    jwtToken: "your-jwt-token-here"); // Optional JWT token
+
+var provider = services.BuildServiceProvider();
+var logger = provider.GetRequiredService<ILoggerFactory>()
+    .CreateLogger<Program>();
+
+// Resolve the client instance
+var bridgeClient = provider.GetRequiredService<GrpcWebBridgeClientExample>();
+
+try
+{
+    // Example 1: Check bridge health
+    var healthy = await bridgeClient.CheckHealthAsync();
+    if (!healthy)
+    {
+        logger.LogError("Bridge is not healthy");
+        return;
+    }
+
+    // Example 2: List registered services
+    var servicesList = await bridgeClient.ListServicesAsync();
+    foreach (var service in servicesList ?? new())
+    {
+        logger.LogInformation("Service: {ServiceName} - Status: {Status}", 
+            service.ServiceName, service.Status);
+    }
+
+    // Example 3: Register a service dynamically
+    await bridgeClient.RegisterServiceAsync(
+        "TestService",
+        "grpc://localhost:50051",
+        enableHealthCheck: true);
+
+    // Example 4: Make an RPC call
+    var result = await bridgeClient.CallServiceAsync<object>(
+        "TestService",
+        "GetData",
+        new { id = 42 });
+
+    // Example 5: Get metrics
+    var metrics = await bridgeClient.GetMetricsAsync();
+    if (metrics != null)
+    {
+        logger.LogInformation("Bridge Metrics - " +
+            "Total: {TotalRequests}, Success: {SuccessfulRequests}, " +
+            "Failed: {FailedRequests}, Avg Latency: {AverageLatencyMs}ms",
+            metrics.TotalRequests,
+            metrics.SuccessfulRequests,
+            metrics.FailedRequests,
+            metrics.AverageLatencyMs);
+    }
+
+    // Example 6: Call with retry logic
+    var retryResult = await bridgeClient.CallWithRetryAsync<object>(
+        "TestService",
+        "GetData",
+        new { id = 42 });
+
+    // Example 7: Monitor active streams
+    var activeStreams = await bridgeClient.GetActiveStreamCountAsync();
+    logger.LogInformation("Active streams: {Count}", activeStreams);
+}
+catch (Exception ex)
+{
+    logger.LogError(ex, "Example failed");
+}
+```
