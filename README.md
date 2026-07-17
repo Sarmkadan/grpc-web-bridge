@@ -1,7 +1,7 @@
 // existing content ...
 
 ## GrpcWebBridgeOptionsTests
-The `GrpcWebBridgeOptionsTests` class provides a comprehensive set of unit tests for the `GrpcWebBridgeOptions` configuration builder. It verifies the correct behavior of various configuration methods, including environment settings, development, production, and testing defaults, maximum stream count, allowed origins, and compression settings.
+The `GrpcWebBridgeOptions` class provides a comprehensive set of unit tests for the `GrpcWebBridgeOptions` configuration builder. It verifies the correct behavior of various configuration methods, including environment settings, development, production, and testing defaults, maximum stream count, allowed origins, and compression settings.
 
 Below is a realistic usage example that demonstrates how to use some of its public members:
 ```csharp
@@ -299,4 +299,44 @@ namespace DemoApp
 }
 ```
 
-The example above demonstrates the three core public members of `BasicUsageExample` (`CheckBridgeHealthAsync`, `MakeSimpleCallAsync`, `GetBridgeMetricsAsync`) together with its constructor and the static async `Main` entry point. It can be copied into a console project and run as‑is, assuming a bridge instance is reachable at the supplied URL.
+## AdvancedUsageExample
+The `AdvancedUsageExample` class provides advanced features for interacting with the gRPC-Web Bridge, including health checks with circuit breaker patterns, resilient RPC calls, streaming data with progress reporting, and detailed metrics retrieval. It also supports service registration with validation and batch operations with retry logic.
+
+Below is a realistic usage example that demonstrates how to use some of its public members:
+```csharp
+var advancedExample = new AdvancedUsageExample("http://localhost:5000");
+
+// Health check with circuit breaker
+var health = await advancedExample.CheckHealthWithCircuitBreakerAsync();
+Console.WriteLine($"Health Status: {health}");
+
+// Resilient RPC call
+var rpcResult = await advancedExample.CallWithResilienceAsync<object>(
+    "ExampleService",
+    "GetData",
+    new { timestamp = DateTime.UtcNow.Ticks });
+Console.WriteLine($"RPC result: {rpcResult}");
+
+// Register a service with validation
+var regResult = await advancedExample.RegisterServiceWithValidationAsync(
+    "DemoService",
+    "grpc://localhost:50051",
+    new Dictionary<string, string>
+    {
+        ["version"] = "1.0",
+        ["environment"] = "demo"
+    },
+    true);
+Console.WriteLine($"Registration result: {regResult}");
+
+// Get detailed metrics
+var metrics = await advancedExample.GetDetailedMetricsAsync();
+if (metrics != null)
+{
+    Console.WriteLine($"Total Requests: {metrics.TotalRequests}");
+    Console.WriteLine($"Successful Requests: {metrics.SuccessfulRequests}");
+    Console.WriteLine($"Failed Requests: {metrics.FailedRequests}");
+    Console.WriteLine($"Average Latency: {metrics.AverageLatencyMs}ms");
+}
+```
+```
