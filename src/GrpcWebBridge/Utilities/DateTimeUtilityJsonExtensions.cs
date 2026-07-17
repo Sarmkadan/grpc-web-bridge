@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Text.Json;
 
@@ -21,19 +21,23 @@ public static class DateTimeUtilityJsonExtensions
     };
 
     /// <summary>
+    /// Gets the appropriate JsonSerializerOptions based on the indented flag.
+    /// </summary>
+    /// <param name="indented">Whether to format the JSON with indentation.</param>
+    /// <returns>Configured JsonSerializerOptions.</returns>
+    private static JsonSerializerOptions GetOptions(bool indented) =>
+        indented
+            ? new JsonSerializerOptions(_jsonSerializerOptions) { WriteIndented = true }
+            : _jsonSerializerOptions;
+
+    /// <summary>
     /// Serializes a DateTime to a JSON string using ISO 8601 format.
     /// </summary>
     /// <param name="value">The DateTime value to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the DateTime value.</returns>
     public static string ToJson(this DateTime value, bool indented = false)
-    {
-        var options = indented
-            ? new JsonSerializerOptions(_jsonSerializerOptions) { WriteIndented = true }
-            : _jsonSerializerOptions;
-
-        return JsonSerializer.Serialize(value, options);
-    }
+        => JsonSerializer.Serialize(value, GetOptions(indented));
 
     /// <summary>
     /// Deserializes a JSON string to a DateTime value.
@@ -84,13 +88,11 @@ public static class DateTimeUtilityJsonExtensions
     /// <param name="value">The nullable DateTime value to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the DateTime? value.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static string ToJson(this DateTime? value, bool indented = false)
     {
-        var options = indented
-            ? new JsonSerializerOptions(_jsonSerializerOptions) { WriteIndented = true }
-            : _jsonSerializerOptions;
-
-        return JsonSerializer.Serialize(value, options);
+        ArgumentNullException.ThrowIfNull(value);
+        return JsonSerializer.Serialize(value, GetOptions(indented));
     }
 
     /// <summary>
@@ -100,11 +102,5 @@ public static class DateTimeUtilityJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the DateTimePeriod value.</returns>
     public static string ToJson(this DateTimePeriod value, bool indented = false)
-    {
-        var options = indented
-            ? new JsonSerializerOptions(_jsonSerializerOptions) { WriteIndented = true }
-            : _jsonSerializerOptions;
-
-        return JsonSerializer.Serialize(value, options);
-    }
+        => JsonSerializer.Serialize(value, GetOptions(indented));
 }
