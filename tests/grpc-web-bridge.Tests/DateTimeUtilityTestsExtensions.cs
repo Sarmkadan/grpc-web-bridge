@@ -26,7 +26,6 @@ public static class DateTimeUtilityTestsExtensions
     /// <param name="includeHolidays">Whether to include holidays in the sequence.</param>
     /// <param name="holidays">Optional collection of holidays to exclude.</param>
     /// <returns>An enumerable of dates between start and end, excluding weekends and holidays.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="holidays"/> is null.</exception>
     /// <exception cref="ArgumentException"><paramref name="start"/> is after <paramref name="end"/>.</exception>
     public static IEnumerable<DateTime> GetBusinessDaysInRange(
         this DateTimeUtilityTests _,
@@ -35,24 +34,16 @@ public static class DateTimeUtilityTestsExtensions
         bool includeHolidays = false,
         IReadOnlyCollection<DateTime>? holidays = null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(nameof(start));
-        ArgumentException.ThrowIfNullOrEmpty(nameof(end));
-
         if (start > end)
         {
             throw new ArgumentException("Start date must be before or equal to end date.", nameof(start));
-        }
-
-        if (holidays is not null)
-        {
-            ArgumentException.ThrowIfNullOrEmpty(nameof(holidays));
         }
 
         var current = start;
         while (current <= end)
         {
             if (DateTimeUtility.IsWeekend(current) is false &&
-                (includeHolidays || holidays is null || holidays.Contains(current) is false))
+                (includeHolidays || holidays is null || !holidays.Contains(current)))
             {
                 yield return current;
             }
@@ -65,10 +56,10 @@ public static class DateTimeUtilityTestsExtensions
     /// Converts a Unix timestamp to a formatted date string for test assertions.
     /// Useful for debugging and test output formatting.
     /// </summary>
+    /// <param name="_">The <see cref="DateTimeUtilityTests"/> instance.</param>
     /// <param name="timestamp">The Unix timestamp to format.</param>
     /// <param name="format">Optional format string. Defaults to "yyyy-MM-dd HH:mm:ss".</param>
     /// <returns>A formatted date string.</returns>
-    /// <exception cref="ArgumentException"><paramref name="format"/> is invalid.</exception>
     public static string ToFormattedDateString(
         this DateTimeUtilityTests _,
         long timestamp,
@@ -84,6 +75,7 @@ public static class DateTimeUtilityTestsExtensions
     /// Generates a sequence of relative time descriptions between a reference date and test dates.
     /// Useful for testing relative time formatting with various time differences.
     /// </summary>
+    /// <param name="_">The <see cref="DateTimeUtilityTests"/> instance.</param>
     /// <param name="reference">The reference date.</param>
     /// <param name="testDates">Dates to compare against the reference.</param>
     /// <returns>A sequence of relative time descriptions.</returns>
@@ -105,9 +97,10 @@ public static class DateTimeUtilityTestsExtensions
     /// Calculates the number of business days between two dates, including both endpoints.
     /// Provides a more flexible version of GetBusinessDaysBetween that allows customization.
     /// </summary>
+    /// <param name="_">The <see cref="DateTimeUtilityTests"/> instance.</param>
     /// <param name="start">The start date.</param>
     /// <param name="end">The end date.</param>
-    /// <param name="includeStartEnd">Whether to include both start and end dates in the calculation.</param>
+    /// <param name="includeStartEnd">Whether to include both start and end dates in the count (when false, excludes both).</param>
     /// <returns>The number of business days between the dates.</returns>
     /// <exception cref="ArgumentException"><paramref name="start"/> is after <paramref name="end"/>.</exception>
     public static int GetBusinessDaysBetweenFlexible(
@@ -134,6 +127,6 @@ public static class DateTimeUtilityTestsExtensions
             current = current.AddDays(1);
         }
 
-        return includeStartEnd ? count : count - 2;
+        return includeStartEnd ? count : Math.Max(0, count - 2);
     }
 }
