@@ -4,7 +4,7 @@
 // CTO & Software Architect
 // =====================================================================
 
-using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace GrpcWebBridge.BackgroundWorkers;
 
@@ -34,21 +34,22 @@ public static class HealthCheckWorkerValidation
         var problems = new List<string>();
 
         // Validate timing configuration from the worker's options
-        if (value.GetType().GetProperty("Options")?.GetValue(value) is HealthCheckOptions options)
+        var optionsField = value.GetType().GetField("_options", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        if (optionsField?.GetValue(value) is HealthCheckOptions options)
         {
             ValidateCheckIntervalSeconds(options.CheckIntervalSeconds, problems);
             ValidateCheckTimeoutMs(options.CheckTimeoutMs, problems);
             ValidateInitialDelaySeconds(options.InitialDelaySeconds, problems);
         }
 
-        // Validate statistics
+        // Validate statistics - log any errors for debugging
         try
         {
             _ = value.GetStatistics();
         }
-        catch
+        catch (Exception ex)
         {
-            problems.Add("GetStatistics() method failed or threw an exception");
+            problems.Add($"GetStatistics() method failed: {ex.Message}");
         }
 
         return problems.AsReadOnly();
@@ -60,6 +61,7 @@ public static class HealthCheckWorkerValidation
     /// <param name="value">The health check worker to check.</param>
     /// <returns>True if valid; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "Null is validated by ArgumentNullException.ThrowIfNull")]
     public static bool IsValid(this HealthCheckWorker? value)
     {
         return Validate(value).Count == 0;
@@ -71,6 +73,7 @@ public static class HealthCheckWorkerValidation
     /// <param name="value">The health check worker to validate.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown if the worker is not valid, containing a list of problems.</exception>
+    [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "Null is validated by ArgumentNullException.ThrowIfNull")]
     public static void EnsureValid(this HealthCheckWorker? value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -79,14 +82,22 @@ public static class HealthCheckWorkerValidation
         if (problems.Count > 0)
         {
             throw new ArgumentException(
-                "HealthCheckWorker configuration or state is invalid. Problems:\n" +
-                string.Join("\n", problems),
+                $"HealthCheckWorker configuration or state is invalid. Problems:{Environment.NewLine}" +
+                string.Join(Environment.NewLine, problems),
                 nameof(value));
         }
     }
 
-    private static void ValidateCheckIntervalSeconds(int value, List<string> problems)
+    /// <summary>
+    /// Validates that CheckIntervalSeconds is within acceptable range.
+    /// </summary>
+    /// <param name="value">The check interval in seconds.</param>
+    /// <param name="problems">List to accumulate validation problems.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="problems"/> is null.</exception>
+    private static void ValidateCheckIntervalSeconds(int value, [DisallowNull] List<string> problems)
     {
+        ArgumentNullException.ThrowIfNull(problems);
+
         if (value <= 0)
         {
             problems.Add(
@@ -104,8 +115,16 @@ public static class HealthCheckWorkerValidation
         }
     }
 
-    private static void ValidateCheckTimeoutMs(int value, List<string> problems)
+    /// <summary>
+    /// Validates that CheckTimeoutMs is within acceptable range.
+    /// </summary>
+    /// <param name="value">The check timeout in milliseconds.</param>
+    /// <param name="problems">List to accumulate validation problems.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="problems"/> is null.</exception>
+    private static void ValidateCheckTimeoutMs(int value, [DisallowNull] List<string> problems)
     {
+        ArgumentNullException.ThrowIfNull(problems);
+
         if (value <= 0)
         {
             problems.Add(
@@ -123,8 +142,16 @@ public static class HealthCheckWorkerValidation
         }
     }
 
-    private static void ValidateInitialDelaySeconds(int value, List<string> problems)
+    /// <summary>
+    /// Validates that InitialDelaySeconds is within acceptable range.
+    /// </summary>
+    /// <param name="value">The initial delay in seconds.</param>
+    /// <param name="problems">List to accumulate validation problems.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="problems"/> is null.</exception>
+    private static void ValidateInitialDelaySeconds(int value, [DisallowNull] List<string> problems)
     {
+        ArgumentNullException.ThrowIfNull(problems);
+
         if (value < MinimumInitialDelaySeconds)
         {
             problems.Add(
