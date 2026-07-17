@@ -6,7 +6,7 @@ using GrpcWebBridge.Streaming;
 namespace GrpcWebBridge.Tests;
 
 /// <summary>
-/// Provides System.Text.Json serialization helpers for <see cref="FlowControlOptionsEdgeCaseTestsJsonExtensions"/>.
+/// Provides System.Text.Json serialization helpers for <see cref="FlowControlOptionsEdgeCaseTests"/>.
 /// </summary>
 public static class FlowControlOptionsEdgeCaseTestsJsonExtensions
 {
@@ -44,15 +44,15 @@ public static class FlowControlOptionsEdgeCaseTestsJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>The deserialized instance, or <see langword="null"/> if the JSON is empty or whitespace.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/>.</exception>
     /// <exception cref="JsonException">The JSON is invalid or cannot be deserialized.</exception>
     public static FlowControlOptionsEdgeCaseTests? FromJson(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
+        ArgumentNullException.ThrowIfNull(json);
 
-        return JsonSerializer.Deserialize<FlowControlOptionsEdgeCaseTests>(json, _jsonOptions);
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<FlowControlOptionsEdgeCaseTests>(json, _jsonOptions);
     }
 
     /// <summary>
