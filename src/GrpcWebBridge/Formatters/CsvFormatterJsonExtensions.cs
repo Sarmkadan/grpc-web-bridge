@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,6 +11,7 @@ namespace GrpcWebBridge.Formatters;
 
 /// <summary>
 /// Provides System.Text.Json serialization and deserialization extensions for <see cref="CsvFormatter"/>.
+/// Uses camelCase property naming policy and ignores null values during serialization.
 /// </summary>
 public static class CsvFormatterJsonExtensions
 {
@@ -26,7 +27,8 @@ public static class CsvFormatterJsonExtensions
     /// Serializes the <see cref="CsvFormatter"/> instance to a JSON string.
     /// </summary>
     /// <param name="value">The CSV formatter instance to serialize.</param>
-    /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
+    /// <param name="indented">Whether to format the JSON with indentation for readability.
+    /// When <see langword="true"/>, produces human-readable indented JSON; otherwise, produces compact JSON.</param>
     /// <returns>A JSON string representation of the CSV formatter.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static string ToJson(this CsvFormatter value, bool indented = false)
@@ -60,6 +62,7 @@ public static class CsvFormatterJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized <see cref="CsvFormatter"/> instance if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out CsvFormatter? value)
     {
         value = null;
