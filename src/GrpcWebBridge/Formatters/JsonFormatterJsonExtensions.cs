@@ -48,8 +48,7 @@ public static class JsonFormatterJsonExtensions
 
         try
         {
-            var options = GetIndentedOptions();
-            return JsonSerializer.Deserialize<JsonFormatter>(json, options);
+            return JsonSerializer.Deserialize<JsonFormatter>(json, _serializerOptions);
         }
         catch (JsonException)
         {
@@ -70,8 +69,7 @@ public static class JsonFormatterJsonExtensions
 
         try
         {
-            var options = GetIndentedOptions();
-            value = JsonSerializer.Deserialize<JsonFormatter>(json, options);
+            value = JsonSerializer.Deserialize<JsonFormatter>(json, _serializerOptions);
             return true;
         }
         catch (JsonException)
@@ -84,12 +82,6 @@ public static class JsonFormatterJsonExtensions
     /// <summary>
     /// Creates a <see cref="JsonSerializerOptions"/> instance with indentation enabled.
     /// </summary>
-    private static JsonSerializerOptions GetIndentedOptions()
-    {
-        var options = new JsonSerializerOptions(_serializerOptions)
-        {
-            WriteIndented = true
-        };
-        return options;
-    }
+    private static JsonSerializerOptions GetIndentedOptions() =>
+        new(_serializerOptions) { WriteIndented = true };
 }
