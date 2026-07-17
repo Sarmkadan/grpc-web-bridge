@@ -12,21 +12,21 @@ namespace GrpcWebBridge.Domain.Models
         /// <summary>
         /// Gets a display-friendly name combining package and service name.
         /// </summary>
-        /// <param name="descriptor">The service descriptor</param>
-        /// <returns>Formatted display name</returns>
-        /// <exception cref="ArgumentNullException">When descriptor is null</exception>
+        /// <param name="descriptor">The service descriptor.</param>
+        /// <returns>Formatted display name in the format "{PackageName}.{Name}".</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="descriptor"/> is <see langword="null"/>.</exception>
         public static string GetDisplayName(this GrpcServiceDescriptor descriptor)
         {
             ArgumentNullException.ThrowIfNull(descriptor);
-            return $"{descriptor.PackageName}.{descriptor.Name}";
+            return string.Concat(descriptor.PackageName, ".", descriptor.Name);
         }
 
         /// <summary>
         /// Determines if the service endpoint uses secure transport.
         /// </summary>
-        /// <param name="descriptor">The service descriptor</param>
-        /// <returns>True if TLS is enabled and port indicates HTTPS</returns>
-        /// <exception cref="ArgumentNullException">When descriptor is null</exception>
+        /// <param name="descriptor">The service descriptor.</param>
+        /// <returns><see langword="true"/> if TLS is enabled and port indicates HTTPS (443 or 8443); otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="descriptor"/> is <see langword="null"/>.</exception>
         public static bool IsSecureEndpoint(this GrpcServiceDescriptor descriptor)
         {
             ArgumentNullException.ThrowIfNull(descriptor);
@@ -38,9 +38,9 @@ namespace GrpcWebBridge.Domain.Models
         /// <summary>
         /// Gets all streaming methods (client/server) in the service.
         /// </summary>
-        /// <param name="descriptor">The service descriptor</param>
-        /// <returns>ReadOnly collection of streaming methods</returns>
-        /// <exception cref="ArgumentNullException">When descriptor is null</exception>
+        /// <param name="descriptor">The service descriptor.</param>
+        /// <returns>Read-only collection of streaming methods.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="descriptor"/> is <see langword="null"/>.</exception>
         public static IEnumerable<MethodDescriptor> GetStreamingMethods(this GrpcServiceDescriptor descriptor)
         {
             ArgumentNullException.ThrowIfNull(descriptor);
@@ -50,17 +50,18 @@ namespace GrpcWebBridge.Domain.Models
         /// <summary>
         /// Finds a method by name with case-insensitive comparison.
         /// </summary>
-        /// <param name="descriptor">The service descriptor</param>
-        /// <param name="methodName">Name of the method to find</param>
-        /// <returns>Matching method descriptor or null</returns>
-        /// <exception cref="ArgumentNullException">When arguments are null</exception>
+        /// <param name="descriptor">The service descriptor.</param>
+        /// <param name="methodName">Name of the method to find. Leading and trailing whitespace is trimmed.</param>
+        /// <returns>Matching method descriptor or <see langword="null"/> if not found.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="descriptor"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException"><paramref name="methodName"/> is <see langword="null"/>, empty, or consists only of whitespace.</exception>
         public static MethodDescriptor? GetMethodByName(this GrpcServiceDescriptor descriptor, string methodName)
         {
             ArgumentNullException.ThrowIfNull(descriptor);
             ArgumentException.ThrowIfNullOrEmpty(methodName);
             
             return descriptor.Methods
-                .FirstOrDefault(m => string.Equals(m.Name, methodName, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(m => string.Equals(m.Name, methodName.Trim(), StringComparison.OrdinalIgnoreCase));
         }
     }
 }
