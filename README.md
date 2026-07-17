@@ -260,3 +260,31 @@ var packageServices = new ServiceRegistryTests().ListServicesByPackage(
     registry,
     "MyPackage");
 ```
+
+## ReflectionServiceTestsExtensions
+
+The `ReflectionServiceTestsExtensions` class provides utility methods for testing reflection services in gRPC web bridge. It includes methods for creating test services, managing service registries, and verifying service registration states.
+
+Example usage:
+
+```csharp
+// Get the service registry
+var registry = ReflectionServiceTestsExtensions.GetServiceRegistry();
+
+// Create and register a test service
+var testService = ReflectionServiceTestsExtensions.CreateAndRegisterTestService();
+
+// Create a test service with specific methods
+var serviceWithMethods = ReflectionServiceTestsExtensions.CreateTestServiceWithMethods(
+    "TestService",
+    new[] { "Method1", "Method2" });
+
+// Check if a service is registered
+bool isRegistered = ReflectionServiceTestsExtensions.IsServiceRegistered("TestService");
+
+// Get all registered services
+var allServices = ReflectionServiceTestsExtensions.GetAllServices();
+
+// Get the reflection service
+var reflectionService = ReflectionServiceTestsExtensions.GetReflectionService();
+```
