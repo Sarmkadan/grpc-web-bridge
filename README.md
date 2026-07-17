@@ -781,6 +781,63 @@ public sealed class ErrorHandlingMiddlewareTests
 }
 ```
 
+## ServiceRegistryTests
+
+The `ServiceRegistryTests` class provides comprehensive unit tests for the `ServiceRegistry` class, which manages gRPC service registration, discovery, and lifecycle operations. The tests verify service registration scenarios, duplicate service handling, service retrieval, service listing, unregistration, existence checking, and status updates.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<ServiceRegistry>();
+
+// In your service or controller
+var serviceRegistry = app.Services.GetRequiredService<ServiceRegistry>();
+
+// Register a new gRPC service
+var userService = new GrpcService(
+    name: "UserService",
+    packageName: "user.package",
+    endpoint: "localhost",
+    port: 50051
+);
+userService.AddMethod(new GrpcMethod(
+    name: "GetUser",
+    fullName: "user.package.UserService.GetUser",
+    type: MethodType.Unary,
+    inputType: "UserRequest",
+    outputType: "UserResponse"
+));
+serviceRegistry.RegisterService(userService);
+
+// Check if a service exists
+bool exists = serviceRegistry.ServiceExists("user.package.UserService");
+Console.WriteLine($"UserService registered: {exists}");
+
+// Get a registered service
+var retrievedService = serviceRegistry.GetService("user.package.UserService");
+if (retrievedService != null)
+{
+    Console.WriteLine($"Service endpoint: {retrievedService.Endpoint}:{retrievedService.Port}");
+    Console.WriteLine($"Service status: {retrievedService.Status}");
+}
+
+// List all registered services
+var allServices = serviceRegistry.ListServices();
+Console.WriteLine($"Total registered services: {allServices.Count}");
+
+// Update service status
+serviceRegistry.UpdateServiceStatus("user.package.UserService", ServiceStatus.NotServing);
+
+// Unregister a service when it's no longer available
+bool unregistered = serviceRegistry.UnregisterService("user.package.UserService");
+Console.WriteLine($"Service unregistered: {unregistered}");
+
+// Get count of registered services
+int serviceCount = serviceRegistry.RegisteredServiceCount;
+Console.WriteLine($"Currently registered services: {serviceCount}");
+```
+
 ## ClientRateLimitTests
 
 The `ClientRateLimitTests` class provides comprehensive unit tests for the `ClientRateLimit` class, which implements a sliding-window rate limiter for tracking client requests. The tests verify rate limiting behavior, request counting, stale state detection, and thread safety under concurrent access scenarios.
