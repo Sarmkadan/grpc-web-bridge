@@ -15,6 +15,7 @@ namespace GrpcWebBridge.Domain.Exceptions;
 /// </summary>
 public static class StreamingExceptionExtensions
 {
+    // Sealed to prevent unintended inheritance - this is a pure utility class
     /// <summary>
     /// Determines whether the exception represents a terminal stream state.
     /// </summary>
@@ -36,7 +37,7 @@ public static class StreamingExceptionExtensions
     /// Determines whether the exception represents a recoverable stream state.
     /// </summary>
     /// <param name="exception">The streaming exception to check.</param>
-    /// <returns>True if the exception represents a recoverable state (New, Active, or HalfClosed); otherwise, false.</returns>
+    /// <returns>True if the exception represents a recoverable state (Active or HalfClosed); otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
     public static bool IsRecoverableState(this StreamingException? exception)
     {
@@ -66,14 +67,16 @@ public static class StreamingExceptionExtensions
     /// Gets the stream state as a formatted string.
     /// </summary>
     /// <param name="exception">The streaming exception.</param>
-    /// <param name="defaultValue">The default value to return if the stream state is not set.</param>
+    /// <param name="defaultValue">The default value to return if the stream state is not set or is <see cref="StreamState.New"/>.</param>
     /// <returns>The formatted stream state or the default value if not set.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
     public static string GetStreamStateString(this StreamingException? exception, string defaultValue = "Unknown")
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        return exception.LastStreamState?.ToString() ?? defaultValue;
+        return exception.LastStreamState.HasValue && exception.LastStreamState != StreamState.New
+        ? exception.LastStreamState.Value.ToString()
+        : defaultValue;
     }
 
     /// <summary>
@@ -112,7 +115,7 @@ public static class StreamingExceptionExtensions
     /// Determines whether the exception has a specific error code.
     /// </summary>
     /// <param name="exception">The streaming exception to check.</param>
-    /// <param name="errorCode">The error code to match against.</param>
+    /// <param name="errorCode">The error code to match against using ordinal comparison.</param>
     /// <returns>True if the exception has the specified error code; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="exception"/> is null.
@@ -137,10 +140,12 @@ public static class StreamingExceptionExtensions
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        var context = new Dictionary<string, object>(exception.Context);
+        var context = exception.Context is null
+        ? new Dictionary<string, object>()
+        : new Dictionary<string, object>(exception.Context);
 
         if (!string.IsNullOrEmpty(exception.StreamId))
-            context["StreamId"] = exception.StreamId;
+            context["StreamId"] = exception.StreamId!;
 
         if (exception.LastStreamState.HasValue)
             context["StreamState"] = exception.LastStreamState.Value;
@@ -149,7 +154,7 @@ public static class StreamingExceptionExtensions
             context["SequenceNumber"] = exception.SequenceNumber.Value;
 
         if (!string.IsNullOrEmpty(exception.ErrorCode))
-            context["ErrorCode"] = exception.ErrorCode;
+            context["ErrorCode"] = exception.ErrorCode!;
 
         if (exception.GrpcStatus.HasValue)
             context["GrpcStatus"] = exception.GrpcStatus.Value;
