@@ -11,7 +11,8 @@ using System.Text.Json.Serialization.Metadata;
 namespace GrpcWebBridge.Services;
 
 /// <summary>
-/// Provides System.Text.Json serialization extensions for <see cref="AuthenticationService"/>
+/// Provides System.Text.Json serialization extensions for serializing and deserializing
+/// <see cref="AuthenticationService"/> instances to/from JSON strings.
 /// </summary>
 public static class AuthenticationServiceJsonExtensions
 {
@@ -43,10 +44,11 @@ public static class AuthenticationServiceJsonExtensions
     /// <summary>
     /// Deserializes a JSON string to an <see cref="AuthenticationService"/> instance.
     /// </summary>
-    /// <param name="json">The JSON string to deserialize.</param>
+    /// <param name="json">The JSON string to deserialize. Null or whitespace returns null.</param>
     /// <returns>The deserialized authentication service instance, or null if the JSON is null or whitespace.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or whitespace.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
-    public static AuthenticationService? FromJson(string json)
+    public static AuthenticationService? FromJson(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -62,7 +64,8 @@ public static class AuthenticationServiceJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized authentication service instance if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
-    public static bool TryFromJson(string json, out AuthenticationService? value)
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or whitespace.</exception>
+    public static bool TryFromJson(string? json, out AuthenticationService? value)
     {
         value = null;
 
