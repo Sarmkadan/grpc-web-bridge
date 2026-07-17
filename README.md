@@ -1094,6 +1094,67 @@ var sanitized = ValidationUtility.SanitizeInput("<script>alert('xss')</script>")
 Console.WriteLine($"Sanitized input: {sanitized}");
 ```
 
+## StreamUtilityTests
+
+The `StreamUtilityTests` class provides comprehensive unit tests for the `StreamUtility` class, covering stream operations including chunked copying, compression/decompression, Base64 conversion, and stream validation. The tests verify correct behavior for both happy paths and edge cases including null inputs, empty streams, invalid chunk sizes, and maximum size limits.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<StreamUtility>();
+
+// In your service or controller
+var streamUtility = app.Services.GetRequiredService<StreamUtility>();
+
+// Copy a stream in chunks with default chunk size (4096 bytes)
+using var sourceStream = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+using var destinationStream = new MemoryStream();
+await streamUtility.CopyStreamChunkedAsync(sourceStream, destinationStream);
+destinationStream.Position = 0;
+using var reader = new StreamReader(destinationStream);
+var result = await reader.ReadToEndAsync();
+Console.WriteLine(result); // "Hello, World!"
+
+// Copy with custom chunk size
+using var largeSource = new MemoryStream(new byte[1024 * 1024]); // 1MB
+using var largeDest = new MemoryStream();
+await streamUtility.CopyStreamChunkedAsync(largeSource, largeDest, chunkSize: 8192);
+
+// Read entire stream to byte array
+using var dataStream = new MemoryStream(Encoding.UTF8.GetBytes("Test data"));
+var bytes = await streamUtility.ReadStreamToEndAsync(dataStream);
+Console.WriteLine(Encoding.UTF8.GetString(bytes)); // "Test data"
+
+// Compress and decompress data
+var originalData = Encoding.UTF8.GetBytes("Compression test data");
+using var compressedStream = new MemoryStream();
+await streamUtility.CompressAndDecompress_RoundTrip_RecoverOriginalData(originalData);
+
+// Convert stream to Base64
+using var base64Source = new MemoryStream(Encoding.UTF8.GetBytes("Base64 test"));
+var base64String = await streamUtility.StreamToBase64Async(base64Source);
+Console.WriteLine(base64String);
+
+// Convert Base64 back to stream
+var base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes("Back to stream"));
+using var decodedStream = streamUtility.Base64ToStream(base64Data);
+using var decodedReader = new StreamReader(decodedStream);
+var decodedResult = await decodedReader.ReadToEndAsync();
+Console.WriteLine(decodedResult); // "Back to stream"
+
+// Tee a stream to multiple destinations
+using var teeSource = new MemoryStream(Encoding.UTF8.GetBytes("Tee test"));
+using var dest1 = new MemoryStream();
+using var dest2 = new MemoryStream();
+await streamUtility.TeeStreamAsync(teeSource, new[] { dest1, dest2 });
+
+// Validate stream is readable
+await using var fileStream = File.OpenRead("test.txt");
+bool isValid = streamUtility.IsStreamValid(fileStream);
+Console.WriteLine($"Stream valid: {isValid}");
+```
+
 ## CorrelationIdManager
 
 The `CorrelationIdManager` class provides distributed tracing and correlation ID management for tracking requests across multiple services and components. It enables request lifecycle tracking, metadata storage, and comprehensive observability through trace hierarchies and statistics.
