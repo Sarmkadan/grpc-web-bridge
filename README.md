@@ -838,6 +838,52 @@ int serviceCount = serviceRegistry.RegisteredServiceCount;
 Console.WriteLine($"Currently registered services: {serviceCount}");
 ```
 
+## CryptographyUtilityTests
+
+The `CryptographyUtilityTests` class provides comprehensive unit tests for the `CryptographyUtility` class, covering password hashing, token generation, cryptographic hash functions (SHA-256), HMAC computation (HMAC-SHA256), and AES-256 encryption/decryption operations. The tests verify correct behavior for both happy paths and edge cases including empty inputs, invalid lengths, and tampered ciphertexts.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<CryptographyUtility>();
+
+// In your service or controller
+var crypto = app.Services.GetRequiredService<CryptographyUtility>();
+
+// Password hashing and verification
+string password = "my-secure-password-123";
+string hashedPassword = CryptographyUtility.HashPassword(password);
+bool isValid = CryptographyUtility.VerifyPassword(password, hashedPassword); // true
+bool isInvalid = CryptographyUtility.VerifyPassword("wrong-password", hashedPassword); // false
+
+// Generate secure tokens (32 bytes by default, returns Base64 string)
+string token = CryptographyUtility.GenerateToken(); // 32 bytes
+string customToken = CryptographyUtility.GenerateToken(64); // 64 bytes
+
+// Generate API keys (alphanumeric, 32 characters by default)
+string apiKey = CryptographyUtility.GenerateApiKey(); // 32 chars
+string customApiKey = CryptographyUtility.GenerateApiKey(48); // 48 chars
+
+// Compute SHA-256 hash (returns hex string)
+string input = "hello world";
+string sha256Hash = CryptographyUtility.ComputeSha256(input);
+
+// Compute HMAC-SHA256 (returns hex string)
+string message = "authentication message";
+string key = "secret-key-123";
+string hmacHash = CryptographyUtility.ComputeHmacSha256(message, key);
+
+// AES-256 encryption and decryption
+string plaintext = "sensitive data";
+string encryptionKey = "this-is-a-32-character-key!!!!!!";
+string ciphertext = CryptographyUtility.EncryptAes256(plaintext, encryptionKey);
+string decrypted = CryptographyUtility.DecryptAes256(ciphertext, encryptionKey);
+
+// Verify decryption worked
+Console.WriteLine(decrypted == plaintext ? "Success!" : "Decryption failed");
+```
+
 ## ClientRateLimitTests
 
 The `ClientRateLimitTests` class provides comprehensive unit tests for the `ClientRateLimit` class, which implements a sliding-window rate limiter for tracking client requests. The tests verify rate limiting behavior, request counting, stale state detection, and thread safety under concurrent access scenarios.
