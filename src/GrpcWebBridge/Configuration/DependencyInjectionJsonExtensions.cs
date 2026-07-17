@@ -44,10 +44,15 @@ public static class DependencyInjectionJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>The deserialized instance, or null if the JSON is empty or whitespace.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
-    public static GrpcWebBridgeOptions? FromJson(string json)
+    public static GrpcWebBridgeOptions? FromJson(string? json)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        if (json is null)
+        {
+            return null;
+        }
 
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -63,9 +68,21 @@ public static class DependencyInjectionJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized instance if successful, otherwise null.</param>
     /// <returns>True if deserialization succeeded; otherwise false.</returns>
-    public static bool TryFromJson(string json, out GrpcWebBridgeOptions? value)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
+    public static bool TryFromJson(string? json, out GrpcWebBridgeOptions? value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        value = null;
+
+        if (json is null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
 
         try
         {
@@ -74,7 +91,6 @@ public static class DependencyInjectionJsonExtensions
         }
         catch (JsonException)
         {
-            value = null;
             return false;
         }
     }
