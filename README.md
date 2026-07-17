@@ -500,6 +500,46 @@ public class UserController : ControllerBase
 // }
 ```
 
+## BidirectionalStreamingEngineTests
+
+The `BidirectionalStreamingEngineTests` class provides comprehensive integration tests for the `BidirectionalStreamingEngine`, covering backpressure scenarios, producer timeouts, event emission, adaptive flow control, and resource cleanup. The tests verify credit window saturation behavior, throttling detection, timeout handling, event publication, and proper stream lifecycle management.
+
+Example usage:
+
+```csharp
+// Configure services in Program.cs
+builder.Services.AddSingleton<BidirectionalStreamingEngine>();
+
+// In your service or controller
+var engine = app.Services.GetRequiredService<BidirectionalStreamingEngine>();
+
+// Open a bidirectional stream
+var stream = await engine.OpenStreamAsync("stream-123", MethodType.BidirectionalStreaming);
+
+// Write messages with backpressure handling
+await stream.WriteAsync(new StreamMessage("stream-123", 1, messageData));
+
+// Check backpressure status
+bool isThrottled = stream.BackpressureController.IsThrottled;
+int availableCredits = stream.BackpressureController.AvailableCredits;
+
+// Release credits to allow more writes
+stream.BackpressureController.ReleaseCredit(2);
+
+// Monitor stream events
+var eventBus = app.Services.GetRequiredService<EventBus>();
+eventBus.Subscribe<BackpressureChangedEvent>(e => {
+    Console.WriteLine($"Stream {e.StreamId} backpressure changed: {e.IsThrottled}");
+});
+
+// Close stream when done
+await engine.CloseStreamAsync("stream-123");
+
+// Get metrics for monitoring
+var metrics = engine.GetAllMetrics();
+Console.WriteLine($"Active streams: {metrics.Count}");
+```
+
 ## ErrorHandlingMiddlewareTests
 
 The `ErrorHandlingMiddlewareTests` class provides comprehensive unit tests for the `ErrorHandlingMiddleware` class, verifying that it correctly handles various exception types and returns appropriate HTTP status codes with structured error responses. The tests cover exception-to-status-code mappings, response structure validation, and proper middleware pipeline behavior, ensuring the error handling middleware behaves as expected across different error scenarios.
