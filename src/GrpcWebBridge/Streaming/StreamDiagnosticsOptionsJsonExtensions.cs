@@ -45,9 +45,12 @@ public static class StreamDiagnosticsOptionsJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to parse.</param>
     /// <returns>The deserialized options instance, or <see langword="null"/> if the JSON is empty or whitespace.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is <see langword="null"/>.</exception>
     /// <exception cref="JsonException">Thrown if the JSON is invalid or cannot be deserialized.</exception>
     public static StreamDiagnosticsOptions? FromJson(string json)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrWhiteSpace(json))
         {
             return null;
@@ -62,8 +65,11 @@ public static class StreamDiagnosticsOptionsJsonExtensions
     /// <param name="json">The JSON string to parse.</param>
     /// <param name="value">Receives the deserialized options instance if successful.</param>
     /// <returns><see langword="true"/> if parsing succeeded; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is <see langword="null"/>.</exception>
     public static bool TryFromJson(string json, out StreamDiagnosticsOptions? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
         if (string.IsNullOrWhiteSpace(json))
