@@ -48,6 +48,7 @@ public static class ServiceDiscoveryClientExtensions
     /// <param name="serviceName">The name of the service to discover.</param>
     /// <returns>A read-only list of matching service instances.</returns>
     /// <exception cref="ArgumentException"><paramref name="serviceName"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="client"/> is <see langword="null"/>.</exception>
     public static async Task<IReadOnlyList<ServiceInstance>> DiscoverServicesAsync(this ServiceDiscoveryClient client, string serviceName)
     {
         ArgumentException.ThrowIfNullOrEmpty(serviceName);
@@ -64,6 +65,7 @@ public static class ServiceDiscoveryClientExtensions
     /// <param name="serviceName">The name of the service to find.</param>
     /// <returns>A healthy service instance, or <see langword="null"/> if none are available.</returns>
     /// <exception cref="ArgumentException"><paramref name="serviceName"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="client"/> is <see langword="null"/>.</exception>
     public static async Task<ServiceInstance?> GetHealthyInstanceAsync(this ServiceDiscoveryClient client, string serviceName)
     {
         ArgumentException.ThrowIfNullOrEmpty(serviceName);
@@ -127,23 +129,28 @@ public static class ServiceDiscoveryClientExtensions
         ArgumentNullException.ThrowIfNull(client);
 
         var stats = client.GetStatistics();
+
+        // Handle null case explicitly
+        if (stats is null)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        // Handle dictionary case directly
         if (stats is Dictionary<string, string> dict)
         {
             return dict;
         }
 
-        // Convert anonymous object to dictionary
+        // Convert anonymous object to dictionary using reflection
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (stats is not null)
+
+        foreach (var property in stats.GetType().GetProperties())
         {
-            foreach (var property in stats.GetType().GetProperties())
-            {
-                var value = property.GetValue(stats)?.ToString() ?? string.Empty;
-                result[property.Name] = value;
-            }
+            var value = property.GetValue(stats)?.ToString() ?? string.Empty;
+            result[property.Name] = value;
         }
 
         return result;
     }
-
 }
