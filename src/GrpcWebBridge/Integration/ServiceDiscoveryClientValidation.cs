@@ -26,19 +26,19 @@ public static class ServiceDiscoveryClientValidation
         // Validate Id
         if (string.IsNullOrWhiteSpace(value.Id))
         {
-            problems.Add($"ServiceInstance.Id cannot be null, empty, or whitespace.");
+            problems.Add("ServiceInstance.Id cannot be null, empty, or whitespace.");
         }
 
         // Validate Name
         if (string.IsNullOrWhiteSpace(value.Name))
         {
-            problems.Add($"ServiceInstance.Name cannot be null, empty, or whitespace.");
+            problems.Add("ServiceInstance.Name cannot be null, empty, or whitespace.");
         }
 
         // Validate Host
         if (string.IsNullOrWhiteSpace(value.Host))
         {
-            problems.Add($"ServiceInstance.Host cannot be null, empty, or whitespace.");
+            problems.Add("ServiceInstance.Host cannot be null, empty, or whitespace.");
         }
 
         // Validate Port (should be a valid port number: 0-65535)
@@ -50,11 +50,11 @@ public static class ServiceDiscoveryClientValidation
         // Validate Status
         if (string.IsNullOrWhiteSpace(value.Status))
         {
-            problems.Add($"ServiceInstance.Status cannot be null, empty, or whitespace.");
+            problems.Add("ServiceInstance.Status cannot be null, empty, or whitespace.");
         }
         else if (!IsValidStatus(value.Status))
         {
-            problems.Add($"ServiceInstance.Status must be a valid status (e.g., 'UP', 'DOWN', 'MAINTENANCE'), but was '{value.Status}'.");
+            problems.Add($"ServiceInstance.Status must be a valid status (e.g., 'UP', 'DOWN', 'MAINTENANCE', 'OUT_OF_SERVICE', 'UNKNOWN'), but was '{value.Status}'.");
         }
 
         // Validate Metadata (optional but must be valid if provided)
@@ -64,7 +64,13 @@ public static class ServiceDiscoveryClientValidation
             {
                 if (string.IsNullOrWhiteSpace(kvp.Key))
                 {
-                    problems.Add($"ServiceInstance.Metadata contains a key that is null, empty, or whitespace.");
+                    problems.Add("ServiceInstance.Metadata contains a key that is null, empty, or whitespace.");
+                    break;
+                }
+
+                if (string.IsNullOrWhiteSpace(kvp.Value))
+                {
+                    problems.Add("ServiceInstance.Metadata contains a value that is null, empty, or whitespace.");
                     break;
                 }
             }
@@ -73,7 +79,7 @@ public static class ServiceDiscoveryClientValidation
         // Validate RegisteredAt (should not be default DateTime)
         if (value.RegisteredAt == default)
         {
-            problems.Add($"ServiceInstance.RegisteredAt cannot be default(DateTime).");
+            problems.Add("ServiceInstance.RegisteredAt cannot be default(DateTime).");
         }
 
         // Validate LastHeartbeat (should be null or a valid past date)
@@ -81,11 +87,11 @@ public static class ServiceDiscoveryClientValidation
         {
             if (value.LastHeartbeat.Value == default)
             {
-                problems.Add($"ServiceInstance.LastHeartbeat cannot be default(DateTime) when set.");
+                problems.Add("ServiceInstance.LastHeartbeat cannot be default(DateTime) when set.");
             }
             else if (value.LastHeartbeat.Value > DateTime.UtcNow.AddMinutes(5))
             {
-                problems.Add($"ServiceInstance.LastHeartbeat cannot be in the future (was {value.LastHeartbeat.Value:O}).");
+                problems.Add($"ServiceInstance.LastHeartbeat cannot be in the future (was {value.LastHeartbeat.Value:yyyy-MM-dd HH:mm:ss}).");
             }
         }
 
@@ -126,8 +132,11 @@ public static class ServiceDiscoveryClientValidation
     /// </summary>
     /// <param name="status">The status to validate.</param>
     /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="status"/> is null.</exception>
     private static bool IsValidStatus(string status)
     {
+        ArgumentNullException.ThrowIfNull(status);
+
         if (string.IsNullOrWhiteSpace(status))
         {
             return false;
