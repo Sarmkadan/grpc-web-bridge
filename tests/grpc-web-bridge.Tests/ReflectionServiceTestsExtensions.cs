@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
@@ -131,10 +132,7 @@ public static class ReflectionServiceTestsExtensions
     public static IEnumerable<GrpcService> GetAllServices(this ServiceRegistry registry)
     {
         ArgumentNullException.ThrowIfNull(registry);
-        // This method is designed to work with the registry instance directly
-        // In practice, it would need access to the internal _services field
-        // For now, return empty as this is a helper method
-        return Enumerable.Empty<GrpcService>();
+        return registry.ListServices();
     }
 
     /// <summary>
@@ -145,20 +143,19 @@ public static class ReflectionServiceTestsExtensions
     /// <param name="fieldName">The name of the field to retrieve.</param>
     /// <returns>The field value.</returns>
     /// <exception cref="ArgumentException">Thrown when fieldName is null or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when tests is null.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the field is not found or cannot be accessed.</exception>
     private static T GetFieldValue<T>(this ReflectionServiceTests tests, string fieldName)
     {
+        ArgumentNullException.ThrowIfNull(tests);
         ArgumentException.ThrowIfNullOrEmpty(fieldName);
 
         var field = typeof(ReflectionServiceTests).GetField(
             fieldName,
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            BindingFlags.NonPublic | BindingFlags.Instance);
 
-        if (field is null)
-        {
-            throw new InvalidOperationException($"Field '{fieldName}' not found in ReflectionServiceTests");
-        }
-
-        return (T)field.GetValue(tests)!;
+        return field is null
+            ? throw new InvalidOperationException($"Field '{fieldName}' not found in ReflectionServiceTests")
+            : (T)field.GetValue(tests)!;
     }
 }
