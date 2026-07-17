@@ -12,3 +12,47 @@ sut._exported.Should().BeEmpty(); // Verify no activities are exported yet
 
 sut._tracerProvider.ForceFlush();
 ``` 
+
+## ServiceRepositoryTests
+The `ServiceRepositoryTests` class provides a suite of unit tests for the `ServiceRepository` implementation.  
+It verifies that services can be added, retrieved, updated, deleted, counted, and queried by package, as well as handling request storage and existence checks.
+
+Below is a realistic usage example that demonstrates how the public test methods can be invoked (e.g., from a custom test runner or interactive session):
+
+```csharp
+using System.Threading.Tasks;
+using GrpcWebBridge.Tests;
+
+// Instantiate the test class
+var repoTests = new ServiceRepositoryTests();
+
+// Add a new service and verify it was stored
+await repoTests.AddAsync_WithNewService_ReturnsTrueAndStoresService();
+
+// Attempt to add a duplicate service ID
+await repoTests.AddAsync_WithDuplicateServiceId_ReturnsFalse();
+
+// Retrieve a service by its full name
+await repoTests.GetByFullNameAsync_WithExistingService_ReturnsService();
+
+// Delete a service
+await repoTests.DeleteAsync_WithExistingService_ReturnsTrueAndRemoves();
+
+// Count services
+await repoTests.CountAsync_ReturnsCorrectCount();
+
+// Update a service
+await repoTests.UpdateAsync_WithExistingService_UpdatesAndReturnsTrue();
+
+// Check existence of a non‑existent service
+await repoTests.ExistsAsync_WithNonExistentFullName_ReturnsFalse();
+
+// Add a request
+await repoTests.AddRequestAsync_WithValidRequest_ReturnsTrue();
+
+// Get a service by a non‑existent ID
+await repoTests.GetByIdAsync_WithNonExistentId_ReturnsNull();
+
+// Get services by package
+await repoTests.GetByPackageAsync_ReturnsServicesForPackage();
+```
