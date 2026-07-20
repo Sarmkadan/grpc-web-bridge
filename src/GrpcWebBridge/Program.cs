@@ -6,6 +6,8 @@
 
 using Grpc.AspNetCore.Web;
 using GrpcWebBridge.Configuration;
+using GrpcWebBridge.Domain;
+using GrpcWebBridge.Endpoints;
 using GrpcWebBridge.Middleware;
 using GrpcWebBridge.Services;
 using OpenTelemetry.Trace;
@@ -108,13 +110,20 @@ if (app.Environment.IsDevelopment())
 // Map reflection endpoints
 app.MapGrpcReflectionEndpoints();
 
-// Health check endpoint
+// Health check endpoints
+app.MapHealthEndpoints();
+
+// Legacy health check endpoint (kept for backward compatibility)
 app.MapGet("/health", async (ServiceRegistry registry, StreamingService streaming) =>
 {
+    var uptime = DateTime.UtcNow - HealthEndpoints.GetStartupTime();
+
     var response = new
     {
         status = "healthy",
         timestamp = DateTime.UtcNow,
+        uptime = uptime.ToString("c"),
+        uptime_seconds = (int)uptime.TotalSeconds,
         services = registry.RegisteredServiceCount,
         activeStreams = streaming.ActiveStreamCount,
         version = "1.0.0"
