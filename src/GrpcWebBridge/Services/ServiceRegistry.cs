@@ -8,6 +8,8 @@ using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 
 namespace GrpcWebBridge.Services;
 
@@ -17,10 +19,11 @@ namespace GrpcWebBridge.Services;
 public sealed class ServiceRegistry
 {
     private readonly ILogger<ServiceRegistry> _logger;
-    private readonly Dictionary<string, GrpcService> _services = [];
-    private readonly Dictionary<string, ServiceMetadata> _metadata = [];
+    private readonly Dictionary<string, GrpcService> _services = new();
+    private readonly Dictionary<string, ServiceMetadata> _metadata = new();
     private readonly object _servicesLock = new();
     private readonly object _metadataLock = new();
+    private readonly Dictionary<string, DateTime> _serviceRegistrationTimestamps = new();
 
     public int RegisteredServiceCount
     {
@@ -57,6 +60,7 @@ public sealed class ServiceRegistry
                 throw new ServiceRegistrationException(service.Name, "Service registry is full");
 
             _services[service.FullName] = service;
+            _serviceRegistrationTimestamps[service.FullName] = DateTime.UtcNow;
             _logger.LogInformation("Service registered: {ServiceName} ({Endpoint}:{Port})",
                 service.FullName, service.Endpoint, service.Port);
 
@@ -103,6 +107,7 @@ public sealed class ServiceRegistry
         {
             if (_services.Remove(fullName))
             {
+                _serviceRegistrationTimestamps.Remove(fullName);
                 _logger.LogInformation("Service unregistered: {ServiceName}", fullName);
                 return true;
             }
@@ -128,7 +133,7 @@ public sealed class ServiceRegistry
     public IEnumerable<GrpcService> ListServicesByPackage(string packageName)
     {
         if (string.IsNullOrWhiteSpace(packageName))
-            return [];
+            return new List<GrpcService>();
 
         lock (_servicesLock)
         {
@@ -221,6 +226,21 @@ public sealed class ServiceRegistry
             ServiceStatus.NotServing => ServiceHealthStatus.Unhealthy,
             _ => ServiceHealthStatus.Unknown
         };
+    }
+
+    /// <summary>
+    /// Gets a registry snapshot
+    /// </summary>
+    public RegistrySnapshot GetRegistrySnapshot()
+    {
+        lock (_servicesLock)
+        {
+            return new RegistrySnapshot
+            {
+                TotalServiceCount = _services.Count,
+                ServiceRegistrationTimestamps = new Dictionary<string, DateTime>(_serviceRegistrationTimestamps)
+            };
+        }
     }
 }
 
