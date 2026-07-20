@@ -207,7 +207,8 @@ public sealed class WebhookPublisher : IDisposable
     }
 
     /// <summary>
-    /// Sends a webhook to the subscription URL with retry logic.
+    /// Sends a webhook to the subscription URL with exponential backoff retry logic (3 attempts, jitter).
+    /// Retries only on 5xx server errors and timeouts.
     /// </summary>
     private async Task SendWebhookAsync(
         WebhookEvent webhookEvent,
@@ -215,7 +216,7 @@ public sealed class WebhookPublisher : IDisposable
         CancellationToken cancellationToken)
     {
         int retryCount = 0;
-        int maxRetries = subscription.RetryOnFailure ? _options.MaxRetries : 0;
+        int maxRetries = subscription.RetryOnFailure ? Math.Min(3, _options.MaxRetries) : 0;
 
         while (retryCount <= maxRetries)
         {
@@ -239,12 +240,13 @@ public sealed class WebhookPublisher : IDisposable
                     subscription.Headers,
                     "webhook");
 
+                // Only retry on 5xx server errors and timeouts
                 if (response.IsSuccessStatusCode)
                 {
                     subscription.SuccessCount++;
                     subscription.LastSuccessfulDelivery = DateTime.UtcNow;
-                    _logger.LogDebug("Webhook delivered successfully: SubscriptionId={Id}, EventType={Type}",
-                        subscription.Id, webhookEvent.EventType);
+                    _logger.LogDebug("Webhook delivered successfully: SubscriptionId={Id}, EventType={Type}, Attempt={Attempt}",
+                        subscription.Id, webhookEvent.EventType, retryCount + 1);
                     return;
                 }
                 else if (response.StatusCode >= System.Net.HttpStatusCode.InternalServerError)
@@ -252,15 +254,43 @@ public sealed class WebhookPublisher : IDisposable
                     // Retry on 5xx errors
                     if (retryCount < maxRetries)
                     {
-                        var delayMs = (int)(Math.Pow(2, retryCount) * 1000); // Exponential backoff
-                        await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                         retryCount++;
+                        int delayMs = CalculateRetryDelayWithJitter(retryCount, maxRetries);
+                        _logger.LogWarning("Webhook delivery failed with 5xx error, retrying in {DelayMs}ms: SubscriptionId={Id}, EventType={Type}, Attempt={Attempt}/{MaxAttempts}, StatusCode={StatusCode}",
+                            delayMs, subscription.Id, webhookEvent.EventType, retryCount, maxRetries + 1, (int)response.StatusCode);
+                        await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                         continue;
                     }
                 }
 
                 // Non-retryable error
                 throw new HttpRequestException($"Webhook request failed with status {response.StatusCode}");
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            {
+                // Retry on timeout
+                if (retryCount < maxRetries)
+                {
+                    retryCount++;
+                    int delayMs = CalculateRetryDelayWithJitter(retryCount, maxRetries);
+                    _logger.LogWarning(ex, "Webhook delivery timed out, retrying in {DelayMs}ms: SubscriptionId={Id}, EventType={Type}, Attempt={Attempt}/{MaxAttempts}",
+                        delayMs, subscription.Id, webhookEvent.EventType, retryCount, maxRetries + 1);
+                    await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                subscription.FailureCount++;
+                _logger.LogWarning(ex, "Webhook delivery timed out after retries: SubscriptionId={Id}, EventType={Type}",
+                    subscription.Id, webhookEvent.EventType);
+
+                if (subscription.FailureCount > _options.FailureThresholdForDisable)
+                {
+                    subscription.IsActive = false;
+                    _logger.LogError("Webhook subscription disabled due to excessive failures: SubscriptionId={Id}",
+                        subscription.Id);
+                }
+
+                break;
             }
             catch (Exception ex)
             {
@@ -282,13 +312,32 @@ public sealed class WebhookPublisher : IDisposable
                 }
 
                 retryCount++;
-                if (retryCount <= maxRetries)
-                {
-                    var delayMs = (int)(Math.Pow(2, retryCount - 1) * 1000);
-                    await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
-                }
+                int delayMs = CalculateRetryDelayWithJitter(retryCount, maxRetries);
+                await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
             }
         }
+    }
+
+    /// <summary>
+    /// Calculates retry delay with exponential backoff and jitter.
+    /// </summary>
+    private int CalculateRetryDelayWithJitter(int retryCount, int maxRetries)
+    {
+        // Base delay: exponential backoff (2^retryCount * 1000ms)
+        double baseDelayMs = Math.Pow(2, retryCount) * 1000;
+
+        // Add jitter: random factor between 0.5 and 1.5
+        Random random = new Random();
+        double jitterFactor = 0.5 + (random.NextDouble() * 1.0);
+        double delayWithJitter = baseDelayMs * jitterFactor;
+
+        // Cap at reasonable maximum for last retry
+        if (retryCount >= maxRetries - 1)
+        {
+            delayWithJitter = Math.Min(delayWithJitter, 10000); // Max 10 seconds for final retry
+        }
+
+        return (int)delayWithJitter;
     }
 
     public void Dispose()
