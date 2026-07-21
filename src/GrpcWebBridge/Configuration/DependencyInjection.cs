@@ -6,6 +6,7 @@
 
 using GrpcWebBridge.BackgroundWorkers;
 using GrpcWebBridge.Data;
+using GrpcWebBridge.Integration;
 using GrpcWebBridge.Services;
 using GrpcWebBridge.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -39,6 +40,9 @@ public static class DependencyInjection
         services.AddSingleton<StreamingService>();
         services.AddSingleton<AuthenticationService>();
         services.AddSingleton<ServiceRegistry>();
+
+// Register correlation ID management
+services.AddCorrelationIdManager();
 
         // Register data access
         services.AddSingleton<IServiceRepository, ServiceRepository>();
