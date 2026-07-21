@@ -6,6 +6,7 @@
 
 using FluentAssertions;
 using GrpcWebBridge.Domain;
+using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
 using Microsoft.Extensions.Logging;
@@ -192,5 +193,177 @@ public sealed class ProtocolTranslationServiceTests
 
         // Assert
         System.Text.Encoding.UTF8.GetString(bytes).Should().Be(str);
+    }
+
+    /// <summary>
+    /// Verifies that translating a valid gRPC response to HTTP format preserves the payload
+    /// when the target format matches the response format.
+    /// </summary>
+    [Fact]
+    public void TranslateGrpcToHttp_WithMatchingFormats_PreservesPayload()
+    {
+        // Arrange
+        var request = new GrpcRequest("TestService", "TestMethod", "payload".AsBytes());
+        var response = new GrpcResponse(request.Id, "payload".AsBytes())
+        {
+            PayloadFormat = SerializationFormat.Protobuf
+        };
+
+        // Act
+        var httpPayload = _service.TranslateGrpcToHttp(response, SerializationFormat.Protobuf);
+
+        // Assert
+        httpPayload.Should().BeEquivalentTo("payload".AsBytes());
+    }
+
+    /// <summary>
+    /// Ensures that translating a gRPC response to JSON converts the payload from Protobuf
+    /// to JSON format.
+    /// </summary>
+    [Fact]
+    public void TranslateGrpcToHttp_ConvertsProtobufToJson()
+    {
+        // Arrange
+        var request = new GrpcRequest("TestService", "TestMethod", "payload".AsBytes());
+        var response = new GrpcResponse(request.Id, "payload".AsBytes())
+        {
+            PayloadFormat = SerializationFormat.Protobuf
+        };
+
+        // Act
+        var jsonPayload = _service.TranslateGrpcToHttp(response, SerializationFormat.Json);
+
+        // Assert
+        jsonPayload.Should().NotBeNull();
+        var json = System.Text.Encoding.UTF8.GetString(jsonPayload);
+        json.Should().Contain("data");
+    }
+
+    /// <summary>
+    /// Confirms that translating a gRPC response to Protobuf converts the payload from JSON
+    /// to Protobuf format.
+    /// </summary>
+    [Fact]
+    public void TranslateGrpcToHttp_ConvertsJsonToProtobuf()
+    {
+        // Arrange
+        var jsonPayload = "{\"data\":\"cGF5bG9hZA==\"}".AsBytes();
+        var request = new GrpcRequest("TestService", "TestMethod", jsonPayload);
+        var response = new GrpcResponse(request.Id, jsonPayload)
+        {
+            PayloadFormat = SerializationFormat.Json
+        };
+
+        // Act
+        var protobufPayload = _service.TranslateGrpcToHttp(response, SerializationFormat.Protobuf);
+
+        // Assert
+        protobufPayload.Should().NotBeNull();
+        var payload = System.Text.Encoding.UTF8.GetString(protobufPayload);
+        payload.Should().Be("payload");
+    }
+
+    /// <summary>
+    /// Validates that TranslateHttpToGrpc throws a ProtocolException when the service name is empty.
+    /// </summary>
+    [Fact]
+    public void TranslateHttpToGrpc_WithEmptyServiceName_ThrowsProtocolException()
+    {
+        // Arrange
+        var payload = "test".AsBytes();
+
+        // Act
+        Action act = () => _service.TranslateHttpToGrpc(string.Empty, "TestMethod", payload, SerializationFormat.Json);
+
+        // Assert
+        act.Should().Throw<ProtocolException>()
+            .And.Message.Should().Contain("Service name cannot be empty");
+    }
+
+    /// <summary>
+    /// Validates that TranslateHttpToGrpc throws a ProtocolException when the method name is empty.
+    /// </summary>
+    [Fact]
+    public void TranslateHttpToGrpc_WithEmptyMethodName_ThrowsProtocolException()
+    {
+        // Arrange
+        var payload = "test".AsBytes();
+
+        // Act
+        Action act = () => _service.TranslateHttpToGrpc("TestService", string.Empty, payload, SerializationFormat.Json);
+
+        // Assert
+        act.Should().Throw<ProtocolException>()
+            .And.Message.Should().Contain("Method name cannot be empty");
+    }
+
+    /// <summary>
+    /// Verifies that ValidateRequest throws an exception when the payload exceeds the maximum size.
+    /// </summary>
+    [Fact]
+    public void ValidateRequest_WithPayloadExceedingMaximumSize_ThrowsException()
+    {
+        // Arrange
+        var largePayload = new byte[Constants.Grpc.MaxMessageSize + 1];
+        var request = new GrpcRequest("TestService", "TestMethod", largePayload);
+
+        // Act
+        Action act = () => _service.ValidateRequest(request);
+
+        // Assert
+        act.Should().Throw<Exception>()
+            .And.Message.Should().Contain("exceeds maximum size");
+    }
+
+    /// <summary>
+    /// Ensures that ConvertProtobufToJson converts non-empty Protobuf data to a JSON object
+    /// containing a base64-encoded data field.
+    /// </summary>
+    [Fact]
+    public void ConvertProtobufToJson_WithNonEmptyData_ReturnsJsonWithDataField()
+    {
+        // Arrange
+        var protobuf = "test data".AsBytes();
+
+        // Act
+        var json = _service.ConvertProtobufToJson(protobuf);
+
+        // Assert
+        var jsonString = System.Text.Encoding.UTF8.GetString(json);
+        jsonString.Should().Contain("data");
+        jsonString.Should().Contain("dGVzdCBkYXRh"); // base64 for "test data"
+    }
+
+    /// <summary>
+    /// Validates that ConvertJsonToProtobuf throws a ProtocolException when the JSON is malformed.
+    /// </summary>
+    [Fact]
+    public void ConvertJsonToProtobuf_WithMalformedJson_ThrowsProtocolException()
+    {
+        // Arrange
+        var malformedJson = "{ invalid json".AsBytes();
+
+        // Act
+        Action act = () => _service.ConvertJsonToProtobuf(malformedJson);
+
+        // Assert
+        act.Should().Throw<ProtocolException>();
+    }
+
+    /// <summary>
+    /// Validates that TranslateAndInvokeAsync throws an ArgumentNullException when the request is null.
+    /// </summary>
+    [Fact]
+    public async Task TranslateAndInvokeAsync_WithNullRequest_ThrowsArgumentNullException()
+    {
+        // Arrange
+        GrpcRequest? request = null;
+        AuthenticationContext? authContext = null;
+
+        // Act
+        Func<Task> act = async () => await _service.TranslateAndInvokeAsync(request!, authContext);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }
