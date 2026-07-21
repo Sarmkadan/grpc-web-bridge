@@ -235,7 +235,7 @@ public sealed class CorrelationIdMiddleware
     private readonly RequestDelegate _next;
     private readonly CorrelationIdManager _correlationIdManager;
     private readonly ILogger<CorrelationIdMiddleware> _logger;
-    private const string CorrelationIdHeader = "X-Correlation-ID";
+    private const string CorrelationIdHeader = "X-Correlation-Id";
 
     public CorrelationIdMiddleware(
         RequestDelegate next,

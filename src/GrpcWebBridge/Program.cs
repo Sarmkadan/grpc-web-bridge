@@ -8,6 +8,7 @@ using Grpc.AspNetCore.Web;
 using GrpcWebBridge.Configuration;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Endpoints;
+using GrpcWebBridge.Integration;
 using GrpcWebBridge.Middleware;
 using GrpcWebBridge.Services;
 using OpenTelemetry.Trace;
@@ -90,6 +91,7 @@ app.UseErrorHandling();
 app.UseGrpcWebContentTypeValidation();
 app.UseRequestLogging();
 app.UseRouting();
+app.UseCorrelationId();
 app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
 
 app.UseCors("AllowGrpcWeb");
