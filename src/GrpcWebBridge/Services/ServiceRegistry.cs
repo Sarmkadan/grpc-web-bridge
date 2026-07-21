@@ -242,6 +242,14 @@ public sealed class ServiceRegistry
             };
         }
     }
+
+    /// <summary>
+    /// Gets a registry snapshot as JSON
+    /// </summary>
+    public string GetRegistrySnapshotJson()
+    {
+        return GetRegistrySnapshot().ToJson();
+    }
 }
 
 /// <summary>
