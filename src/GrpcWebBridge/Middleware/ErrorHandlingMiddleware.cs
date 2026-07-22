@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using GrpcWebBridge.Domain.Exceptions;
 using System.Net;
@@ -17,125 +17,139 @@ namespace GrpcWebBridge.Middleware;
 /// </summary>
 public sealed class ErrorHandlingMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ErrorHandlingMiddleware> _logger;
+	private readonly RequestDelegate _next;
+	private readonly ILogger<ErrorHandlingMiddleware> _logger;
 
-    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
+	public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
+	{
+		_next = next;
+		_logger = logger;
+	}
 
-    public async Task InvokeAsync(HttpContext context)
-    {
-        try
-        {
-            await _next(context);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled exception in request pipeline");
-            await HandleExceptionAsync(context, ex);
-        }
-    }
+	public async Task InvokeAsync(HttpContext context)
+	{
+		try
+		{
+			await _next(context);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Unhandled exception in request pipeline");
+			await HandleExceptionAsync(context, ex);
+		}
+	}
 
-    /// <summary>
-    /// Handles exception conversion to HTTP response.
-    /// Maps domain exceptions to appropriate HTTP status codes.
-    /// </summary>
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
-    {
-        context.Response.ContentType = "application/json";
+	/// <summary>
+	/// Handles exception conversion to HTTP response.
+	/// Maps domain exceptions to appropriate HTTP status codes.
+	/// </summary>
+	private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+	{
+		context.Response.ContentType = "application/json";
 
-        var response = new ErrorResponse
-        {
-            Success = false,
-            Timestamp = DateTime.UtcNow,
-            Path = context.Request.Path,
-            TraceId = context.TraceIdentifier
-        };
+		var response = new ErrorResponse
+		{
+			Success = false,
+			Timestamp = DateTime.UtcNow,
+			Path = context.Request.Path,
+			TraceId = context.TraceIdentifier
+		};
 
-        // Map exception types to HTTP status codes and error details
-        switch (exception)
-        {
-            case ServiceRegistrationException sre:
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.Error = "Service Registration Failed";
-                response.Message = sre.Message;
-                response.Details = new { exception = nameof(ServiceRegistrationException) };
-                break;
+		// Map exception types to HTTP status codes and error details
+		switch (exception)
+		{
+		case ServiceRegistrationException sre:
+			context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.Error = "Service Registration Failed";
+			response.Message = sre.Message;
+			response.Details = new { exception = nameof(ServiceRegistrationException) };
+			break;
 
-            case StreamingException se:
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                response.Error = "Streaming Operation Failed";
-                response.Message = se.Message;
-                response.Details = new { exception = nameof(StreamingException) };
-                break;
+		case StreamingException se:
+			context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+			response.Error = "Streaming Operation Failed";
+			response.Message = se.Message;
+			response.Details = new { exception = nameof(StreamingException) };
+			break;
 
-            case ProtocolException pe:
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.Error = "Protocol Translation Failed";
-                response.Message = pe.Message;
-                response.Details = new { exception = nameof(ProtocolException) };
-                break;
+		case ProtocolException pe:
+			context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.Error = "Protocol Translation Failed";
+			response.Message = pe.Message;
+			response.Details = new { exception = nameof(ProtocolException) };
+			break;
 
-            case GrpcWebBridgeException gwbe:
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                response.Error = "Bridge Operation Failed";
-                response.Message = gwbe.Message;
-                response.Details = new { exception = nameof(GrpcWebBridgeException) };
-                break;
+		case ConfigurationException ce:
+			context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.Error = "Configuration Error";
+			response.Message = ce.Message;
+			response.Details = new { exception = nameof(ConfigurationException) };
+			break;
 
-            case ArgumentNullException ane:
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.Error = "Invalid Request";
-                response.Message = $"Required parameter missing: {ane.ParamName}";
-                response.Details = new { exception = nameof(ArgumentNullException), paramName = ane.ParamName };
-                break;
+		case ValidationException ve:
+			context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.Error = "Validation Failed";
+			response.Message = ve.Message;
+			response.Details = new { exception = nameof(ValidationException) };
+			break;
 
-            case ArgumentException ae:
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.Error = "Invalid Argument";
-                response.Message = ae.Message;
-                response.Details = new { exception = nameof(ArgumentException) };
-                break;
+		case GrpcWebBridgeException gwbe:
+			context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+			response.Error = "Bridge Operation Failed";
+			response.Message = gwbe.Message;
+			response.Details = new { exception = nameof(GrpcWebBridgeException) };
+			break;
 
-            case UnauthorizedAccessException:
-                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                response.Error = "Unauthorized";
-                response.Message = "You do not have permission to perform this operation";
-                response.Details = new { exception = nameof(UnauthorizedAccessException) };
-                break;
+		case ArgumentNullException ane:
+			context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.Error = "Invalid Request";
+			response.Message = $"Required parameter missing: {ane.ParamName}";
+			response.Details = new { exception = nameof(ArgumentNullException), paramName = ane.ParamName };
+			break;
 
-            case TimeoutException te:
-                context.Response.StatusCode = (int)HttpStatusCode.GatewayTimeout;
-                response.Error = "Operation Timeout";
-                response.Message = te.Message;
-                response.Details = new { exception = nameof(TimeoutException) };
-                break;
+		case ArgumentException ae:
+			context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.Error = "Invalid Argument";
+			response.Message = ae.Message;
+			response.Details = new { exception = nameof(ArgumentException) };
+			break;
 
-            case OperationCanceledException oce:
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.Error = "Operation Cancelled";
-                response.Message = oce.Message;
-                response.Details = new { exception = nameof(OperationCanceledException) };
-                break;
+		case UnauthorizedAccessException:
+			context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+			response.Error = "Unauthorized";
+			response.Message = "You do not have permission to perform this operation";
+			response.Details = new { exception = nameof(UnauthorizedAccessException) };
+			break;
 
-            default:
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                response.Error = "Internal Server Error";
-                response.Message = "An unexpected error occurred while processing your request";
-                response.Details = new
-                {
-                    exception = exception.GetType().Name,
-                    // Include message in development environment only
-                    message = !string.IsNullOrEmpty(exception.Message) ? exception.Message : null
-                };
-                break;
-        }
+		case TimeoutException te:
+			context.Response.StatusCode = (int)HttpStatusCode.GatewayTimeout;
+			response.Error = "Operation Timeout";
+			response.Message = te.Message;
+			response.Details = new { exception = nameof(TimeoutException) };
+			break;
 
-        return context.Response.WriteAsJsonAsync(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-    }
+		case OperationCanceledException oce:
+			context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+			response.Error = "Operation Cancelled";
+			response.Message = oce.Message;
+			response.Details = new { exception = nameof(OperationCanceledException) };
+			break;
+
+		default:
+			context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+			response.Error = "Internal Server Error";
+			response.Message = "An unexpected error occurred while processing your request";
+			response.Details = new
+		{
+			exception = exception.GetType().Name,
+			// Include message in development environment only
+			message = !string.IsNullOrEmpty(exception.Message) ? exception.Message : null
+		};
+			break;
+		}
+
+		return context.Response.WriteAsJsonAsync(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+	}
 }
 
 /// <summary>
@@ -143,13 +157,13 @@ public sealed class ErrorHandlingMiddleware
 /// </summary>
 public sealed class ErrorResponse
 {
-    public bool Success { get; set; } = false;
-    public string? Error { get; set; }
-    public string? Message { get; set; }
-    public object? Details { get; set; }
-    public string? Path { get; set; }
-    public string? TraceId { get; set; }
-    public DateTime Timestamp { get; set; }
+	public bool Success { get; set; } = false;
+	public string? Error { get; set; }
+	public string? Message { get; set; }
+	public object? Details { get; set; }
+	public string? Path { get; set; }
+	public string? TraceId { get; set; }
+	public DateTime Timestamp { get; set; }
 }
 
 /// <summary>
@@ -157,8 +171,8 @@ public sealed class ErrorResponse
 /// </summary>
 public static class ErrorHandlingMiddlewareExtensions
 {
-    public static IApplicationBuilder UseErrorHandling(this IApplicationBuilder builder)
-    {
-        return builder.UseMiddleware<ErrorHandlingMiddleware>();
-    }
+	public static IApplicationBuilder UseErrorHandling(this IApplicationBuilder builder)
+	{
+		return builder.UseMiddleware<ErrorHandlingMiddleware>();
+	}
 }
