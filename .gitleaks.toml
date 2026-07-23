@@ -1,0 +1,39 @@
+# Gitleaks configuration for gRPC Web Bridge repository
+# This file defines patterns to detect secrets in the repository
+
+[extend]
+useDefault = true
+
+[allowlist]
+# Allowlist known false positives
+paths = [
+  # Ignore test files with fake credentials
+  "**/test/**",
+  "**/*Test*.cs",
+  "**/Tests/**",
+
+  # Ignore example files
+  "**/examples/**",
+
+  # Ignore documentation files with placeholder values
+  "**/*.md",
+
+  # Ignore configuration files with default values
+  "**/*.config",
+  "**/*.json",
+  "**/*.yaml",
+  "**/*.yml"
+]
+
+regexTarget = "match"
+regexes = [
+  # Allow test environment variables
+  { regex = '''(?i)TEST_''', description = "Test environment variables" },
+
+  # Allow placeholder values in documentation
+  { regex = '''(?i)example[_-]?token''', description = "Example tokens" },
+  { regex = '''(?i)placeholder[_-]?password''', description = "Placeholder passwords" },
+
+  # Allow localhost URLs
+  { regex = '''localhost[:/][0-9]+''', description = "Localhost URLs" }
+]

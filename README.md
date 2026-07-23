@@ -1,37 +1,47 @@
-# CLAUDE.md
+# GoalTracker Integration
 
-## GoalTracker Integration
+For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
 
-При работе над задачей, привязанной к цели в GoalTracker, в конце сессии залогируй чат:
+## Environment Variables
 
 ```bash
-# 1. Получить токен (кешируй - валиден 30 дней)
-TOKEN=$(curl -s -X POST https://tracker.sarmkadan.com/api/auth/login \
- -H 'Content-Type: application/json' \
- -d '{"username":"vlad","password":"GoalTracker2026!Vlad"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
-
-# 2. Залогировать сессию (GOAL_ID = id цели из трекера)
-curl -s -X POST https://tracker.sarmkadan.com/api/goals/GOAL_ID/log \
- -H "Authorization: Bearer $TOKEN" \
- -H 'Content-Type: application/json' \
- -d '{"sessionId":"SESSION_ID","summary":"краткое описание что сделано"}'
+# Set these environment variables before using the GoalTracker integration commands
+# GOAL_TRACKER_USERNAME - Your GoalTracker username
+# GOAL_TRACKER_PASSWORD - Your GoalTracker password  
+# GOAL_TRACKER_BASE_URL - Base URL for GoalTracker API (default: https://tracker.sarmkadan.com)
 ```
 
-**Правила:**
-- `SESSION_ID` - текущий session id (виден в `claude --resume`). Если неизвестен - используй timestamp вида `manual-2026-06-01-1430`
-- `summary` - 1-3 предложения что конкретно сделано в этой сессии. Без воды, только факты
-- Логировать в КОНЦЕ сессии, когда работа завершена
-- Если Влад явно указал goal ID или название цели - логировать. Если нет - спросить "залогировать в GoalTracker?"
-- Не логировать сессии которые не связаны ни с какой целью
+## Usage
 
-**Список целей:** `GET https://tracker.sarmkadan.com/api/goals` (с Bearer токеном)
-
-**Добавить шаг к цели:**
 ```bash
-curl -s -X POST https://tracker.sarmkadan.com/api/goals/GOAL_ID/steps \
- -H "Authorization: Bearer $TOKEN" \
- -H 'Content-Type: application/json' \
- -d '{"description":"описание шага"}'
+# 1. Get token from environment variables
+TOKEN=$(curl -s -X POST "${GOAL_TRACKER_BASE_URL:-https://tracker.sarmkadan.com}/api/auth/login" \
+-H 'Content-Type: application/json' \
+-d "{\"username\":\"${GOAL_TRACKER_USERNAME}\",\"password\":\"${GOAL_TRACKER_PASSWORD}\"}" | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
+
+# 2. Log session (GOAL_ID = goal ID from tracker)
+curl -s -X POST "${GOAL_TRACKER_BASE_URL:-https://tracker.sarmkadan.com}/api/goals/GOAL_ID/log" \
+-H "Authorization: Bearer $TOKEN" \
+-H 'Content-Type: application/json' \
+-d '{"sessionId":"SESSION_ID","summary":"brief description of what was done"}'
+```
+
+## Rules
+- `SESSION_ID` - current session ID (visible in `claude --resume`). If unknown, use timestamp format `manual-2026-06-01-1430`
+- `summary` - 1-3 sentences describing what was accomplished in this session. Keep it factual.
+- Log sessions at the END of work when complete
+- If Vlad explicitly provides goal ID or name - log it. Otherwise - ask "log to GoalTracker?"
+- Do not log sessions unrelated to any specific goal
+
+## Goals List
+`GET ${GOAL_TRACKER_BASE_URL:-https://tracker.sarmkadan.com}/api/goals` (with Bearer token)
+
+## Add Step to Goal
+```bash
+curl -s -X POST "${GOAL_TRACKER_BASE_URL:-https://tracker.sarmkadan.com}/api/goals/GOAL_ID/steps" \
+-H "Authorization: Bearer $TOKEN" \
+-H 'Content-Type: application/json' \
+-d '{"description":"step description"}'
 ```
 
 ---
@@ -49,7 +59,7 @@ The `StreamingExceptionExtensions` class provides a set of extension methods for
 var exception = new StreamingException("Stream failed");
 if (exception.IsTerminalState(StreamState.Completed))
 {
-    Console.WriteLine("Stream is in terminal state");
+Console.WriteLine("Stream is in terminal state");
 }
 ```
 
@@ -62,18 +72,18 @@ For example, you can check if a request contains specific metadata, retrieve met
 ```csharp
 var request = new GrpcRequest
 {
-    Id = Guid.NewGuid(),
-    FullMethodName = "/service/method",
-    PayloadFormat = "application/grpc+protobuf",
-    MethodType = "Unary",
-    TimeoutMilliseconds = 5000,
-    Payload = Encoding.UTF8.GetBytes("test payload"),
-    Metadata = new Dictionary<string, string>
-    {
-        { "authorization", "Bearer token123" },
-        { "user-id", "42" },
-        { "request-id", Guid.NewGuid().ToString() }
-    }
+Id = Guid.NewGuid(),
+FullMethodName = "/service/method",
+PayloadFormat = "application/grpc+protobuf",
+MethodType = "Unary",
+TimeoutMilliseconds = 5000,
+Payload = Encoding.UTF8.GetBytes("test payload"),
+Metadata = new Dictionary<string, string>
+{
+{ "authorization", "Bearer token123" },
+{ "user-id", "42" },
+{ "request-id", Guid.NewGuid().ToString() }
+}
 };
 
 // Check if metadata key exists
@@ -105,12 +115,12 @@ For example, you can serialize a worker to JSON, modify the JSON string, and des
 // Create a worker instance
 var worker = new StreamCleanupWorker
 {
-    WorkerId = Guid.NewGuid(),
-    StreamId = Guid.NewGuid(),
-    CleanupInterval = TimeSpan.FromMinutes(5),
-    MaxAge = TimeSpan.FromHours(2),
-    IsActive = true,
-    LastCleanup = DateTime.UtcNow
+WorkerId = Guid.NewGuid(),
+StreamId = Guid.NewGuid(),
+CleanupInterval = TimeSpan.FromMinutes(5),
+MaxAge = TimeSpan.FromHours(2),
+IsActive = true,
+LastCleanup = DateTime.UtcNow
 };
 
 // Serialize to JSON
@@ -123,7 +133,7 @@ StreamCleanupWorker? restoredWorker = StreamCleanupWorkerJsonExtensions.FromJson
 // Try to deserialize with error handling
 if (StreamCleanupWorkerJsonExtensions.TryFromJson(json, out var safeWorker))
 {
-    Console.WriteLine($"Successfully restored worker: {safeWorker?.WorkerId}");
+Console.WriteLine($"Successfully restored worker: {safeWorker?.WorkerId}");
 }
 ```
 
@@ -140,12 +150,12 @@ var streamingService = new StreamingService();
 // Add some streams
 streamingService.AddStream(new Stream
 {
-    StreamId = Guid.NewGuid().ToString(),
-    MethodType = MethodType.ServerStreaming,
-    State = StreamState.Active,
-    MessageCount = 0,
-    CreatedAt = DateTime.UtcNow,
-    LastActivityTime = DateTime.UtcNow
+StreamId = Guid.NewGuid().ToString(),
+MethodType = MethodType.ServerStreaming,
+State = StreamState.Active,
+MessageCount = 0,
+CreatedAt = DateTime.UtcNow,
+LastActivityTime = DateTime.UtcNow
 });
 
 // Validate the streaming service
@@ -153,15 +163,15 @@ IReadOnlyList<string> validationErrors = streamingService.Validate();
 
 if (validationErrors.Count > 0)
 {
-    Console.WriteLine("Validation failed:");
-    foreach (var error in validationErrors)
-    {
-        Console.WriteLine($"- {error}");
-    }
+Console.WriteLine("Validation failed:");
+foreach (var error in validationErrors)
+{
+Console.WriteLine($"- {error}");
+}
 }
 else
 {
-    Console.WriteLine("Streaming service is valid!");
+Console.WriteLine("Streaming service is valid!");
 }
 
 // Quick validation check
@@ -171,12 +181,12 @@ Console.WriteLine($"Is valid: {isValid}");
 // Ensure validation (throws if invalid)
 try
 {
-    streamingService.EnsureValid();
-    Console.WriteLine("Streaming service passed validation");
+streamingService.EnsureValid();
+Console.WriteLine("Streaming service passed validation");
 }
 catch (ArgumentException ex)
 {
-    Console.WriteLine($"Validation failed: {ex.Message}");
+Console.WriteLine($"Validation failed: {ex.Message}");
 }
 ```
 
@@ -201,11 +211,11 @@ Console.WriteLine($"Restored date: {restoredDate}");
 // Try to deserialize with error handling
 if (json.TryFromJson(out var safeDate))
 {
-    Console.WriteLine($"Successfully deserialized: {safeDate}");
+Console.WriteLine($"Successfully deserialized: {safeDate}");
 }
 else
 {
-    Console.WriteLine("Failed to deserialize date");
+Console.WriteLine("Failed to deserialize date");
 }
 
 // Serialize nullable DateTime
@@ -226,39 +236,39 @@ var registry = new ServiceRegistryTests().CreateTestRegistry();
 
 // Create and register a test service
 var service = new ServiceRegistryTests().CreateAndRegisterTestService(
-    "TestService",
-    "TestPackage");
+"TestService",
+"TestPackage");
 
 // Create and register multiple test services
 var services = new ServiceRegistryTests().CreateAndRegisterTestServices(
-    3,
-    "MyPackage");
+3,
+"MyPackage");
 
 // Check if a service exists
 bool exists = new ServiceRegistryTests().ServiceExists(
-    registry,
-    "TestPackage.TestService");
+registry,
+"TestPackage.TestService");
 
 // Get a service or throw if not found
 var foundService = new ServiceRegistryTests().GetServiceOrThrow(
-    registry,
-    "TestPackage.TestService");
+registry,
+"TestPackage.TestService");
 
 // Update service status and get the updated service
 var updatedService = new ServiceRegistryTests().UpdateAndGetServiceStatus(
-    registry,
-    "TestPackage.TestService",
-    ServiceStatus.Maintenance);
+registry,
+"TestPackage.TestService",
+ServiceStatus.Maintenance);
 
 // Get service health status
 var healthStatus = new ServiceRegistryTests().GetServiceHealthStatus(
-    registry,
-    "TestPackage.TestService");
+registry,
+"TestPackage.TestService");
 
 // List all services by package
 var packageServices = new ServiceRegistryTests().ListServicesByPackage(
-    registry,
-    "MyPackage");
+registry,
+"MyPackage");
 ```
 
 ## ReflectionServiceTestsExtensions
@@ -276,8 +286,8 @@ var testService = ReflectionServiceTestsExtensions.CreateAndRegisterTestService(
 
 // Create a test service with specific methods
 var serviceWithMethods = ReflectionServiceTestsExtensions.CreateTestServiceWithMethods(
-    "TestService",
-    new[] { "Method1", "Method2" });
+"TestService",
+new[] { "Method1", "Method2" });
 
 // Check if a service is registered
 bool isRegistered = ReflectionServiceTestsExtensions.IsServiceRegistered("TestService");
