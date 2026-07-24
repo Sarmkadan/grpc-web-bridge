@@ -84,61 +84,128 @@ public static class HealthEndpoints
         .WithName("Standard Health Check")
         .WithOpenApi();
 
-        // Detailed health check endpoint (backward compatibility)
-        app.MapGet("/health/detailed", async (
-            ServiceRegistry registry,
-            StreamingService streaming) =>
+        // Configuration for detailed health endpoint authentication
+        var healthConfig = app.Services.GetRequiredService<GrpcWebBridge.Configuration.GrpcWebBridgeOptions>();
+        var requireAuthForDetailedHealth = healthConfig.Configuration.RequireAuthenticationForDetailedHealth;
+
+        // Detailed health check endpoint with optional authentication
+        if (requireAuthForDetailedHealth)
         {
-            var uptime = DateTime.UtcNow - _startupTime;
-
-            var response = new DetailedHealthResponse
+            // Authenticated detailed health check endpoint
+            app.MapGet("/health/detailed", async (
+                ServiceRegistry registry,
+                StreamingService streaming) =>
             {
-                status = "healthy",
-                timestamp = DateTime.UtcNow,
-                uptime = uptime.ToString("c"),
-                uptime_seconds = (int)uptime.TotalSeconds,
-                services = new ServiceHealthSummary
-                {
-                    registered_count = registry.RegisteredServiceCount,
-                    health_status = GetOverallServiceHealth(registry),
-                    services = registry.ListServices().Select(s => new ServiceHealthItem
-                    {
-                        id = s.Id,
-                        name = s.Name,
-                        full_name = s.FullName,
-                        endpoint = s.Endpoint,
-                        port = s.Port,
-                        status = s.Status.ToString(),
-                        health_status = registry.GetHealthStatus(s.FullName).ToString(),
-                        method_count = s.Methods.Count,
-                        created_at = s.CreatedAt,
-                        updated_at = s.UpdatedAt ?? s.CreatedAt
-                    }).ToList()
-                },
-                workers = new WorkerStatusSummary
-                {
-                    streaming_service = new StreamingWorkerStatus
-                    {
-                        active_stream_count = streaming.ActiveStreamCount,
-                        max_stream_count = Constants.Streaming.MaxStreamCount,
-                        stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
-                        status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
-                    }
-                },
-                system = new SystemStatus
-                {
-                    environment = app.Environment.EnvironmentName,
-                    application_name = app.Environment.ApplicationName,
-                    version = "1.0.0",
-                    timestamp = DateTime.UtcNow
-                }
-            };
+                var uptime = DateTime.UtcNow - _startupTime;
 
-            return Results.Ok(response);
-        })
-        .WithName("Detailed Health Check")
-        .Produces<DetailedHealthResponse>(200, "application/json")
-        .WithOpenApi();
+                var response = new DetailedHealthResponse
+                {
+                    status = "healthy",
+                    timestamp = DateTime.UtcNow,
+                    uptime = uptime.ToString("c"),
+                    uptime_seconds = (int)uptime.TotalSeconds,
+                    services = new ServiceHealthSummary
+                    {
+                        registered_count = registry.RegisteredServiceCount,
+                        health_status = GetOverallServiceHealth(registry),
+                        services = registry.ListServices().Select(s => new ServiceHealthItem
+                        {
+                            id = s.Id,
+                            name = s.Name,
+                            full_name = s.FullName,
+                            endpoint = s.Endpoint,
+                            port = s.Port,
+                            status = s.Status.ToString(),
+                            health_status = registry.GetHealthStatus(s.FullName).ToString(),
+                            method_count = s.Methods.Count,
+                            created_at = s.CreatedAt,
+                            updated_at = s.UpdatedAt ?? s.CreatedAt
+                        }).ToList()
+                    },
+                    workers = new WorkerStatusSummary
+                    {
+                        streaming_service = new StreamingWorkerStatus
+                        {
+                            active_stream_count = streaming.ActiveStreamCount,
+                            max_stream_count = Constants.Streaming.MaxStreamCount,
+                            stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
+                            status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
+                        }
+                    },
+                    system = new SystemStatus
+                    {
+                        environment = app.Environment.EnvironmentName,
+                        application_name = app.Environment.ApplicationName,
+                        version = "1.0.0",
+                        timestamp = DateTime.UtcNow
+                    }
+                };
+
+                return Results.Ok(response);
+            })
+            .RequireAuthorization()
+            .WithName("Authenticated Detailed Health Check")
+            .Produces<DetailedHealthResponse>(200, "application/json")
+            .WithOpenApi();
+        }
+        else
+        {
+            // Unauthenticated detailed health check endpoint (backward compatibility)
+            app.MapGet("/health/detailed", async (
+                ServiceRegistry registry,
+                StreamingService streaming) =>
+            {
+                var uptime = DateTime.UtcNow - _startupTime;
+
+                var response = new DetailedHealthResponse
+                {
+                    status = "healthy",
+                    timestamp = DateTime.UtcNow,
+                    uptime = uptime.ToString("c"),
+                    uptime_seconds = (int)uptime.TotalSeconds,
+                    services = new ServiceHealthSummary
+                    {
+                        registered_count = registry.RegisteredServiceCount,
+                        health_status = GetOverallServiceHealth(registry),
+                        services = registry.ListServices().Select(s => new ServiceHealthItem
+                        {
+                            id = s.Id,
+                            name = s.Name,
+                            full_name = s.FullName,
+                            endpoint = s.Endpoint,
+                            port = s.Port,
+                            status = s.Status.ToString(),
+                            health_status = registry.GetHealthStatus(s.FullName).ToString(),
+                            method_count = s.Methods.Count,
+                            created_at = s.CreatedAt,
+                            updated_at = s.UpdatedAt ?? s.CreatedAt
+                        }).ToList()
+                    },
+                    workers = new WorkerStatusSummary
+                    {
+                        streaming_service = new StreamingWorkerStatus
+                        {
+                            active_stream_count = streaming.ActiveStreamCount,
+                            max_stream_count = Constants.Streaming.MaxStreamCount,
+                            stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
+                            status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
+                        }
+                    },
+                    system = new SystemStatus
+                    {
+                        environment = app.Environment.EnvironmentName,
+                        application_name = app.Environment.ApplicationName,
+                        version = "1.0.0",
+                        timestamp = DateTime.UtcNow
+                    }
+                };
+
+                return Results.Ok(response);
+            })
+            .WithName("Detailed Health Check")
+            .Produces<DetailedHealthResponse>(200, "application/json")
+            .WithOpenApi();
+        }
 
         // Registry snapshot endpoint
         app.MapGet("/health/registry", (ServiceRegistry registry) =>
@@ -150,7 +217,7 @@ public static class HealthEndpoints
                 total_service_count = snapshot.TotalServiceCount,
                 registered_services = snapshot.ServiceRegistrationTimestamps.Count,
                 service_registration_timestamps = snapshot.ServiceRegistrationTimestamps
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString("o")),
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString("o")),
                 timestamp = DateTime.UtcNow
             };
 

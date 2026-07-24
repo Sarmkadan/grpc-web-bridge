@@ -19,6 +19,11 @@ public sealed class BridgeConfiguration
     public bool EnableMetrics { get; set; } = true;
     public bool EnableCors { get; set; } = true;
     public bool RequireAuthentication { get; set; }
+
+/// <summary>
+/// Gets or sets whether detailed health checks require authentication
+/// </summary>
+public bool RequireAuthenticationForDetailedHealth { get; set; }
     public int MaxStreamCount { get; set; } = Constants.Streaming.MaxStreamCount;
     public int StreamIdleTimeoutSeconds { get; set; } = Constants.Streaming.StreamIdleTimeoutSeconds;
     public int StreamHeartbeatIntervalSeconds { get; set; } = Constants.Streaming.StreamHeartbeatIntervalSeconds;
