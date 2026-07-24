@@ -1,0 +1,7 @@
+public MethodParameter(string name, string typeName, int fieldNumber, bool isRequired = true)
+{
+    Name = ValidateName(name);
+    TypeName = ValidateTypeName(typeName);
+    FieldNumber = ValidateFieldNumber(fieldNumber);
+    IsRequired = isRequired;
+}
