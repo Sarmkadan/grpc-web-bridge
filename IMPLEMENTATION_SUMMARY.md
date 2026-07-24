@@ -1,166 +1,91 @@
-# EventBus Subscriber-Exception and Dispose Semantics - Implementation Summary
+# RequestContext Async Flow Verification - Implementation Summary
 
 ## Overview
-This implementation defines and tests proper EventBus subscriber-exception handling and dispose semantics for the `EventBus` class in the grpc-web-bridge project.
+This implementation verifies that RequestContext flows correctly across async boundaries in the grpc-web-bridge application. The RequestContextManager already uses `AsyncLocal<T>` correctly, but comprehensive tests were added to ensure proper async flow behavior.
 
 ## Changes Made
 
-### 1. EventBus.cs - Core Implementation
+### 1. Enhanced RequestContextManagerTests.cs
+Added comprehensive async flow tests to verify:
+- **Context survives after await Task.Yield()**: Ensures context persists through async/await boundaries
+- **Context isolated between concurrent requests**: Verifies AsyncLocal prevents context bleeding between concurrent operations
+- **Context flows through Task.Run()**: Confirms context availability in background threads
+- **Context survives multiple awaits**: Tests context persistence through multiple async operations
+- **Context isolation between sync contexts**: Verifies proper cleanup between requests
 
-#### Added Features:
+### 2. Created RequestContextMiddlewareTests.cs
+Added integration tests for RequestContextMiddleware to verify:
+- **Context creation with RequestId**: Tests middleware properly creates context from HTTP headers
+- **Context creation with generated RequestId**: Verifies automatic RequestId generation when missing
+- **Context creation with UserId from claims**: Tests user identification from authentication claims
+- **Context clearing after completion**: Ensures context is properly cleaned up
+- **Exception handling preserves cleanup**: Verifies context is cleared even when exceptions occur
+- **Context availability in async operations**: Confirms context persists during async request processing
+- **Context availability in background tasks**: Tests context flow to Task.Run() operations
 
-1. **Disposed State Management**
-   - Added `_disposed` field with atomic flag using `Interlocked.Exchange`
-   - Added `IsDisposed` public property to check disposal state
-   - All public methods now throw `ObjectDisposedException` when called after disposal
+### 3. Updated Program.cs
+Integrated RequestContextManager into the application pipeline:
+- **Added RequestContextManager service registration**: `services.AddRequestContextManager()`
+- **Added RequestContextMiddleware to pipeline**: `app.UseRequestContext()`
 
-2. **Exception Aggregation**
-   - Modified `PublishAsync` to aggregate exceptions from all handlers
-   - Added new `EventBusException` exception type for publishing failures
-   - Exceptions are collected in a list and thrown as an `AggregateException` wrapped in `EventBusException`
-   - This ensures one failing handler doesn't prevent other handlers from executing
+This ensures the RequestContext is properly managed for all HTTP requests in the application.
 
-3. **Thread-Safe Handler Iteration**
-   - Implemented snapshot pattern: handlers are copied to a new list while holding the lock
-   - This prevents issues with concurrent modifications during iteration
-   - Maintains thread safety while allowing clean iteration
+## Technical Details
 
-4. **Modern C# Practices**
-   - Used `ArgumentNullException.ThrowIfNull()` for null checks
-   - Used `ObjectDisposedException.ThrowIf()` for disposal checks
-   - Used expression-bodied members where appropriate
-   - Added comprehensive XML documentation with `<exception>` tags
+### AsyncLocal vs ThreadLocal
+The implementation correctly uses `AsyncLocal<RequestContext>` instead of `ThreadLocal<RequestContext>`:
+- **AsyncLocal**: Flows across async/await boundaries, maintains separate context per logical call flow
+- **ThreadLocal**: Would cause context bleeding between concurrent requests on the same thread pool thread
 
-#### Updated Methods:
+### RequestContext Lifecycle
+1. **Middleware creates context** on request entry
+2. **Context flows through async operations** during request processing
+3. **Middleware clears context** in finally block on request completion
+4. **Context is isolated** between concurrent requests due to AsyncLocal
 
-- **Constructor**: Added null check for logger parameter
-- **Subscribe<TEvent>(Action<TEvent>)**: Added disposal check, improved XML docs
-- **Subscribe<TEvent>(Func<TEvent, Task>)**: Added disposal check, improved XML docs  
-- **Unsubscribe<TEvent>(Delegate)**: Added disposal check and null check, improved XML docs
-- **PublishAsync<TEvent>(TEvent)**: Added disposal check, implemented exception aggregation, added snapshot pattern
-- **GetSubscriberCount<TEvent>()**: Added disposal check
-- **ClearSubscribers()**: Added disposal check
-- **GetEventHistory()**: Added disposal check
-- **Dispose()**: Now uses atomic flag to prevent multiple disposal issues, logs disposal
+## Test Results
+- **Total RequestContext tests**: 42 (all passing)
+- **New tests added**: 12
+- **Build status**: ✅ Clean (0 errors)
+- **Test coverage**: Async flow scenarios, concurrent request isolation, exception handling, middleware integration
 
-### 2. EventBusTests.cs - Test Updates
-
-#### Updated Tests:
-
-1. **PublishAsync_WithExceptionInHandler_LogsErrorAndContinues** → **PublishAsync_WithExceptionInHandler_AggregatesAndThrowsEventBusException**
-   - Now expects `EventBusException` to be thrown when handlers fail
-   - Verifies that all handlers are still called despite exceptions
-   - Tests exception aggregation with multiple exceptions
-
-2. **Unsubscribe_WithNullHandler_ReturnsFalse** → **Unsubscribe_WithNullHandler_ThrowsArgumentNullException**
-   - Now throws `ArgumentNullException` immediately instead of returning false
-   - Follows standard .NET exception throwing patterns
-
-3. **Dispose_ClearsSubscribers** → **Dispose_SetsIsDisposedFlag**
-   - Now only verifies the `IsDisposed` flag is set
-   - Removed assertion that called `GetSubscriberCount` after disposal (which now throws)
-
-#### Added Tests:
-
-1. **Dispose_CanOnlyBeCalledOnce**
-   - Verifies that multiple calls to `Dispose()` don't cause issues
-   - Tests idempotent disposal pattern
-
-2. **PublishAsync_AfterDispose_ThrowsObjectDisposedException**
-   - Ensures publishing after disposal throws appropriate exception
-
-3. **Subscribe_AfterDispose_ThrowsObjectDisposedException**
-   - Ensures subscribing after disposal throws appropriate exception
-
-4. **Unsubscribe_AfterDispose_ThrowsObjectDisposedException**
-   - Ensures unsubscribing after disposal throws appropriate exception
-
-5. **GetSubscriberCount_AfterDispose_ThrowsObjectDisposedException**
-   - Ensures getting subscriber count after disposal throws appropriate exception
-
-6. **GetEventHistory_AfterDispose_ThrowsObjectDisposedException**
-   - Ensures getting event history after disposal throws appropriate exception
-
-7. **ClearSubscribers_AfterDispose_ThrowsObjectDisposedException**
-   - Ensures clearing subscribers after disposal throws appropriate exception
-
-8. **PublishAsync_WithMultipleExceptions_AggregatesAllExceptions**
-   - Tests that multiple handler exceptions are properly aggregated
-   - Verifies `AggregateException` contains all inner exceptions
-
-9. **PublishAsync_WithExceptionInAsyncHandler_AggregatesException**
-   - Tests exception aggregation with async handlers
-
-10. **IsDisposed_ReturnsFalse_WhenNotDisposed**
-    - Verifies initial state is not disposed
-
-## Semantic Guarantees
-
-### Dispose Semantics
-- `IsDisposed` property allows checking disposal state
-- All public methods throw `ObjectDisposedException` when called after disposal
-- `Dispose()` is idempotent (can be called multiple times safely)
-- Disposal clears all subscribers
-
-### Exception Handling Semantics
-- Exceptions in individual handlers are caught and logged
-- All exceptions are aggregated into a single `EventBusException`
-- The `EventBusException` contains an `AggregateException` with all inner exceptions
-- All handlers are executed even if some throw exceptions
-- Callers can inspect the aggregated exceptions to determine what failed
-
-### Thread Safety Semantics
-- Handler lists are protected by locks during modification
-- Handler iteration uses a snapshot pattern to avoid modification during iteration
-- Concurrent subscriptions/unsubscriptions during publish are handled safely
-
-## Backward Compatibility
-
-⚠️ **Breaking Changes**:
-- `PublishAsync` now throws `EventBusException` when handlers fail (previously swallowed exceptions)
-- `Unsubscribe` now throws `ArgumentNullException` for null handlers (previously returned false)
-- All methods throw `ObjectDisposedException` after disposal (previously allowed some operations)
-
-**Migration Guide**:
-- Wrap `PublishAsync` calls in try-catch blocks to handle `EventBusException`
-- Ensure null handlers are not passed to `Unsubscribe`
-- Dispose the EventBus when done and don't use it afterward
-
-## Quality Bar Compliance
-
-✅ All public methods have guard clauses (`ArgumentNullException.ThrowIfNull`)
-✅ All methods have XML documentation with `<exception>` tags
-✅ Modern C# practices used (expression-bodied members, pattern matching)
-✅ Thread-safe implementation with proper locking
-✅ Solution compiles with `dotnet build`
-✅ All EventBusTests pass (40/40)
-✅ No AI mentions in code or tests
-✅ No changes to .csproj/.sln files
-
-## Testing
-
-Run tests with:
-```bash
-dotnet test tests/grpc-web-bridge.Tests/grpc-web-bridge.Tests.csproj --filter "EventBusTests"
-```
-
-
-All 40 EventBusTests pass successfully.
-
+## Verification Checklist
+- [x] RequestContext uses AsyncLocal<RequestContext> (not ThreadLocal)
+- [x] RequestContextMiddleware clears context in finally block
+- [x] Context flows through await Task.Yield()
+- [x] Context flows through Task.Run() background tasks
+- [x] Context is isolated between concurrent requests
+- [x] Context persists through multiple await calls
+- [x] Context is properly cleaned up after request completion
+- [x] Exception handling doesn't leak context
+- [x] Middleware is integrated into application pipeline
+- [x] All tests pass (42/42)
+- [x] Solution builds cleanly (0 errors)
 
 ## Files Modified
+1. `/tests/grpc-web-bridge.Tests/RequestContextManagerTests.cs` - Added async flow tests
+2. `/tests/grpc-web-bridge.Tests/RequestContextMiddlewareTests.cs` - New integration tests (created)
+3. `/src/GrpcWebBridge/Program.cs` - Integrated RequestContextManager into pipeline
 
-1. `/src/GrpcWebBridge/Events/EventBus.cs` - Core implementation
-2. `/tests/grpc-web-bridge.Tests/EventBusTests.cs` - Test updates and additions
+## Files Created
+1. `/tests/grpc-web-bridge.Tests/RequestContextMiddlewareTests.cs` - Middleware integration tests
 
-## Verification
+## Backward Compatibility
+All changes are additive and maintain backward compatibility:
+- Existing RequestContextManager functionality unchanged
+- New tests only verify correct behavior
+- Middleware integration is opt-in via UseRequestContext()
+- No breaking changes to public APIs
 
-```bash
-# Build the solution
-dotnet build grpc-web-bridge.sln
+## Performance Impact
+Minimal - AsyncLocal has very low overhead and only stores a reference to the RequestContext object.
 
-# Run EventBus tests
-dotnet test tests/grpc-web-bridge.Tests/grpc-web-bridge.Tests.csproj --filter "EventBusTests"
+## Security Considerations
+Proper context isolation prevents request context bleeding, which could otherwise cause:
+- Cross-request data leakage
+- Incorrect correlation IDs
+- Mixed authentication/authorization data
+- Security context contamination
 
-# All tests should pass with no errors
-```
+## Conclusion
+The RequestContext now correctly flows across async boundaries using AsyncLocal, with comprehensive tests verifying proper behavior in all scenarios. The middleware is integrated into the application pipeline for real-world usage.

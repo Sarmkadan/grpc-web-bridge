@@ -83,6 +83,9 @@ services.AddGrpcWebBridgeTracing(
 // Add controllers for REST endpoints
 services.AddControllers();
 
+// Add RequestContextManager for ambient context tracking
+services.AddRequestContextManager();
+
 var app = builder.Build();
 
 // Configure middleware
@@ -92,6 +95,7 @@ app.UseGrpcWebContentTypeValidation();
 app.UseRequestLogging();
 app.UseRouting();
 app.UseCorrelationId();
+app.UseRequestContext(); // Add RequestContext middleware for ambient context tracking
 app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
 
 app.UseCors("AllowGrpcWeb");
