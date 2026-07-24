@@ -50,6 +50,7 @@ services.AddCorrelationIdManager();
 
         // Register hosted services for background tasks
         services.AddHostedService<StreamCleanupService>();
+services.AddHostedService<StreamingWorkerSupervisor>();
 
         return services;
     }
