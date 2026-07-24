@@ -19,9 +19,17 @@ public sealed class EventBus : IDisposable
     private readonly ILogger<EventBus> _logger;
     private readonly ConcurrentBag<EventRecord> _eventHistory;
     private readonly int _maxHistorySize;
+    private int _disposed;
+
+    /// <summary>
+    /// Gets a value indicating whether this instance has been disposed.
+    /// </summary>
+    public bool IsDisposed => _disposed == 1;
 
     public EventBus(ILogger<EventBus> logger, int maxHistorySize = 1000)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+
         _subscribers = new ConcurrentDictionary<string, List<Delegate>>();
         _logger = logger;
         _eventHistory = new ConcurrentBag<EventRecord>();
@@ -31,10 +39,14 @@ public sealed class EventBus : IDisposable
     /// <summary>
     /// Subscribes to an event with a synchronous handler.
     /// </summary>
+    /// <typeparam name="TEvent">The event type to subscribe to.</typeparam>
+    /// <param name="handler">The synchronous handler to invoke when the event is published.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">The event bus has been disposed.</exception>
     public void Subscribe<TEvent>(Action<TEvent> handler) where TEvent : EventBase
     {
-        if (handler is null)
-            throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         var eventName = typeof(TEvent).Name;
         var handlers = _subscribers.GetOrAdd(eventName, _ => new List<Delegate>());
@@ -50,10 +62,14 @@ public sealed class EventBus : IDisposable
     /// <summary>
     /// Subscribes to an event with an asynchronous handler.
     /// </summary>
+    /// <typeparam name="TEvent">The event type to subscribe to.</typeparam>
+    /// <param name="handler">The asynchronous handler to invoke when the event is published.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">The event bus has been disposed.</exception>
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : EventBase
     {
-        if (handler is null)
-            throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         var eventName = typeof(TEvent).Name;
         var handlers = _subscribers.GetOrAdd(eventName, _ => new List<Delegate>());
@@ -69,20 +85,29 @@ public sealed class EventBus : IDisposable
     /// <summary>
     /// Unsubscribes from an event.
     /// </summary>
+    /// <typeparam name="TEvent">The event type to unsubscribe from.</typeparam>
+    /// <param name="handler">The handler to remove.</param>
+    /// <returns><see langword="true"/> if the handler was found and removed; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">The event bus has been disposed.</exception>
     public bool Unsubscribe<TEvent>(Delegate handler) where TEvent : EventBase
     {
-        if (handler is null)
-            return false;
+        ArgumentNullException.ThrowIfNull(handler);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         var eventName = typeof(TEvent).Name;
         if (!_subscribers.TryGetValue(eventName, out var handlers))
+        {
             return false;
+        }
 
         lock (handlers)
         {
             var removed = handlers.Remove(handler);
             if (removed)
+            {
                 _logger.LogDebug("Unsubscribed from event: EventType={EventType}", eventName);
+            }
             return removed;
         }
     }
@@ -91,10 +116,15 @@ public sealed class EventBus : IDisposable
     /// Publishes an event synchronously.
     /// All subscribers are notified immediately.
     /// </summary>
+    /// <typeparam name="TEvent">The event type to publish.</typeparam>
+    /// <param name="event">The event to publish.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="event"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">The event bus has been disposed.</exception>
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : EventBase
     {
-        if (@event is null)
-            throw new ArgumentNullException(nameof(@event));
+        ArgumentNullException.ThrowIfNull(@event);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         var eventName = typeof(TEvent).Name;
         RecordEvent(@event);
@@ -105,33 +135,40 @@ public sealed class EventBus : IDisposable
             return;
         }
 
-        var tasks = new List<Task>();
-
+        // Take a snapshot of handlers to avoid issues with concurrent modifications during iteration
+        List<Delegate>? handlerSnapshot = null;
         lock (handlers)
         {
-            foreach (var handler in handlers)
+            handlerSnapshot = new List<Delegate>(handlers);
+        }
+
+        var exceptions = new List<Exception>();
+
+        foreach (var handler in handlerSnapshot)
+        {
+            try
             {
-                try
+                switch (handler)
                 {
-                    if (handler is Action<TEvent> syncHandler)
-                    {
+                    case Action<TEvent> syncHandler:
                         syncHandler(@event);
-                    }
-                    else if (handler is Func<TEvent, Task> asyncHandler)
-                    {
-                        tasks.Add(asyncHandler(@event));
-                    }
+                        break;
+                    case Func<TEvent, Task> asyncHandler:
+                        await asyncHandler(@event).ConfigureAwait(false);
+                        break;
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error executing event handler: EventType={EventType}", eventName);
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing event handler: EventType={EventType}", eventName);
+                exceptions.Add(ex);
             }
         }
 
-        if (tasks.Count > 0)
+        // If any exceptions occurred, aggregate them into a single exception
+        if (exceptions.Count > 0)
         {
-            await Task.WhenAll(tasks).ConfigureAwait(false);
+            throw new EventBusException($"One or more event handlers failed for event type {eventName}", new AggregateException(exceptions));
         }
 
         _logger.LogInformation("Published event: EventType={EventType}, SubscriberCount={Count}", eventName, handlers.Count);
@@ -140,8 +177,12 @@ public sealed class EventBus : IDisposable
     /// <summary>
     /// Gets the number of subscribers for an event type.
     /// </summary>
+    /// <typeparam name="TEvent">The event type to check.</typeparam>
+    /// <returns>The number of subscribers for the specified event type.</returns>
     public int GetSubscriberCount<TEvent>() where TEvent : EventBase
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+
         var eventName = typeof(TEvent).Name;
         return _subscribers.TryGetValue(eventName, out var handlers) ? handlers.Count : 0;
     }
@@ -149,12 +190,19 @@ public sealed class EventBus : IDisposable
     /// <summary>
     /// Gets event history for auditing and debugging.
     /// </summary>
+    /// <param name="eventType">Optional event type filter.</param>
+    /// <returns>A list of event records.</returns>
+    /// <exception cref="ObjectDisposedException">The event bus has been disposed.</exception>
     public List<EventRecord> GetEventHistory(string? eventType = null)
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+
         var history = _eventHistory.ToList();
 
         if (!string.IsNullOrEmpty(eventType))
+        {
             history = history.Where(h => h.EventType == eventType).ToList();
+        }
 
         return history.OrderByDescending(h => h.PublishedAt).ToList();
     }
@@ -163,8 +211,11 @@ public sealed class EventBus : IDisposable
     /// Clears all subscribers.
     /// Useful for testing and cleanup.
     /// </summary>
+    /// <exception cref="ObjectDisposedException">The event bus has been disposed.</exception>
     public void ClearSubscribers()
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+
         _subscribers.Clear();
         _logger.LogInformation("All event subscribers cleared");
     }
@@ -201,7 +252,11 @@ public sealed class EventBus : IDisposable
 
     public void Dispose()
     {
-        _subscribers?.Clear();
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
+        {
+            _subscribers.Clear();
+            _logger.LogInformation("EventBus disposed");
+        }
     }
 }
 
@@ -225,6 +280,17 @@ public sealed class EventRecord
     public string EventId { get; set; } = string.Empty;
     public DateTime PublishedAt { get; set; }
     public object? Data { get; set; }
+}
+
+/// <summary>
+/// Exception thrown when event bus operations fail.
+/// </summary>
+public sealed class EventBusException : Exception
+{
+    public EventBusException(string message, Exception? innerException = null)
+        : base(message, innerException)
+    {
+    }
 }
 
 // Concrete event types for the bridge
