@@ -27,6 +27,101 @@ public sealed class RequestContextManager : IDisposable
     }
 
     /// <summary>
+    /// Sanitizes a metadata key by removing control characters and validating length.
+    /// </summary>
+    /// <param name="key">The metadata key to sanitize.</param>
+    /// <returns>The sanitized key, or null if invalid.</returns>
+    private string? SanitizeMetadataKey(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return null;
+
+        // Remove control characters (0x00-0x1F, 0x7F-0x9F)
+        var sanitized = new char[key.Length];
+        var length = 0;
+        for (var i = 0; i < key.Length; i++)
+        {
+            var c = key[i];
+            if (c >= ' ' && c <= '~') // Printable ASCII
+            {
+                sanitized[length++] = c;
+            }
+        }
+
+        var result = new string(sanitized, 0, length);
+
+        // Validate length
+        if (result.Length > RequestContext.MaxMetadataKeyLength)
+        {
+            _logger.LogWarning("Metadata key '{OriginalKey}' exceeds maximum length of {MaxLength} characters",
+                key, RequestContext.MaxMetadataKeyLength);
+            return null;
+        }
+
+        return result.Length == 0 ? null : result;
+    }
+
+    /// <summary>
+    /// Sanitizes a metadata value by removing control characters, newlines, and validating length.
+    /// </summary>
+    /// <param name="value">The metadata value to sanitize.</param>
+    /// <param name="truncated">Receives true if the value was truncated.</param>
+    /// <returns>The sanitized value, or null if invalid.</returns>
+    private string? SanitizeMetadataValue(string value, out bool truncated)
+    {
+        truncated = false;
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        // Remove control characters and newlines to prevent log injection
+        var sanitized = new char[value.Length];
+        var length = 0;
+        var wasTruncated = false;
+
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+
+            // Allow printable ASCII and common Unicode characters, but remove control characters
+            if (c >= ' ' && c <= '~')
+            {
+                sanitized[length++] = c;
+            }
+            else if (c > '~') // Extended Unicode characters
+            {
+                // Keep extended characters but ensure we don't exceed limits
+                if (length < RequestContext.MaxMetadataValueLength)
+                {
+                    sanitized[length++] = c;
+                }
+                else
+                {
+                    wasTruncated = true;
+                }
+            }
+            // Control characters (0x00-0x1F, 0x7F-0x9F) are removed
+        }
+
+        var result = new string(sanitized, 0, length);
+
+        // Check if we exceeded the limit
+        if (result.Length > RequestContext.MaxMetadataValueLength)
+        {
+            result = result[..RequestContext.MaxMetadataValueLength];
+            wasTruncated = true;
+            truncated = true;
+        }
+
+        if (wasTruncated)
+        {
+            _logger.LogWarning("Metadata value exceeds maximum length of {MaxLength} characters and was truncated",
+                RequestContext.MaxMetadataValueLength);
+        }
+
+        return result.Length == 0 ? null : result;
+    }
+
+    /// <summary>
     /// Creates and sets a new request context.
     /// </summary>
     /// <param name="requestId">The request identifier.</param>
@@ -41,12 +136,58 @@ public sealed class RequestContextManager : IDisposable
     {
         ArgumentException.ThrowIfNullOrEmpty(requestId);
 
+        // Validate and sanitize initial metadata
+        var validatedMetadata = new Dictionary<string, string>(StringComparer.Ordinal);
+        var totalSize = 0;
+        var entryCount = 0;
+
+        if (metadata != null)
+        {
+            foreach (var kvp in metadata)
+            {
+                if (string.IsNullOrEmpty(kvp.Key))
+                    continue;
+
+                var sanitizedKey = SanitizeMetadataKey(kvp.Key);
+                if (sanitizedKey is null)
+                {
+                    _logger.LogWarning("Initial metadata key '{Key}' was rejected during context creation", kvp.Key);
+                    continue;
+                }
+
+                var sanitizedValue = SanitizeMetadataValue(kvp.Value, out var wasTruncated);
+                if (sanitizedValue is null)
+                {
+                    _logger.LogWarning("Initial metadata value for key '{Key}' was rejected during context creation", kvp.Key);
+                    continue;
+                }
+
+                var entrySize = sanitizedKey.Length + sanitizedValue.Length;
+                if (totalSize + entrySize > RequestContext.MaxTotalMetadataSize)
+                {
+                    _logger.LogWarning("Initial metadata entry '{Key}' exceeds total size limit and was skipped", sanitizedKey);
+                    continue;
+                }
+
+                if (entryCount >= RequestContext.MaxMetadataEntries)
+                {
+                    _logger.LogWarning("Maximum metadata entry count reached during context creation, entry '{Key}' was skipped",
+                        sanitizedKey);
+                    break;
+                }
+
+                validatedMetadata[sanitizedKey] = sanitizedValue;
+                totalSize += entrySize;
+                entryCount++;
+            }
+        }
+
         var context = new RequestContext
         {
             RequestId = requestId,
             UserId = userId,
             StartTime = DateTime.UtcNow,
-            Metadata = metadata ?? new Dictionary<string, string>()
+            Metadata = validatedMetadata
         };
 
         _context.Value = context;
@@ -56,8 +197,8 @@ public sealed class RequestContextManager : IDisposable
             _activeContexts[requestId] = context;
         }
 
-        _logger.LogDebug("Request context created: RequestId={RequestId}, UserId={UserId}",
-            requestId, userId ?? "anonymous");
+        _logger.LogDebug("Request context created: RequestId={RequestId}, UserId={UserId}, MetadataEntries={EntryCount}",
+            requestId, userId ?? "anonymous", entryCount);
 
         return context;
     }
@@ -90,6 +231,10 @@ public sealed class RequestContextManager : IDisposable
     /// <summary>
     /// Sets metadata for the current request.
     /// </summary>
+    /// <param name="key">The metadata key.</param>
+    /// <param name="value">The metadata value.</param>
+    /// <exception cref="ArgumentNullException">Thrown when key is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when key is empty or contains only whitespace.</exception>
     public void SetMetadata(string key, string value)
     {
         if (_context.Value is null)
@@ -98,7 +243,53 @@ public sealed class RequestContextManager : IDisposable
             return;
         }
 
-        _context.Value.Metadata[key] = value;
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        // Sanitize the key and value
+        var sanitizedKey = SanitizeMetadataKey(key);
+        if (sanitizedKey is null)
+        {
+            _logger.LogWarning("Metadata key '{Key}' was rejected due to validation", key);
+            return;
+        }
+
+        var sanitizedValue = SanitizeMetadataValue(value, out var wasTruncated);
+        if (sanitizedValue is null)
+        {
+            _logger.LogWarning("Metadata value for key '{Key}' was rejected due to validation", key);
+            return;
+        }
+
+        // Check total metadata size limit
+        var currentSize = _context.Value.Metadata.Sum(kvp => kvp.Key.Length + kvp.Value.Length);
+        var newEntrySize = sanitizedKey.Length + sanitizedValue.Length;
+
+        if (currentSize + newEntrySize > RequestContext.MaxTotalMetadataSize)
+        {
+            _logger.LogWarning("Adding metadata entry would exceed total size limit of {MaxTotalSize} bytes",
+                RequestContext.MaxTotalMetadataSize);
+            return;
+        }
+
+        // Check maximum number of entries
+        if (_context.Value.Metadata.Count >= RequestContext.MaxMetadataEntries)
+        {
+            _logger.LogWarning("Cannot add metadata entry: maximum of {MaxEntries} entries already reached",
+                RequestContext.MaxMetadataEntries);
+            return;
+        }
+
+        _context.Value.Metadata[sanitizedKey] = sanitizedValue;
+
+        if (wasTruncated)
+        {
+            _logger.LogDebug("Metadata entry added with truncated value for key '{Key}'", sanitizedKey);
+        }
+        else
+        {
+            _logger.LogTrace("Metadata entry added: key='{Key}', value length={ValueLength}",
+                sanitizedKey, sanitizedValue.Length);
+        }
     }
 
     /// <summary>
@@ -216,6 +407,26 @@ public sealed class RequestContextManager : IDisposable
 /// </summary>
 public sealed class RequestContext
 {
+    /// <summary>
+    /// Maximum allowed length for any metadata key in bytes.
+    /// </summary>
+    public const int MaxMetadataKeyLength = 128;
+
+    /// <summary>
+    /// Maximum allowed length for any metadata value in bytes.
+    /// </summary>
+    public const int MaxMetadataValueLength = 4096;
+
+    /// <summary>
+    /// Maximum allowed number of metadata entries per request.
+    /// </summary>
+    public const int MaxMetadataEntries = 100;
+
+    /// <summary>
+    /// Maximum total size of all metadata values combined in bytes.
+    /// </summary>
+    public const int MaxTotalMetadataSize = 65536;
+
     public string RequestId { get; set; } = Guid.NewGuid().ToString();
     public string? UserId { get; set; }
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
