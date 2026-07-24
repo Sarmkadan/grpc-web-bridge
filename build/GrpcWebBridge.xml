@@ -2163,42 +2163,71 @@
             Supports synchronous and asynchronous event handling.
             </summary>
         </member>
+        <member name="P:GrpcWebBridge.Events.EventBus.IsDisposed">
+            <summary>
+            Gets a value indicating whether this instance has been disposed.
+            </summary>
+        </member>
         <member name="M:GrpcWebBridge.Events.EventBus.Subscribe``1(System.Action{``0})">
             <summary>
             Subscribes to an event with a synchronous handler.
             </summary>
+            <typeparam name="TEvent">The event type to subscribe to.</typeparam>
+            <param name="handler">The synchronous handler to invoke when the event is published.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
+            <exception cref="T:System.ObjectDisposedException">The event bus has been disposed.</exception>
         </member>
         <member name="M:GrpcWebBridge.Events.EventBus.Subscribe``1(System.Func{``0,System.Threading.Tasks.Task})">
             <summary>
             Subscribes to an event with an asynchronous handler.
             </summary>
+            <typeparam name="TEvent">The event type to subscribe to.</typeparam>
+            <param name="handler">The asynchronous handler to invoke when the event is published.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
+            <exception cref="T:System.ObjectDisposedException">The event bus has been disposed.</exception>
         </member>
         <member name="M:GrpcWebBridge.Events.EventBus.Unsubscribe``1(System.Delegate)">
             <summary>
             Unsubscribes from an event.
             </summary>
+            <typeparam name="TEvent">The event type to unsubscribe from.</typeparam>
+            <param name="handler">The handler to remove.</param>
+            <returns><see langword="true"/> if the handler was found and removed; otherwise, <see langword="false"/>.</returns>
+            <exception cref="T:System.ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
+            <exception cref="T:System.ObjectDisposedException">The event bus has been disposed.</exception>
         </member>
         <member name="M:GrpcWebBridge.Events.EventBus.PublishAsync``1(``0)">
             <summary>
             Publishes an event synchronously.
             All subscribers are notified immediately.
             </summary>
+            <typeparam name="TEvent">The event type to publish.</typeparam>
+            <param name="event">The event to publish.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> representing the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException"><paramref name="event"/> is <see langword="null"/>.</exception>
+            <exception cref="T:System.ObjectDisposedException">The event bus has been disposed.</exception>
         </member>
         <member name="M:GrpcWebBridge.Events.EventBus.GetSubscriberCount``1">
             <summary>
             Gets the number of subscribers for an event type.
             </summary>
+            <typeparam name="TEvent">The event type to check.</typeparam>
+            <returns>The number of subscribers for the specified event type.</returns>
         </member>
         <member name="M:GrpcWebBridge.Events.EventBus.GetEventHistory(System.String)">
             <summary>
             Gets event history for auditing and debugging.
             </summary>
+            <param name="eventType">Optional event type filter.</param>
+            <returns>A list of event records.</returns>
+            <exception cref="T:System.ObjectDisposedException">The event bus has been disposed.</exception>
         </member>
         <member name="M:GrpcWebBridge.Events.EventBus.ClearSubscribers">
             <summary>
             Clears all subscribers.
             Useful for testing and cleanup.
             </summary>
+            <exception cref="T:System.ObjectDisposedException">The event bus has been disposed.</exception>
         </member>
         <member name="M:GrpcWebBridge.Events.EventBus.RecordEvent``1(``0)">
             <summary>
@@ -2215,35 +2244,112 @@
             Event record for history tracking.
             </summary>
         </member>
+        <member name="T:GrpcWebBridge.Events.EventBusException">
+            <summary>
+            Exception thrown when event bus operations fail.
+            </summary>
+        </member>
         <member name="T:GrpcWebBridge.Events.ServiceRegisteredEvent">
             <summary>
             Fired when a service is registered.
             </summary>
+            <param name="requestId">The correlation/request ID for tracing the operation.</param>
         </member>
         <member name="T:GrpcWebBridge.Events.ServiceUnregisteredEvent">
             <summary>
             Fired when a service is unregistered.
             </summary>
+            <param name="requestId">The correlation/request ID for tracing the operation.</param>
         </member>
         <member name="T:GrpcWebBridge.Events.MethodInvokedEvent">
             <summary>
             Fired when a method is invoked.
             </summary>
+            <param name="requestId">The correlation/request ID for tracing the operation.</param>
+        </member>
+        <member name="P:GrpcWebBridge.Events.MethodInvokedEvent.ServiceId">
+            <summary>Gets or sets the service identifier.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.MethodInvokedEvent.MethodName">
+            <summary>Gets or sets the name of the method being invoked.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.MethodInvokedEvent.DurationMs">
+            <summary>Gets or sets the duration of the method invocation in milliseconds.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.MethodInvokedEvent.Success">
+            <summary>Gets or sets a value indicating whether the method invocation was successful.</summary>
+        </member>
+        <member name="T:GrpcWebBridge.Events.StreamCompletionStatus">
+            <summary>
+            Completion status of a stream.
+            </summary>
+        </member>
+        <member name="F:GrpcWebBridge.Events.StreamCompletionStatus.Completed">
+            <summary>Stream completed successfully.</summary>
+        </member>
+        <member name="F:GrpcWebBridge.Events.StreamCompletionStatus.Cancelled">
+            <summary>Stream was cancelled by the caller.</summary>
+        </member>
+        <member name="F:GrpcWebBridge.Events.StreamCompletionStatus.Faulted">
+            <summary>Stream terminated due to an error.</summary>
         </member>
         <member name="T:GrpcWebBridge.Events.StreamStartedEvent">
             <summary>
             Fired when a stream starts.
             </summary>
+            <param name="requestId">The correlation/request ID for tracing the operation.</param>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamStartedEvent.StreamId">
+            <summary>Gets or sets the stream identifier.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamStartedEvent.ServiceId">
+            <summary>Gets or sets the service identifier.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamStartedEvent.MethodName">
+            <summary>Gets or sets the name of the method associated with the stream.</summary>
         </member>
         <member name="T:GrpcWebBridge.Events.StreamEndedEvent">
             <summary>
             Fired when a stream ends.
+            </summary>
+            <param name="requestId">The correlation/request ID for tracing the operation.</param>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamEndedEvent.StreamId">
+            <summary>Gets or sets the stream identifier.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamEndedEvent.MessageCount">
+            <summary>Gets or sets the total number of messages processed in the stream.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamEndedEvent.DurationMs">
+            <summary>Gets or sets the duration of the stream in milliseconds.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamEndedEvent.CompletionStatus">
+            <summary>Gets or sets the completion status of the stream.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamEndedEvent.ErrorCode">
+            <summary>
+            Gets or sets the error code when <see cref="P:GrpcWebBridge.Events.StreamEndedEvent.CompletionStatus"/> is <see cref="F:GrpcWebBridge.Events.StreamCompletionStatus.Faulted"/>.
+            </summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.StreamEndedEvent.CloseReason">
+            <summary>
+            Gets or sets a human-readable description of the termination reason.
             </summary>
         </member>
         <member name="T:GrpcWebBridge.Events.AuthenticationFailedEvent">
             <summary>
             Fired when authentication fails.
             </summary>
+            <param name="requestId">The correlation/request ID for tracing the operation.</param>
+        </member>
+        <member name="P:GrpcWebBridge.Events.AuthenticationFailedEvent.UserId">
+            <summary>Gets or sets the user identifier.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.AuthenticationFailedEvent.FailureReason">
+            <summary>Gets or sets the reason for authentication failure.</summary>
+        </member>
+        <member name="P:GrpcWebBridge.Events.AuthenticationFailedEvent.ClientIp">
+            <summary>Gets or sets the client IP address.</summary>
         </member>
         <member name="T:GrpcWebBridge.Events.EventBusExtensions">
             <summary>
@@ -3104,6 +3210,44 @@
             <returns>The most recent trace, or null if none exists.</returns>
             <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="manager"/> is null.</exception>
         </member>
+        <member name="T:GrpcWebBridge.Integration.HttpClientFactoryOptions">
+            <summary>
+            Configuration options for HTTP client factory.
+            </summary>
+        </member>
+        <member name="P:GrpcWebBridge.Integration.HttpClientFactoryOptions.RequestTimeoutMs">
+            <summary>
+            Gets or sets the request timeout in milliseconds.
+            </summary>
+        </member>
+        <member name="P:GrpcWebBridge.Integration.HttpClientFactoryOptions.MaxConnectionsPerServer">
+            <summary>
+            Gets or sets the maximum number of connections per server.
+            </summary>
+        </member>
+        <member name="P:GrpcWebBridge.Integration.HttpClientFactoryOptions.UseCookies">
+            <summary>
+            Gets or sets a value indicating whether to use cookies.
+            </summary>
+        </member>
+        <member name="P:GrpcWebBridge.Integration.HttpClientFactoryOptions.AllowAutoRedirect">
+            <summary>
+            Gets or sets a value indicating whether to allow automatic redirection.
+            </summary>
+        </member>
+        <member name="P:GrpcWebBridge.Integration.HttpClientFactoryOptions.AllowInsecureHttps">
+            <summary>
+            Gets or sets a value indicating whether to allow insecure HTTPS connections.
+            </summary>
+        </member>
+        <member name="P:GrpcWebBridge.Integration.HttpClientFactoryOptions.PooledConnectionLifetimeMs">
+            <summary>
+            Gets or sets the pooled connection lifetime in milliseconds.
+            After this duration, the underlying SocketsHttpHandler will be rotated to
+            prevent DNS staleness and ensure connection freshness.
+            Default is 2 minutes (120000 ms).
+            </summary>
+        </member>
         <member name="T:GrpcWebBridge.Integration.HttpClientFactory">
             <summary>
             HTTP client factory managing pooled HTTP clients.
@@ -3115,50 +3259,104 @@
             <summary>
             Gets or creates an HTTP client for a specific endpoint.
             </summary>
+            <param name="name">The name of the client.</param>
+            <returns>An HTTP client instance.</returns>
+            <exception cref="T:GrpcWebBridge.Domain.Exceptions.ConfigurationException">Thrown if name is null or empty.</exception>
         </member>
         <member name="M:GrpcWebBridge.Integration.HttpClientFactory.CreateConfiguredClient(System.String)">
             <summary>
             Creates a new configured HTTP client with timeouts and handlers.
+            </summary>
+            <param name="name">The client name.</param>
+            <returns>A configured HTTP client.</returns>
+        </member>
+        <member name="M:GrpcWebBridge.Integration.HttpClientFactory.GetPooledHandler(System.String)">
+            <summary>
+            Gets or creates a pooled handler for the given client name.
+            </summary>
+            <param name="name">The client name.</param>
+            <returns>A pooled handler.</returns>
+        </member>
+        <member name="M:GrpcWebBridge.Integration.HttpClientFactory.CheckHandlerRotation">
+            <summary>
+            Checks if handlers need to be rotated based on pooled connection lifetime.
             </summary>
         </member>
         <member name="M:GrpcWebBridge.Integration.HttpClientFactory.RegisterClient(System.String,System.Net.Http.HttpClient)">
             <summary>
             Registers a pre-configured client.
             </summary>
+            <param name="name">The client name.</param>
+            <param name="client">The HTTP client to register.</param>
+            <exception cref="T:System.ArgumentException">Thrown if name is null or empty.</exception>
+            <exception cref="T:System.ArgumentNullException">Thrown if client is null.</exception>
         </member>
         <member name="M:GrpcWebBridge.Integration.HttpClientFactory.GetClientForUri(System.String)">
             <summary>
             Gets or creates a client for a specific base address.
             </summary>
+            <param name="baseUri">The base URI for the client.</param>
+            <returns>An HTTP client configured with the base address.</returns>
+            <exception cref="T:GrpcWebBridge.Domain.Exceptions.ConfigurationException">Thrown if baseUri is null or empty.</exception>
         </member>
         <member name="M:GrpcWebBridge.Integration.HttpClientFactory.GetAsync(System.String,System.String)">
             <summary>
             Sends a GET request and returns response content as string.
             </summary>
+            <param name="uri">The request URI.</param>
+            <param name="clientName">Optional client name.</param>
+            <returns>The response content as a string.</returns>
+            <exception cref="T:GrpcWebBridge.Domain.Exceptions.ConfigurationException">Thrown if URI is invalid.</exception>
+            <exception cref="T:GrpcWebBridge.Domain.Exceptions.GrpcWebBridgeException">Thrown if the request fails.</exception>
         </member>
         <member name="M:GrpcWebBridge.Integration.HttpClientFactory.PostJsonAsync(System.String,System.Object,System.String)">
             <summary>
             Sends a POST request with JSON body.
             </summary>
+            <param name="uri">The request URI.</param>
+            <param name="payload">The JSON payload to send.</param>
+            <param name="clientName">Optional client name.</param>
+            <returns>The response content as a string.</returns>
+            <exception cref="T:GrpcWebBridge.Domain.Exceptions.ConfigurationException">Thrown if URI is invalid or payload is null.</exception>
+            <exception cref="T:GrpcWebBridge.Domain.Exceptions.GrpcWebBridgeException">Thrown if the request fails.</exception>
         </member>
         <member name="M:GrpcWebBridge.Integration.HttpClientFactory.SendAsync(System.String,System.Net.Http.HttpMethod,System.Net.Http.HttpContent,System.Collections.Generic.Dictionary{System.String,System.String},System.String)">
             <summary>
             Sends a request with custom configuration.
             </summary>
+            <param name="uri">The request URI.</param>
+            <param name="method">The HTTP method.</param>
+            <param name="content">Optional request content.</param>
+            <param name="headers">Optional request headers.</param>
+            <param name="clientName">Optional client name.</param>
+            <returns>The HTTP response message.</returns>
+            <exception cref="T:GrpcWebBridge.Domain.Exceptions.ConfigurationException">Thrown if URI or method is invalid.</exception>
+            <exception cref="T:GrpcWebBridge.Domain.Exceptions.GrpcWebBridgeException">Thrown if the request fails.</exception>
         </member>
         <member name="M:GrpcWebBridge.Integration.HttpClientFactory.RemoveClient(System.String)">
             <summary>
             Removes a registered client.
             </summary>
+            <param name="name">The client name to remove.</param>
+            <returns>True if the client was found and removed; otherwise false.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if name is null.</exception>
         </member>
         <member name="M:GrpcWebBridge.Integration.HttpClientFactory.GetRegisteredClientNames">
             <summary>
             Gets list of registered client names.
             </summary>
+            <returns>A list of registered client names.</returns>
         </member>
-        <member name="T:GrpcWebBridge.Integration.HttpClientFactoryOptions">
+        <member name="M:GrpcWebBridge.Integration.HttpClientFactory.Dispose">
             <summary>
-            Configuration options for HTTP client factory.
+            Disposes the factory and all registered clients.
+            Note: Disposes only the clients managed by this factory.
+            Clients registered via RegisterClient are disposed by the caller.
+            </summary>
+        </member>
+        <member name="T:GrpcWebBridge.Integration.HttpClientFactory.PooledHandler">
+            <summary>
+            Internal class to manage pooled SocketsHttpHandler instances.
             </summary>
         </member>
         <member name="T:GrpcWebBridge.Integration.HttpClientFactoryExtensions">
@@ -4829,7 +5027,7 @@
             <see cref="M:GrpcWebBridge.Streaming.BidirectionalStreamingEngine.CloseStreamAsync(System.String,System.Nullable{GrpcWebBridge.Domain.GrpcStatusCode},System.Threading.CancellationToken)"/> can await a bounded grace period.
             </summary>
         </member>
-        <member name="M:GrpcWebBridge.Streaming.BidirectionalStreamingEngine.StreamEntry.#ctor(GrpcWebBridge.Streaming.FlowControlledStream,System.Threading.Tasks.Task)">
+        <member name="M:GrpcWebBridge.Streaming.BidirectionalStreamingEngine.StreamEntry.#ctor(GrpcWebBridge.Streaming.FlowControlledStream,System.Threading.Tasks.Task,GrpcWebBridge.Streaming.BidirectionalStreamContext)">
             <summary>
             Bundles the live stream with the outbound channel's drain-completion task so that
             <see cref="M:GrpcWebBridge.Streaming.BidirectionalStreamingEngine.CloseStreamAsync(System.String,System.Nullable{GrpcWebBridge.Domain.GrpcStatusCode},System.Threading.CancellationToken)"/> can await a bounded grace period.

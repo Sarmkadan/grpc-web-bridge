@@ -3,6 +3,7 @@
 // Author: Automated Generation
 // =============================================================================
 
+using System.Threading.Tasks;
 using FluentAssertions;
 using GrpcWebBridge.Integration;
 using Microsoft.Extensions.Logging;
@@ -136,5 +137,126 @@ public sealed class RequestContextManagerTests
         // After clear
         _manager.Clear();
         _manager.IsContextActive().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Context_Survives_After_Await_Task_Yield()
+    {
+        // Arrange
+        var manager = new RequestContextManager(Substitute.For<ILogger<RequestContextManager>>());
+        var requestId = "req-async-yield";
+
+        // Act - create context and await Task.Yield
+        manager.CreateContext(requestId);
+        await Task.Yield();
+
+        // Assert - context should still be available
+        manager.IsContextActive().Should().BeTrue();
+        manager.GetRequestId().Should().Be(requestId);
+    }
+
+    [Fact]
+    public async Task Context_Isolated_Between_Concurrent_Requests()
+    {
+        // Arrange
+        var manager = new RequestContextManager(Substitute.For<ILogger<RequestContextManager>>());
+        var requestId1 = "req-concurrent-1";
+        var requestId2 = "req-concurrent-2";
+        RequestContext? context1 = null;
+        RequestContext? context2 = null;
+
+        // Act - create contexts concurrently and capture them
+        var task1 = Task.Run(() => {
+            manager.CreateContext(requestId1);
+            context1 = manager.GetContext();
+        });
+        var task2 = Task.Run(() => {
+            manager.CreateContext(requestId2);
+            context2 = manager.GetContext();
+        });
+
+        await Task.WhenAll(task1, task2);
+
+        // Assert - each task should see its own context
+        context1.Should().NotBeNull();
+        context2.Should().NotBeNull();
+        context1?.RequestId.Should().Be(requestId1);
+        context2?.RequestId.Should().Be(requestId2);
+
+        // Clear and verify isolation
+        manager.Clear();
+        manager.IsContextActive().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Context_Flows_Through_Task_Run()
+    {
+        // Arrange
+        var manager = new RequestContextManager(Substitute.For<ILogger<RequestContextManager>>());
+        var requestId = "req-background-task";
+        RequestContext? capturedContext = null;
+
+        // Act - create context and capture it in background task
+        manager.CreateContext(requestId);
+        await Task.Run(() => capturedContext = manager.GetContext());
+
+        // Assert - context should be available in background task
+        capturedContext.Should().NotBeNull();
+        capturedContext?.RequestId.Should().Be(requestId);
+        manager.GetRequestId().Should().Be(requestId);
+    }
+
+    [Fact]
+    public async Task Context_Survives_Multiple_Awaits()
+    {
+        // Arrange
+        var manager = new RequestContextManager(Substitute.For<ILogger<RequestContextManager>>());
+        var requestId = "req-multiple-awaits";
+
+        // Act - create context and await multiple times
+        manager.CreateContext(requestId);
+        await Task.Delay(1);
+        await Task.Yield();
+        await Task.Delay(1);
+
+        // Assert - context should still be available
+        manager.IsContextActive().Should().BeTrue();
+        manager.GetRequestId().Should().Be(requestId);
+    }
+
+    [Fact]
+    public void Clear_Should_Reset_Context_To_Null()
+    {
+        // Arrange
+        var manager = new RequestContextManager(Substitute.For<ILogger<RequestContextManager>>());
+        manager.CreateContext("req-clear-test");
+        manager.IsContextActive().Should().BeTrue();
+
+        // Act
+        manager.Clear();
+
+        // Assert
+        manager.IsContextActive().Should().BeFalse();
+        manager.GetContext().Should().BeNull();
+    }
+
+    [Fact]
+    public void Context_Should_Not_Leak_Between_Sync_Contexts()
+    {
+        // Arrange
+        var manager = new RequestContextManager(Substitute.For<ILogger<RequestContextManager>>());
+
+        // Create first context
+        manager.CreateContext("req-1");
+        manager.GetRequestId().Should().Be("req-1");
+
+        // Clear first context
+        manager.Clear();
+        manager.IsContextActive().Should().BeFalse();
+
+        // Create second context
+        manager.CreateContext("req-2");
+        manager.GetRequestId().Should().Be("req-2");
+        manager.IsContextActive().Should().BeTrue();
     }
 }
