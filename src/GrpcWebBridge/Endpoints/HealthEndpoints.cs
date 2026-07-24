@@ -11,6 +11,8 @@ using GrpcWebBridge.BackgroundWorkers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace GrpcWebBridge.Endpoints;
 
@@ -19,7 +21,19 @@ namespace GrpcWebBridge.Endpoints;
 /// </summary>
 public static class HealthEndpoints
 {
-    private static DateTime _startupTime = DateTime.UtcNow;
+    private static readonly DateTime _startupTime = DateTime.UtcNow;
+    private const int MaxConcurrentHealthChecks = 50; // Maximum number of concurrent service health checks
+    private static readonly SemaphoreSlim _healthCheckSemaphore = new(MaxConcurrentHealthChecks, MaxConcurrentHealthChecks);
+    private const int HealthCheckTimeoutMs = 5000; // 5 second timeout per service health check
+    private const int OverallHealthCheckTimeoutMs = 10000; // 10 second overall timeout for detailed health check
+    private static readonly ConcurrentDictionary<string, CachedHealthResult> _healthCache = new();
+    private const int HealthCacheDurationMs = 2000; // 2 second cache to prevent DoS via repeated requests
+
+    private sealed class CachedHealthResult
+    {
+        public DetailedHealthResponse? Response { get; set; }
+        public DateTime CachedAt { get; set; }
+    }
 
     /// <summary>
     /// Gets the application startup time
@@ -88,56 +102,134 @@ public static class HealthEndpoints
         // Detailed health check endpoint - always requires authentication for security
         // This endpoint exposes internal service topology, versions, and failure details
         // that should not be publicly accessible
-        app.MapGet("/health/detailed", async (
-            ServiceRegistry registry,
-            StreamingService streaming) =>
+        app.MapGet("/health/detailed", async (ServiceRegistry registry, StreamingService streaming, CancellationToken cancellationToken) =>
         {
-            var uptime = DateTime.UtcNow - _startupTime;
+            // Check cache first
+            var cacheKey = "detailed-health";
+            var now = DateTime.UtcNow;
 
-            var response = new DetailedHealthResponse
+            if (_healthCache.TryGetValue(cacheKey, out var cachedResult) &&
+                now - cachedResult.CachedAt < TimeSpan.FromMilliseconds(HealthCacheDurationMs))
             {
-                status = "healthy",
-                timestamp = DateTime.UtcNow,
-                uptime = uptime.ToString("c"),
-                uptime_seconds = (int)uptime.TotalSeconds,
-                services = new ServiceHealthSummary
-                {
-                    registered_count = registry.RegisteredServiceCount,
-                    health_status = GetOverallServiceHealth(registry),
-                    services = registry.ListServices().Select(s => new ServiceHealthItem
-                    {
-                        id = s.Id,
-                        name = s.Name,
-                        full_name = s.FullName,
-                        endpoint = s.Endpoint,
-                        port = s.Port,
-                        status = s.Status.ToString(),
-                        health_status = registry.GetHealthStatus(s.FullName).ToString(),
-                        method_count = s.Methods.Count,
-                        created_at = s.CreatedAt,
-                        updated_at = s.UpdatedAt ?? s.CreatedAt
-                    }).ToList()
-                },
-                workers = new WorkerStatusSummary
-                {
-                    streaming_service = new StreamingWorkerStatus
-                    {
-                        active_stream_count = streaming.ActiveStreamCount,
-                        max_stream_count = Constants.Streaming.MaxStreamCount,
-                        stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
-                        status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
-                    }
-                },
-                system = new SystemStatus
-                {
-                    environment = app.Environment.EnvironmentName,
-                    application_name = app.Environment.ApplicationName,
-                    version = "1.0.0",
-                    timestamp = DateTime.UtcNow
-                }
-            };
+                return Results.Ok(cachedResult.Response);
+            }
 
-            return Results.Ok(response);
+            // Use cancellation token for overall timeout
+            using var timeoutCts = new CancellationTokenSource(OverallHealthCheckTimeoutMs);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+            var combinedToken = linkedCts.Token;
+
+            try
+            {
+                // Use semaphore to limit concurrent health checks
+                await _healthCheckSemaphore.WaitAsync(combinedToken).ConfigureAwait(false);
+
+                try
+                {
+                    var uptime = DateTime.UtcNow - _startupTime;
+
+                    // Get all services with timeout protection
+                    var services = await Task.Run(() => registry.ListServices().ToList(), combinedToken).ConfigureAwait(false);
+
+                    // Get overall health status with timeout protection
+                    var overallHealthStatus = await GetOverallServiceHealthAsync(registry, services, combinedToken).ConfigureAwait(false);
+
+                    var response = new DetailedHealthResponse
+                    {
+                        status = "healthy",
+                        timestamp = DateTime.UtcNow,
+                        uptime = uptime.ToString("c"),
+                        uptime_seconds = (int)uptime.TotalSeconds,
+                        services = new ServiceHealthSummary
+                        {
+                            registered_count = registry.RegisteredServiceCount,
+                            health_status = overallHealthStatus,
+                            services = services.Select(s => new ServiceHealthItem
+                            {
+                                id = s.Id,
+                                name = s.Name,
+                                full_name = s.FullName,
+                                endpoint = s.Endpoint,
+                                port = s.Port,
+                                status = s.Status.ToString(),
+                                health_status = registry.GetHealthStatus(s.FullName).ToString(),
+                                method_count = s.Methods.Count,
+                                created_at = s.CreatedAt,
+                                updated_at = s.UpdatedAt ?? s.CreatedAt
+                            }).ToList()
+                        },
+                        workers = new WorkerStatusSummary
+                        {
+                            streaming_service = new StreamingWorkerStatus
+                            {
+                                active_stream_count = streaming.ActiveStreamCount,
+                                max_stream_count = Constants.Streaming.MaxStreamCount,
+                                stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
+                                status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
+                            }
+                        },
+                        system = new SystemStatus
+                        {
+                            environment = app.Environment.EnvironmentName,
+                            application_name = app.Environment.ApplicationName,
+                            version = "1.0.0",
+                            timestamp = DateTime.UtcNow
+                        }
+                    };
+
+                    // Cache the result
+                    _healthCache[cacheKey] = new CachedHealthResult
+                    {
+                        Response = response,
+                        CachedAt = now
+                    };
+
+                    return Results.Ok(response);
+                }
+                finally
+                {
+                    _healthCheckSemaphore.Release();
+                }
+            }
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+            {
+                // Return cached result if available, otherwise return degraded state
+                if (_healthCache.TryGetValue(cacheKey, out var cachedHealthResult))
+                {
+                    return Results.Ok(cachedHealthResult.Response);
+                }
+
+                return Results.Ok(new DetailedHealthResponse
+                {
+                    status = "degraded",
+                    timestamp = DateTime.UtcNow,
+                    uptime = (DateTime.UtcNow - _startupTime).ToString("c"),
+                    uptime_seconds = (int)(DateTime.UtcNow - _startupTime).TotalSeconds,
+                    services = new ServiceHealthSummary
+                    {
+                        registered_count = registry.RegisteredServiceCount,
+                        health_status = "degraded",
+                        services = []
+                    },
+                    workers = new WorkerStatusSummary
+                    {
+                        streaming_service = new StreamingWorkerStatus
+                        {
+                            active_stream_count = streaming.ActiveStreamCount,
+                            max_stream_count = Constants.Streaming.MaxStreamCount,
+                            stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
+                            status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
+                        }
+                    },
+                    system = new SystemStatus
+                    {
+                        environment = app.Environment.EnvironmentName,
+                        application_name = app.Environment.ApplicationName,
+                        version = "1.0.0",
+                        timestamp = DateTime.UtcNow
+                    }
+                });
+            }
         })
         .RequireAuthorization()
         .WithName("Authenticated Detailed Health Check")
@@ -165,15 +257,27 @@ public static class HealthEndpoints
         .WithOpenApi();
     }
 
-    private static string GetOverallServiceHealth(ServiceRegistry registry)
+    /// <summary>
+    /// Gets the overall health status of all registered services
+    /// </summary>
+    /// <param name="registry">The service registry</param>
+    /// <param name="services">Optional list of services to check (defaults to all registered services)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The overall health status: "no_services", "healthy", "degraded", or "unhealthy"</returns>
+    /// <exception cref="ArgumentNullException">Thrown if registry is null</exception>
+    private static async Task<string> GetOverallServiceHealthAsync(ServiceRegistry registry, List<GrpcWebBridge.Domain.Models.GrpcService>? services = null, CancellationToken cancellationToken = default)
     {
-        var services = registry.ListServices().ToList();
+        ArgumentNullException.ThrowIfNull(registry);
 
-        if (services.Count == 0)
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var serviceList = services ?? registry.ListServices().ToList();
+
+        if (serviceList.Count == 0)
             return "no_services";
 
-        var healthyCount = services.Count(s => s.Status == ServiceStatus.Serving);
-        var unhealthyCount = services.Count(s => s.Status == ServiceStatus.NotServing);
+        var healthyCount = serviceList.Count(s => s.Status == ServiceStatus.Serving);
+        var unhealthyCount = serviceList.Count(s => s.Status == ServiceStatus.NotServing);
 
         if (unhealthyCount == 0 && healthyCount > 0)
             return "healthy";
