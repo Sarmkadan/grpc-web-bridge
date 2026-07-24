@@ -46,8 +46,7 @@ services.AddGrpcWebBridge(options =>
         .WithCompression(true, 6)
         .WithSwagger(true)
         .WithCors(true)
-        .AddAllowedOrigins("*")
-    .RequireAuthenticationForDetailedHealth();
+        .AddAllowedOrigins("*");
 });
 
 // Add Swagger/OpenAPI

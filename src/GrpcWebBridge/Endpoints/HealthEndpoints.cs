@@ -85,131 +85,64 @@ public static class HealthEndpoints
         .WithName("Standard Health Check")
         .WithOpenApi();
 
-        // Configuration for detailed health endpoint authentication
-        // Get supervisor from DI if available
-var supervisor = app.Services.GetService<StreamingWorkerSupervisor>();
-
-var healthConfig = app.Services.GetRequiredService<GrpcWebBridge.Configuration.GrpcWebBridgeOptions>();
-        var requireAuthForDetailedHealth = healthConfig.Configuration.RequireAuthenticationForDetailedHealth;
-
-        // Detailed health check endpoint with optional authentication
-        if (requireAuthForDetailedHealth)
+        // Detailed health check endpoint - always requires authentication for security
+        // This endpoint exposes internal service topology, versions, and failure details
+        // that should not be publicly accessible
+        app.MapGet("/health/detailed", async (
+            ServiceRegistry registry,
+            StreamingService streaming) =>
         {
-            // Authenticated detailed health check endpoint
-            app.MapGet("/health/detailed", async (
-                ServiceRegistry registry,
-                StreamingService streaming) =>
+            var uptime = DateTime.UtcNow - _startupTime;
+
+            var response = new DetailedHealthResponse
             {
-                var uptime = DateTime.UtcNow - _startupTime;
-
-                var response = new DetailedHealthResponse
+                status = "healthy",
+                timestamp = DateTime.UtcNow,
+                uptime = uptime.ToString("c"),
+                uptime_seconds = (int)uptime.TotalSeconds,
+                services = new ServiceHealthSummary
                 {
-                    status = "healthy",
-                    timestamp = DateTime.UtcNow,
-                    uptime = uptime.ToString("c"),
-                    uptime_seconds = (int)uptime.TotalSeconds,
-                    services = new ServiceHealthSummary
+                    registered_count = registry.RegisteredServiceCount,
+                    health_status = GetOverallServiceHealth(registry),
+                    services = registry.ListServices().Select(s => new ServiceHealthItem
                     {
-                        registered_count = registry.RegisteredServiceCount,
-                        health_status = GetOverallServiceHealth(registry),
-                        services = registry.ListServices().Select(s => new ServiceHealthItem
-                        {
-                            id = s.Id,
-                            name = s.Name,
-                            full_name = s.FullName,
-                            endpoint = s.Endpoint,
-                            port = s.Port,
-                            status = s.Status.ToString(),
-                            health_status = registry.GetHealthStatus(s.FullName).ToString(),
-                            method_count = s.Methods.Count,
-                            created_at = s.CreatedAt,
-                            updated_at = s.UpdatedAt ?? s.CreatedAt
-                        }).ToList()
-                    },
-                    workers = new WorkerStatusSummary
-                    {
-                        streaming_service = new StreamingWorkerStatus
-                        {
-                            active_stream_count = streaming.ActiveStreamCount,
-                            max_stream_count = Constants.Streaming.MaxStreamCount,
-                            stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
-                            status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
-                        }
-                    },
-                    system = new SystemStatus
-                    {
-                        environment = app.Environment.EnvironmentName,
-                        application_name = app.Environment.ApplicationName,
-                        version = "1.0.0",
-                        timestamp = DateTime.UtcNow
-                    }
-                };
-
-                return Results.Ok(response);
-            })
-            .RequireAuthorization()
-            .WithName("Authenticated Detailed Health Check")
-            .Produces<DetailedHealthResponse>(200, "application/json")
-            .WithOpenApi();
-        }
-        else
-        {
-            // Unauthenticated detailed health check endpoint (backward compatibility)
-            app.MapGet("/health/detailed", async (
-                ServiceRegistry registry,
-                StreamingService streaming) =>
-            {
-                var uptime = DateTime.UtcNow - _startupTime;
-
-                var response = new DetailedHealthResponse
+                        id = s.Id,
+                        name = s.Name,
+                        full_name = s.FullName,
+                        endpoint = s.Endpoint,
+                        port = s.Port,
+                        status = s.Status.ToString(),
+                        health_status = registry.GetHealthStatus(s.FullName).ToString(),
+                        method_count = s.Methods.Count,
+                        created_at = s.CreatedAt,
+                        updated_at = s.UpdatedAt ?? s.CreatedAt
+                    }).ToList()
+                },
+                workers = new WorkerStatusSummary
                 {
-                    status = "healthy",
-                    timestamp = DateTime.UtcNow,
-                    uptime = uptime.ToString("c"),
-                    uptime_seconds = (int)uptime.TotalSeconds,
-                    services = new ServiceHealthSummary
+                    streaming_service = new StreamingWorkerStatus
                     {
-                        registered_count = registry.RegisteredServiceCount,
-                        health_status = GetOverallServiceHealth(registry),
-                        services = registry.ListServices().Select(s => new ServiceHealthItem
-                        {
-                            id = s.Id,
-                            name = s.Name,
-                            full_name = s.FullName,
-                            endpoint = s.Endpoint,
-                            port = s.Port,
-                            status = s.Status.ToString(),
-                            health_status = registry.GetHealthStatus(s.FullName).ToString(),
-                            method_count = s.Methods.Count,
-                            created_at = s.CreatedAt,
-                            updated_at = s.UpdatedAt ?? s.CreatedAt
-                        }).ToList()
-                    },
-                    workers = new WorkerStatusSummary
-                    {
-                        streaming_service = new StreamingWorkerStatus
-                        {
-                            active_stream_count = streaming.ActiveStreamCount,
-                            max_stream_count = Constants.Streaming.MaxStreamCount,
-                            stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
-                            status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
-                        }
-                    },
-                    system = new SystemStatus
-                    {
-                        environment = app.Environment.EnvironmentName,
-                        application_name = app.Environment.ApplicationName,
-                        version = "1.0.0",
-                        timestamp = DateTime.UtcNow
+                        active_stream_count = streaming.ActiveStreamCount,
+                        max_stream_count = Constants.Streaming.MaxStreamCount,
+                        stream_capacity = $"{streaming.ActiveStreamCount}/{Constants.Streaming.MaxStreamCount}",
+                        status = streaming.ActiveStreamCount > 0 ? "active" : "idle"
                     }
-                };
+                },
+                system = new SystemStatus
+                {
+                    environment = app.Environment.EnvironmentName,
+                    application_name = app.Environment.ApplicationName,
+                    version = "1.0.0",
+                    timestamp = DateTime.UtcNow
+                }
+            };
 
-                return Results.Ok(response);
-            })
-            .WithName("Detailed Health Check")
-            .Produces<DetailedHealthResponse>(200, "application/json")
-            .WithOpenApi();
-        }
+            return Results.Ok(response);
+        })
+        .RequireAuthorization()
+        .WithName("Authenticated Detailed Health Check")
+        .Produces<DetailedHealthResponse>(200, "application/json")
+        .WithOpenApi();
 
         // Registry snapshot endpoint
         app.MapGet("/health/registry", (ServiceRegistry registry) =>
@@ -221,7 +154,7 @@ var healthConfig = app.Services.GetRequiredService<GrpcWebBridge.Configuration.G
                 total_service_count = snapshot.TotalServiceCount,
                 registered_services = snapshot.ServiceRegistrationTimestamps.Count,
                 service_registration_timestamps = snapshot.ServiceRegistrationTimestamps
-                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString("o")),
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString("o")),
                 timestamp = DateTime.UtcNow
             };
 
@@ -404,26 +337,6 @@ var healthConfig = app.Services.GetRequiredService<GrpcWebBridge.Configuration.G
         /// Gets or sets the worker status
         /// </summary>
         public string? status { get; set; }
-
-    /// <summary>
-    /// Gets or sets the consecutive failure count
-    /// </summary>
-    public int consecutive_failure_count { get; set; }
-
-    /// <summary>
-    /// Gets or sets the total restart count
-    /// </summary>
-    public int total_restart_count { get; set; }
-
-    /// <summary>
-    /// Gets or sets the last healthy timestamp
-    /// </summary>
-    public DateTime? last_healthy_time { get; set; }
-
-    /// <summary>
-    /// Gets or sets the supervisor status
-    /// </summary>
-    public string? supervisor_status { get; set; }
     }
 
     /// <summary>
