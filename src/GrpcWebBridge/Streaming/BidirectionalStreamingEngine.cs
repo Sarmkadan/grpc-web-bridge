@@ -38,7 +38,7 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
     /// Bundles the live stream with the outbound channel's drain-completion task so that
     /// <see cref="CloseStreamAsync"/> can await a bounded grace period.
     /// </summary>
-    private sealed record StreamEntry(FlowControlledStream Stream, Task OutboundDrained);
+    private sealed record StreamEntry(FlowControlledStream Stream, Task OutboundDrained, BidirectionalStreamContext Context);
 
     private readonly ConcurrentDictionary<string, StreamEntry> _streams = new();
     private readonly FlowControlOptions _options;
@@ -139,7 +139,7 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
             _options,
             _loggerFactory.CreateLogger<FlowControlledStream>());
 
-        var entry = new StreamEntry(stream, outbound.Reader.Completion);
+        var entry = new StreamEntry(stream, outbound.Reader.Completion, context);
 
         if (!_streams.TryAdd(streamId, entry))
         {
@@ -183,6 +183,10 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
 
         long startTick = Environment.TickCount64;
         var stream = entry.Stream;
+        var context = entry.Context;
+        StreamCompletionStatus completionStatus = StreamCompletionStatus.Completed;
+        string? errorCode = null;
+        string? closeReason = null;
 
         try
         {
@@ -210,7 +214,23 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
                 "Stream {StreamId}: close cancelled by caller — aborting with {Status}.",
                 streamId, finalStatus ?? GrpcStatusCode.Cancelled);
 
-            await stream.AbortAsync(finalStatus ?? GrpcStatusCode.Cancelled, "Close was cancelled.").ConfigureAwait(false);
+            completionStatus = StreamCompletionStatus.Cancelled;
+            errorCode = (finalStatus ?? GrpcStatusCode.Cancelled).ToString("D");
+            closeReason = "Close was cancelled.";
+
+            await stream.AbortAsync(finalStatus ?? GrpcStatusCode.Cancelled, closeReason).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Stream {StreamId}: error during close — aborting with faulted status.",
+                streamId);
+
+            completionStatus = StreamCompletionStatus.Faulted;
+            errorCode = "INTERNAL_ERROR";
+            closeReason = ex.Message;
+
+            await stream.AbortAsync(GrpcStatusCode.Internal, closeReason).ConfigureAwait(false);
         }
         finally
         {
@@ -221,16 +241,20 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
                 StreamId = streamId,
                 MessageCount = stream.Metrics.MessagesIn + stream.Metrics.MessagesOut,
                 DurationMs = durationMs,
+                CompletionStatus = completionStatus,
+                ErrorCode = errorCode,
+                CloseReason = closeReason ?? context.CloseReason ?? "Stream closed successfully",
                 Source = nameof(BidirectionalStreamingEngine)
             });
 
             await stream.DisposeAsync().ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Closed stream {StreamId} — finalStatus={Status}, durationMs={Duration}, " +
+                "Closed stream {StreamId} — status={Status}, errorCode={ErrorCode}, durationMs={Duration}, " +
                 "messagesIn={In}, messagesOut={Out}, backpressureEvents={BP}.",
                 streamId,
-                finalStatus ?? GrpcStatusCode.Ok,
+                completionStatus,
+                errorCode ?? "None",
                 durationMs,
                 stream.Metrics.MessagesIn,
                 stream.Metrics.MessagesOut,
