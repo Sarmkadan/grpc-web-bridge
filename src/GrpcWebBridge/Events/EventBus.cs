@@ -301,9 +301,16 @@ public sealed class EventBus : IDisposable
     private async Task PublishInlineAsync<TEvent>(TEvent @event, string eventName, List<Delegate> handlers) where TEvent : EventBase
     {
         // Original synchronous behavior for compatibility
+        // Take a snapshot of handlers to avoid issues with concurrent modifications during iteration
+        List<Delegate> handlerSnapshot;
+        lock (handlers)
+        {
+            handlerSnapshot = new List<Delegate>(handlers);
+        }
+
         var exceptions = new List<Exception>();
 
-        foreach (var handler in handlers)
+        foreach (var handler in handlerSnapshot)
         {
             try
             {

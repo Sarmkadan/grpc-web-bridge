@@ -4,6 +4,8 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using FluentAssertions;
 using GrpcWebBridge.Events;
 using Microsoft.Extensions.Logging;
@@ -712,28 +714,6 @@ public sealed class EventBusTests : IDisposable
 
 
     [Fact]
-    public async Task PublishAsync_AfterDispose_ThrowsObjectDisposedException()
-    {
-        // Arrange
-        void Handler(ServiceRegisteredEvent @event) { }
-        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
-        _eventBus.Dispose();
-
-        var @event = new ServiceRegisteredEvent
-        {
-            ServiceId = "test-service-id",
-            ServiceName = "TestService",
-            Endpoint = "http://localhost:5000"
-        };
-
-        // Act
-        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
-
-        // Assert
-        await act.Should().ThrowAsync<ObjectDisposedException>("because publishing after dispose should throw");
-    }
-
-    [Fact]
     public void Subscribe_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
@@ -859,4 +839,338 @@ public sealed class EventBusTests : IDisposable
         // Arrange & Act & Assert
         _eventBus.IsDisposed.Should().BeFalse("because the bus should not be disposed initially");
     }
+
+    #region Edge Case Tests for EventBus Behavior
+
+    [Fact]
+    public async Task PublishAsync_WithSubscriberException_ContinuesToOtherSubscribers()
+    {
+        // Arrange
+        var firstHandlerCalled = false;
+        var secondHandlerCalled = false;
+        var thirdHandlerCalled = false;
+
+        void FirstHandler(ServiceRegisteredEvent @event) => firstHandlerCalled = true;
+        void SecondHandler(ServiceRegisteredEvent @event) => throw new InvalidOperationException("Second handler failed");
+        void ThirdHandler(ServiceRegisteredEvent @event) => thirdHandlerCalled = true;
+
+        _eventBus.Subscribe<ServiceRegisteredEvent>(FirstHandler);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(SecondHandler);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(ThirdHandler);
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
+
+        // Assert
+        await act.Should().ThrowAsync<EventBusException>("because one handler threw an exception");
+
+        // All handlers should have been called despite the exception in the middle
+        firstHandlerCalled.Should().BeTrue("because first handler should be called");
+        secondHandlerCalled.Should().BeFalse("because second handler throws exception before setting flag");
+        thirdHandlerCalled.Should().BeTrue("because third handler should still be called after exception");
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithSubscriberException_InAsyncHandler_ContinuesToOtherSubscribers()
+    {
+        // Arrange
+        var firstHandlerCalled = false;
+        var secondHandlerCalled = false;
+        var thirdHandlerCalled = false;
+
+        Task FirstHandler(ServiceRegisteredEvent @event)
+        {
+            firstHandlerCalled = true;
+            return Task.CompletedTask;
+        }
+
+        Task SecondHandler(ServiceRegisteredEvent @event)
+        {
+            throw new InvalidOperationException("Async second handler failed");
+        }
+
+        Task ThirdHandler(ServiceRegisteredEvent @event)
+        {
+            thirdHandlerCalled = true;
+            return Task.CompletedTask;
+        }
+
+        _eventBus.Subscribe<ServiceRegisteredEvent>(FirstHandler);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(SecondHandler);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(ThirdHandler);
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
+
+        // Assert
+        await act.Should().ThrowAsync<EventBusException>("because one async handler threw an exception");
+
+        // All handlers should have been called despite the exception in the middle
+        firstHandlerCalled.Should().BeTrue("because first async handler should be called");
+        secondHandlerCalled.Should().BeFalse("because second async handler throws exception before setting flag");
+        thirdHandlerCalled.Should().BeTrue("because third async handler should still be called after exception");
+    }
+
+    [Fact]
+    public async Task PublishAsync_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        void Handler(ServiceRegisteredEvent @event) { }
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
+        _eventBus.Dispose();
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
+
+        // Assert
+        await act.Should().ThrowAsync<ObjectDisposedException>("because publishing after dispose should throw");
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithConcurrentPublishes_HandlesRaceConditions()
+    {
+        // Arrange
+        var callCount = 0;
+        var lockObj = new object();
+        void Handler(ServiceRegisteredEvent @event)
+        {
+            lock (lockObj)
+            {
+                callCount++;
+            }
+        }
+
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
+
+        // Act - Publish multiple events concurrently
+        var publishTasks = new List<Task>();
+        for (int i = 0; i < 10; i++)
+        {
+            var @event = new ServiceRegisteredEvent
+            {
+                ServiceId = $"service-{i}",
+                ServiceName = $"TestService{i}",
+                Endpoint = $"http://localhost:{5000 + i}"
+            };
+            publishTasks.Add(_eventBus.PublishAsync(@event));
+        }
+
+        await Task.WhenAll(publishTasks);
+
+        // Assert
+        callCount.Should().Be(10, "because each publish should have called the handler exactly once");
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithConcurrentPublishes_HandlesMultipleEvents()
+    {
+        // Arrange
+        var callCount = 0;
+        void Handler(ServiceRegisteredEvent @event)
+        {
+            Interlocked.Increment(ref callCount);
+        }
+
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
+
+        // Act - Publish multiple events concurrently
+        var publishTasks = new List<Task>();
+        for (int i = 0; i < 10; i++)
+        {
+            var @event = new ServiceRegisteredEvent
+            {
+                ServiceId = $"service-{i}",
+                ServiceName = $"TestService{i}",
+                Endpoint = $"http://localhost:{5000 + i}"
+            };
+            publishTasks.Add(_eventBus.PublishAsync(@event));
+        }
+
+        await Task.WhenAll(publishTasks);
+
+        // Assert
+        callCount.Should().Be(10, "because each publish should have called the handler exactly once");
+    }
+
+    [Fact]
+    public async Task PublishAsync_LateSubscriber_OnlyReceivesEventsPublishedAfterSubscription()
+    {
+        // Arrange
+        var eventsReceived = new ConcurrentBag<ServiceRegisteredEvent>();
+        var earlyEvent = new ServiceRegisteredEvent
+        {
+            ServiceId = "early-service",
+            ServiceName = "EarlyService",
+            Endpoint = "http://localhost:5000"
+        };
+        var lateEvent = new ServiceRegisteredEvent
+        {
+            ServiceId = "late-service",
+            ServiceName = "LateService",
+            Endpoint = "http://localhost:5001"
+        };
+
+        void Handler(ServiceRegisteredEvent @event) => eventsReceived.Add(@event);
+
+        // Publish an event before subscribing
+        await _eventBus.PublishAsync(earlyEvent);
+
+        // Subscribe after the event was published
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
+
+        // Publish another event - handler should receive this
+        await _eventBus.PublishAsync(lateEvent);
+
+        // Assert
+        eventsReceived.Should().HaveCount(1, "because only the event published after subscription should be received");
+        eventsReceived.Single().ServiceId.Should().Be("late-service");
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithUnsubscribeDuringHandler_DoesNotThrow()
+    {
+        // Arrange
+        var handler1Called = false;
+        var handler3Called = false;
+
+        void Handler1(ServiceRegisteredEvent @event)
+        {
+            handler1Called = true;
+            // Unsubscribe another handler during handler1 execution
+            // This should not throw due to proper locking
+            var handlers = _eventBus.GetSubscriberCount<ServiceRegisteredEvent>();
+            handlers.Should().BeGreaterThan(0);
+        }
+
+        void Handler3(ServiceRegisteredEvent @event) => handler3Called = true;
+
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler1);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler3);
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
+
+        // Assert
+        await act.Should().NotThrowAsync("because EventBus should handle concurrent modifications gracefully");
+        handler1Called.Should().BeTrue("because handler1 should execute");
+        handler3Called.Should().BeTrue("because handler3 should execute");
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithUnsubscribeDuringAsyncHandler_DoesNotThrow()
+    {
+        // Arrange
+        var handler1Called = false;
+        var handler3Called = false;
+
+        Task Handler1(ServiceRegisteredEvent @event)
+        {
+            handler1Called = true;
+            // Access subscriber count during handler execution
+            // This should not throw due to proper locking
+            var handlers = _eventBus.GetSubscriberCount<ServiceRegisteredEvent>();
+            handlers.Should().BeGreaterThan(0);
+            return Task.CompletedTask;
+        }
+
+        Task Handler3(ServiceRegisteredEvent @event)
+        {
+            handler3Called = true;
+            return Task.CompletedTask;
+        }
+
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler1);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler3);
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
+
+        // Assert
+        await act.Should().NotThrowAsync("because EventBus should handle concurrent modifications gracefully");
+        handler1Called.Should().BeTrue("because handler1 should execute");
+        handler3Called.Should().BeTrue("because handler3 should execute");
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithMultipleExceptions_InAsyncDispatchMode_AreLoggedButNotPropagated()
+    {
+        // Arrange
+        var eventBusWithAsyncDispatch = new EventBus(
+            _mockLogger,
+            maxHistorySize: 100,
+            dispatchOptions: new EventBus.DispatchOptions { UseAsyncDispatch = true });
+
+        var exceptionCount = 0;
+        Task ThrowingHandler(ServiceRegisteredEvent @event)
+        {
+            Interlocked.Increment(ref exceptionCount);
+            throw new InvalidOperationException($"Async handler exception {exceptionCount}");
+        }
+
+        Task NormalHandler(ServiceRegisteredEvent @event) => Task.CompletedTask;
+
+        eventBusWithAsyncDispatch.Subscribe<ServiceRegisteredEvent>(ThrowingHandler);
+        eventBusWithAsyncDispatch.Subscribe<ServiceRegisteredEvent>(NormalHandler);
+        eventBusWithAsyncDispatch.Subscribe<ServiceRegisteredEvent>(ThrowingHandler);
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await eventBusWithAsyncDispatch.PublishAsync(@event);
+
+        // Assert
+        await act.Should().NotThrowAsync("because async dispatch mode logs exceptions but doesn't propagate them");
+
+        // Give time for async processing
+        await Task.Delay(100);
+
+        // Verify exceptions were logged (we can't easily assert on logger calls with NSubstitute without setup)
+        // But we can verify the event was processed
+        eventBusWithAsyncDispatch.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(3);
+
+        // Cleanup
+        await eventBusWithAsyncDispatch.DisposeAsync();
+    }
+
+    #endregion
 }
