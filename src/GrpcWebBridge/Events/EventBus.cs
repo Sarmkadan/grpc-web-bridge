@@ -298,7 +298,8 @@ public sealed class EventBusException : Exception
 /// <summary>
 /// Fired when a service is registered.
 /// </summary>
-public class ServiceRegisteredEvent : EventBase
+/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
+public sealed class ServiceRegisteredEvent : EventBase
 {
     public string ServiceId { get; set; } = string.Empty;
     public string ServiceName { get; set; } = string.Empty;
@@ -308,7 +309,8 @@ public class ServiceRegisteredEvent : EventBase
 /// <summary>
 /// Fired when a service is unregistered.
 /// </summary>
-public class ServiceUnregisteredEvent : EventBase
+/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
+public sealed class ServiceUnregisteredEvent : EventBase
 {
     public string ServiceId { get; set; } = string.Empty;
     public string ServiceName { get; set; } = string.Empty;
@@ -317,40 +319,66 @@ public class ServiceUnregisteredEvent : EventBase
 /// <summary>
 /// Fired when a method is invoked.
 /// </summary>
-public class MethodInvokedEvent : EventBase
+/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
+public sealed class MethodInvokedEvent : EventBase
 {
+    /// <summary>Gets or sets the service identifier.</summary>
     public string ServiceId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the name of the method being invoked.</summary>
     public string MethodName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the duration of the method invocation in milliseconds.</summary>
     public long DurationMs { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the method invocation was successful.</summary>
     public bool Success { get; set; }
 }
 
 /// <summary>
 /// Fired when a stream starts.
 /// </summary>
-public class StreamStartedEvent : EventBase
+/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
+public sealed class StreamStartedEvent : EventBase
 {
+    /// <summary>Gets or sets the stream identifier.</summary>
     public string StreamId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the service identifier.</summary>
     public string ServiceId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the name of the method associated with the stream.</summary>
     public string MethodName { get; set; } = string.Empty;
 }
 
 /// <summary>
 /// Fired when a stream ends.
 /// </summary>
-public class StreamEndedEvent : EventBase
+/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
+public sealed class StreamEndedEvent : EventBase
 {
+    /// <summary>Gets or sets the stream identifier.</summary>
     public string StreamId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the total number of messages processed in the stream.</summary>
     public long MessageCount { get; set; }
+
+    /// <summary>Gets or sets the duration of the stream in milliseconds.</summary>
     public long DurationMs { get; set; }
 }
 
 /// <summary>
 /// Fired when authentication fails.
 /// </summary>
-public class AuthenticationFailedEvent : EventBase
+/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
+public sealed class AuthenticationFailedEvent : EventBase
 {
+    /// <summary>Gets or sets the user identifier.</summary>
     public string? UserId { get; set; }
+
+    /// <summary>Gets or sets the reason for authentication failure.</summary>
     public string FailureReason { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the client IP address.</summary>
     public string? ClientIp { get; set; }
 }
