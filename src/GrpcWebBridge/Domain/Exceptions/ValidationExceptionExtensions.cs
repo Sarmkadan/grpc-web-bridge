@@ -1,14 +1,20 @@
 #nullable enable
 
+// =============================================================================
+// Author: Vladyslav Zaiets | https://sarmkadan.com
+// CTO & Software Architect
+// =====================================================================
+
 namespace GrpcWebBridge.Domain.Exceptions;
 
 /// <summary>
-/// Provides extension methods for <see cref="ValidationException"/> to enhance validation error handling and reporting
+/// Provides extension methods for <see cref="ValidationException"/> to enhance validation error handling and reporting.
+/// Includes RFC 7807 ProblemDetails support for standardized error responses.
 /// </summary>
 public static class ValidationExceptionExtensions
 {
     /// <summary>
-    /// Creates a user-friendly error message from the validation exception
+    /// Creates a user-friendly error message from the validation exception.
     /// </summary>
     /// <param name="exception">The validation exception</param>
     /// <returns>A formatted error message suitable for API responses</returns>
@@ -38,7 +44,7 @@ public static class ValidationExceptionExtensions
     }
 
     /// <summary>
-    /// Checks if the validation exception represents a specific field validation failure
+    /// Checks if the validation exception represents a specific field validation failure.
     /// </summary>
     /// <param name="exception">The validation exception</param>
     /// <param name="fieldName">The field name to check against</param>
@@ -54,7 +60,7 @@ public static class ValidationExceptionExtensions
     }
 
     /// <summary>
-    /// Creates a simplified validation error object suitable for JSON serialization
+    /// Creates a simplified validation error object suitable for JSON serialization.
     /// </summary>
     /// <param name="exception">The validation exception</param>
     /// <returns>A dictionary containing the validation error details</returns>
@@ -88,7 +94,7 @@ public static class ValidationExceptionExtensions
     }
 
     /// <summary>
-    /// Combines multiple validation exceptions into a single aggregated exception
+    /// Combines multiple validation exceptions into a single aggregated exception.
     /// </summary>
     /// <param name="exceptions">Collection of validation exceptions</param>
     /// <returns>A new ValidationException containing all validation errors</returns>
@@ -133,5 +139,55 @@ public static class ValidationExceptionExtensions
         }
 
         return combinedException;
+    }
+
+    /// <summary>
+    /// Creates a ProblemDetails object from a ValidationException for RFC 7807 compliance.
+    /// </summary>
+    /// <param name="exception">The validation exception</param>
+    /// <returns>A ProblemDetails object with validation error information</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
+    public static ProblemDetails ToProblemDetails(this ValidationException exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var problemDetails = new ProblemDetails
+        {
+            Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
+            Title = "Validation Failed",
+            Status = (int)System.Net.HttpStatusCode.BadRequest,
+            Detail = exception.Message,
+            Timestamp = DateTime.UtcNow
+        };
+
+        // Add field-level error information
+        var errors = new Dictionary<string, object?>();
+
+        if (!string.IsNullOrEmpty(exception.FieldName))
+        {
+            errors[exception.FieldName] = exception.Message;
+            problemDetails.Extensions["field"] = exception.FieldName;
+        }
+
+        if (exception.InvalidValue is not null)
+        {
+            errors["value"] = exception.InvalidValue;
+            problemDetails.Extensions["providedValue"] = exception.InvalidValue;
+        }
+
+        if (!string.IsNullOrEmpty(exception.ValidationRule))
+        {
+            errors["rule"] = exception.ValidationRule;
+            problemDetails.Extensions["validationRule"] = exception.ValidationRule;
+        }
+
+        if (errors.Count > 0)
+        {
+            problemDetails.Extensions["errors"] = errors;
+        }
+
+        problemDetails.Extensions["errorCode"] = "VALIDATION_ERROR";
+
+        return problemDetails;
     }
 }
