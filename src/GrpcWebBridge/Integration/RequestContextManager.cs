@@ -13,10 +13,13 @@ namespace GrpcWebBridge.Integration;
 /// Provides ambient context for request-scoped data without explicit parameter passing.
 /// Enables correlation logging and cross-cutting concerns.
 /// </summary>
-public sealed class RequestContextManager
+public sealed class RequestContextManager : IDisposable
 {
     private static readonly AsyncLocal<RequestContext> _context = new();
+    private static readonly ConcurrentDictionary<string, RequestContext> _activeContexts = new();
+    private static readonly object _registryLock = new();
     private readonly ILogger<RequestContextManager> _logger;
+    private int _disposed;
 
     public RequestContextManager(ILogger<RequestContextManager> logger)
     {
@@ -26,11 +29,18 @@ public sealed class RequestContextManager
     /// <summary>
     /// Creates and sets a new request context.
     /// </summary>
+    /// <param name="requestId">The request identifier.</param>
+    /// <param name="userId">Optional user identifier.</param>
+    /// <param name="metadata">Optional request metadata.</param>
+    /// <returns>The created request context.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="requestId"/> is null or empty.</exception>
     public RequestContext CreateContext(
         string requestId,
         string? userId = null,
         Dictionary<string, string>? metadata = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(requestId);
+
         var context = new RequestContext
         {
             RequestId = requestId,
@@ -40,6 +50,12 @@ public sealed class RequestContextManager
         };
 
         _context.Value = context;
+
+        lock (_registryLock)
+        {
+            _activeContexts[requestId] = context;
+        }
+
         _logger.LogDebug("Request context created: RequestId={RequestId}, UserId={UserId}",
             requestId, userId ?? "anonymous");
 
@@ -124,6 +140,10 @@ public sealed class RequestContextManager
 
         if (context is not null)
         {
+            lock (_registryLock)
+            {
+                _activeContexts.TryRemove(context.RequestId, out _);
+            }
             _logger.LogDebug("Request context cleared: RequestId={RequestId}", context.RequestId);
         }
     }
@@ -134,6 +154,60 @@ public sealed class RequestContextManager
     public bool IsContextActive()
     {
         return _context.Value is not null;
+    }
+
+    /// <summary>
+    /// Gets the number of active request contexts.
+    /// Useful for monitoring and diagnostics.
+    /// </summary>
+    /// <returns>The count of active contexts.</returns>
+    public int GetActiveContextCount()
+    {
+        lock (_registryLock)
+        {
+            return _activeContexts.Count;
+        }
+    }
+
+    /// <summary>
+    /// Gets all active request contexts.
+    /// Useful for debugging and monitoring.
+    /// </summary>
+    /// <returns>A collection of active request contexts.</returns>
+    public IReadOnlyCollection<RequestContext> GetActiveContexts()
+    {
+        lock (_registryLock)
+        {
+            return _activeContexts.Values.ToList().AsReadOnly();
+        }
+    }
+
+    /// <summary>
+    /// Attempts to remove a context by request ID.
+    /// Useful for cleanup of orphaned contexts.
+    /// </summary>
+    /// <param name="requestId">The request ID to remove.</param>
+    /// <returns>True if the context was found and removed; otherwise false.</returns>
+    public bool TryRemoveContext(string requestId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(requestId);
+
+        lock (_registryLock)
+        {
+            return _activeContexts.TryRemove(requestId, out _);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
+        {
+            lock (_registryLock)
+            {
+                _activeContexts.Clear();
+            }
+            _logger.LogInformation("RequestContextManager disposed and all active contexts cleared");
+        }
     }
 }
 

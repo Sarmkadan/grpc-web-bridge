@@ -17,8 +17,9 @@ public sealed class EventBus : IDisposable
 {
     private readonly ConcurrentDictionary<string, List<Delegate>> _subscribers;
     private readonly ILogger<EventBus> _logger;
-    private readonly ConcurrentBag<EventRecord> _eventHistory;
+    private readonly ConcurrentQueue<EventRecord> _eventHistory;
     private readonly int _maxHistorySize;
+    private readonly TimeSpan _maxHistoryAge;
     private int _disposed;
 
     /// <summary>
@@ -26,14 +27,22 @@ public sealed class EventBus : IDisposable
     /// </summary>
     public bool IsDisposed => _disposed == 1;
 
-    public EventBus(ILogger<EventBus> logger, int maxHistorySize = 1000)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventBus"/> class.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="maxHistorySize">Maximum number of events to retain in history. Default is 1000.</param>
+    /// <param name="maxHistoryAge">Maximum age of events to retain. Events older than this will be trimmed. Default is 1 hour.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is null.</exception>
+    public EventBus(ILogger<EventBus> logger, int maxHistorySize = 1000, TimeSpan? maxHistoryAge = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
 
         _subscribers = new ConcurrentDictionary<string, List<Delegate>>();
         _logger = logger;
-        _eventHistory = new ConcurrentBag<EventRecord>();
+        _eventHistory = new ConcurrentQueue<EventRecord>();
         _maxHistorySize = maxHistorySize;
+        _maxHistoryAge = maxHistoryAge ?? TimeSpan.FromHours(1);
     }
 
     /// <summary>
@@ -197,7 +206,12 @@ public sealed class EventBus : IDisposable
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-        var history = _eventHistory.ToList();
+        // Convert queue to list while maintaining order (oldest first)
+        var history = new List<EventRecord>();
+        foreach (var record in _eventHistory)
+        {
+            history.Add(record);
+        }
 
         if (!string.IsNullOrEmpty(eventType))
         {
@@ -233,29 +247,44 @@ public sealed class EventBus : IDisposable
             Data = @event
         };
 
-        _eventHistory.Add(record);
+        _eventHistory.Enqueue(record);
 
-        // Trim history if it exceeds max size
-        if (_eventHistory.Count > _maxHistorySize)
+        // Trim history if it exceeds max size or max age
+        TrimHistory();
+    }
+
+    /// <summary>
+    /// Trims the event history to respect bounded retention policies.
+    /// Removes oldest events when exceeding max size or when events exceed max age.
+    /// </summary>
+    private void TrimHistory()
+    {
+        // First, remove events older than max age
+        if (_maxHistoryAge != TimeSpan.Zero)
         {
-            var oldestEvents = _eventHistory
-                .OrderBy(e => e.PublishedAt)
-                .Take(_eventHistory.Count - _maxHistorySize)
-                .ToList();
-
-            foreach (var oldEvent in oldestEvents)
+            var cutoffTime = DateTime.UtcNow - _maxHistoryAge;
+            while (_eventHistory.TryPeek(out var oldest) && oldest.PublishedAt < cutoffTime)
             {
-                _eventHistory.TryTake(out _);
+                _eventHistory.TryDequeue(out _);
             }
+        }
+
+        // Then, remove oldest events if we exceed max size
+        while (_eventHistory.Count > _maxHistorySize && _eventHistory.TryPeek(out _))
+        {
+            _eventHistory.TryDequeue(out _);
         }
     }
 
+    /// <summary>
+    /// Disposes the event bus, clearing all subscribers and event history.
+    /// </summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
         {
             _subscribers.Clear();
-            _logger.LogInformation("EventBus disposed");
+            _logger.LogInformation("EventBus disposed and all subscribers cleared");
         }
     }
 }
