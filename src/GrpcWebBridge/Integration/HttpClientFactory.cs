@@ -2,13 +2,54 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http;
+using System.Net.Security;
 using GrpcWebBridge.Domain.Exceptions;
 
 namespace GrpcWebBridge.Integration;
+
+/// <summary>
+/// Configuration options for HTTP client factory.
+/// </summary>
+public sealed class HttpClientFactoryOptions
+{
+    /// <summary>
+    /// Gets or sets the request timeout in milliseconds.
+    /// </summary>
+    public int RequestTimeoutMs { get; set; } = 30000;
+
+    /// <summary>
+    /// Gets or sets the maximum number of connections per server.
+    /// </summary>
+    public int MaxConnectionsPerServer { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to use cookies.
+    /// </summary>
+    public bool UseCookies { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to allow automatic redirection.
+    /// </summary>
+    public bool AllowAutoRedirect { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to allow insecure HTTPS connections.
+    /// </summary>
+    public bool AllowInsecureHttps { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pooled connection lifetime in milliseconds.
+    /// After this duration, the underlying SocketsHttpHandler will be rotated to
+    /// prevent DNS staleness and ensure connection freshness.
+    /// Default is 2 minutes (120000 ms).
+    /// </summary>
+    public int PooledConnectionLifetimeMs { get; set; } = 120000;
+}
 
 /// <summary>
 /// HTTP client factory managing pooled HTTP clients.
@@ -20,12 +61,19 @@ public sealed class HttpClientFactory : IDisposable
     private readonly ConcurrentDictionary<string, HttpClient> _clients;
     private readonly ILogger<HttpClientFactory> _logger;
     private readonly HttpClientFactoryOptions _options;
+    private readonly ConcurrentDictionary<string, PooledHandler> _pooledHandlers;
+    private readonly object _handlerRotationLock = new object();
+    private DateTime _lastHandlerRotation;
 
     public HttpClientFactory(ILogger<HttpClientFactory> logger, HttpClientFactoryOptions? options = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+
         _clients = new ConcurrentDictionary<string, HttpClient>();
+        _pooledHandlers = new ConcurrentDictionary<string, PooledHandler>();
         _logger = logger;
         _options = options ?? new HttpClientFactoryOptions();
+        _lastHandlerRotation = DateTime.UtcNow;
 
         // Configure default HTTP client handler
         ConfigureDefaultHandler();
@@ -34,10 +82,16 @@ public sealed class HttpClientFactory : IDisposable
     /// <summary>
     /// Gets or creates an HTTP client for a specific endpoint.
     /// </summary>
+    /// <param name="name">The name of the client.</param>
+    /// <returns>An HTTP client instance.</returns>
+    /// <exception cref="ConfigurationException">Thrown if name is null or empty.</exception>
     public HttpClient GetClient(string name = "default")
     {
         if (string.IsNullOrEmpty(name))
             throw new ConfigurationException(nameof(name), "HTTP client name cannot be null or empty");
+
+        // Check if handlers need rotation based on connection lifetime
+        CheckHandlerRotation();
 
         return _clients.GetOrAdd(name, _ =>
         {
@@ -49,20 +103,13 @@ public sealed class HttpClientFactory : IDisposable
     /// <summary>
     /// Creates a new configured HTTP client with timeouts and handlers.
     /// </summary>
+    /// <param name="name">The client name.</param>
+    /// <returns>A configured HTTP client.</returns>
     private HttpClient CreateConfiguredClient(string name)
     {
-        var handler = new HttpClientHandler
-        {
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-            UseCookies = _options.UseCookies,
-            AllowAutoRedirect = _options.AllowAutoRedirect,
-            MaxConnectionsPerServer = _options.MaxConnectionsPerServer,
-            ServerCertificateCustomValidationCallback = _options.AllowInsecureHttps
-                ? (msg, cert, chain, errors) => true
-                : null
-        };
+        var handler = GetPooledHandler(name);
 
-        var client = new HttpClient(handler, disposeHandler: true)
+        var client = new HttpClient(handler.Handler, disposeHandler: false)
         {
             Timeout = _options.RequestTimeoutMs > 0
                 ? TimeSpan.FromMilliseconds(_options.RequestTimeoutMs)
@@ -76,15 +123,65 @@ public sealed class HttpClientFactory : IDisposable
     }
 
     /// <summary>
+    /// Gets or creates a pooled handler for the given client name.
+    /// </summary>
+    /// <param name="name">The client name.</param>
+    /// <returns>A pooled handler.</returns>
+    private PooledHandler GetPooledHandler(string name)
+    {
+        return _pooledHandlers.GetOrAdd(name, _ =>
+        {
+            _logger.LogDebug("Creating new pooled handler: Name={Name}", name);
+            return new PooledHandler(_options, name);
+        });
+    }
+
+    /// <summary>
+    /// Checks if handlers need to be rotated based on pooled connection lifetime.
+    /// </summary>
+    private void CheckHandlerRotation()
+    {
+        if (_options.PooledConnectionLifetimeMs <= 0)
+            return;
+
+        var lifetime = TimeSpan.FromMilliseconds(_options.PooledConnectionLifetimeMs);
+        var now = DateTime.UtcNow;
+        var timeSinceLastRotation = now - _lastHandlerRotation;
+
+        if (timeSinceLastRotation >= lifetime)
+        {
+            lock (_handlerRotationLock)
+            {
+                // Double-check after acquiring lock
+                if ((now - _lastHandlerRotation) >= lifetime)
+                {
+                    _logger.LogInformation("Rotating HTTP handlers due to connection lifetime expiry: Lifetime={Lifetime}, Elapsed={Elapsed}",
+                        lifetime, timeSinceLastRotation);
+
+                    // Dispose old handlers and clear the pool
+                    foreach (var handlerEntry in _pooledHandlers)
+                    {
+                        handlerEntry.Value.Dispose();
+                    }
+
+                    _pooledHandlers.Clear();
+                    _lastHandlerRotation = now;
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Registers a pre-configured client.
     /// </summary>
+    /// <param name="name">The client name.</param>
+    /// <param name="client">The HTTP client to register.</param>
+    /// <exception cref="ArgumentException">Thrown if name is null or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if client is null.</exception>
     public void RegisterClient(string name, HttpClient client)
     {
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentException("Client name cannot be null or empty", nameof(name));
-
-        if (client is null)
-            throw new ArgumentNullException(nameof(client));
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        ArgumentNullException.ThrowIfNull(client);
 
         _clients.AddOrUpdate(name, client, (_, old) =>
         {
@@ -98,6 +195,9 @@ public sealed class HttpClientFactory : IDisposable
     /// <summary>
     /// Gets or creates a client for a specific base address.
     /// </summary>
+    /// <param name="baseUri">The base URI for the client.</param>
+    /// <returns>An HTTP client configured with the base address.</returns>
+    /// <exception cref="ConfigurationException">Thrown if baseUri is null or empty.</exception>
     public HttpClient GetClientForUri(string baseUri)
     {
         if (string.IsNullOrEmpty(baseUri))
@@ -125,6 +225,11 @@ public sealed class HttpClientFactory : IDisposable
     /// <summary>
     /// Sends a GET request and returns response content as string.
     /// </summary>
+    /// <param name="uri">The request URI.</param>
+    /// <param name="clientName">Optional client name.</param>
+    /// <returns>The response content as a string.</returns>
+    /// <exception cref="ConfigurationException">Thrown if URI is invalid.</exception>
+    /// <exception cref="GrpcWebBridgeException">Thrown if the request fails.</exception>
     public async Task<string> GetAsync(string uri, string? clientName = null)
     {
         if (string.IsNullOrEmpty(uri))
@@ -155,6 +260,12 @@ public sealed class HttpClientFactory : IDisposable
     /// <summary>
     /// Sends a POST request with JSON body.
     /// </summary>
+    /// <param name="uri">The request URI.</param>
+    /// <param name="payload">The JSON payload to send.</param>
+    /// <param name="clientName">Optional client name.</param>
+    /// <returns>The response content as a string.</returns>
+    /// <exception cref="ConfigurationException">Thrown if URI is invalid or payload is null.</exception>
+    /// <exception cref="GrpcWebBridgeException">Thrown if the request fails.</exception>
     public async Task<string> PostJsonAsync(string uri, object payload, string? clientName = null)
     {
         if (string.IsNullOrEmpty(uri))
@@ -191,6 +302,14 @@ public sealed class HttpClientFactory : IDisposable
     /// <summary>
     /// Sends a request with custom configuration.
     /// </summary>
+    /// <param name="uri">The request URI.</param>
+    /// <param name="method">The HTTP method.</param>
+    /// <param name="content">Optional request content.</param>
+    /// <param name="headers">Optional request headers.</param>
+    /// <param name="clientName">Optional client name.</param>
+    /// <returns>The HTTP response message.</returns>
+    /// <exception cref="ConfigurationException">Thrown if URI or method is invalid.</exception>
+    /// <exception cref="GrpcWebBridgeException">Thrown if the request fails.</exception>
     public async Task<HttpResponseMessage> SendAsync(
         string uri,
         HttpMethod method,
@@ -240,8 +359,13 @@ public sealed class HttpClientFactory : IDisposable
     /// <summary>
     /// Removes a registered client.
     /// </summary>
+    /// <param name="name">The client name to remove.</param>
+    /// <returns>True if the client was found and removed; otherwise false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if name is null.</exception>
     public bool RemoveClient(string name)
     {
+        ArgumentNullException.ThrowIfNull(name);
+
         if (_clients.TryRemove(name, out var client))
         {
             client?.Dispose();
@@ -255,6 +379,7 @@ public sealed class HttpClientFactory : IDisposable
     /// <summary>
     /// Gets list of registered client names.
     /// </summary>
+    /// <returns>A list of registered client names.</returns>
     public List<string> GetRegisteredClientNames()
     {
         return _clients.Keys.ToList();
@@ -266,8 +391,21 @@ public sealed class HttpClientFactory : IDisposable
         ServicePointManager.ReusePort = true;
     }
 
+    /// <summary>
+    /// Disposes the factory and all registered clients.
+    /// Note: Disposes only the clients managed by this factory.
+    /// Clients registered via RegisterClient are disposed by the caller.
+    /// </summary>
     public void Dispose()
     {
+        // Dispose pooled handlers first (they're shared resources)
+        foreach (var handlerEntry in _pooledHandlers)
+        {
+            handlerEntry.Value.Dispose();
+        }
+        _pooledHandlers.Clear();
+
+        // Dispose all clients managed by this factory
         foreach (var client in _clients.Values)
         {
             client?.Dispose();
@@ -275,16 +413,50 @@ public sealed class HttpClientFactory : IDisposable
 
         _clients.Clear();
     }
-}
 
-/// <summary>
-/// Configuration options for HTTP client factory.
-/// </summary>
-public sealed class HttpClientFactoryOptions
-{
-    public int RequestTimeoutMs { get; set; } = 30000;
-    public int MaxConnectionsPerServer { get; set; } = 10;
-    public bool UseCookies { get; set; } = false;
-    public bool AllowAutoRedirect { get; set; } = true;
-    public bool AllowInsecureHttps { get; set; } = false;
+    /// <summary>
+    /// Internal class to manage pooled SocketsHttpHandler instances.
+    /// </summary>
+    private sealed class PooledHandler : IDisposable
+    {
+        public SocketsHttpHandler Handler { get; }
+        private readonly HttpClientFactoryOptions _options;
+        private bool _disposed;
+
+        public PooledHandler(HttpClientFactoryOptions options, string handlerName)
+        {
+            _options = options;
+            Handler = CreateHandler(handlerName);
+        }
+
+        private SocketsHttpHandler CreateHandler(string handlerName)
+        {
+            return new SocketsHttpHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                UseCookies = _options.UseCookies,
+                AllowAutoRedirect = _options.AllowAutoRedirect,
+                MaxConnectionsPerServer = _options.MaxConnectionsPerServer,
+                PooledConnectionLifetime = TimeSpan.FromMilliseconds(_options.PooledConnectionLifetimeMs),
+                PooledConnectionIdleTimeout = TimeSpan.FromMilliseconds(_options.PooledConnectionLifetimeMs),
+                ConnectTimeout = TimeSpan.FromSeconds(10),
+                EnableMultipleHttp2Connections = true,
+                SslOptions = new SslClientAuthenticationOptions
+                {
+                    RemoteCertificateValidationCallback = _options.AllowInsecureHttps
+                        ? (sender, certificate, chain, errors) => true
+                        : null
+                }
+            };
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            Handler.Dispose();
+        }
+    }
 }
