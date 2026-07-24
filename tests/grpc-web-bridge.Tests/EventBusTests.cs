@@ -129,16 +129,16 @@ public sealed class EventBusTests : IDisposable
     }
 
     [Fact]
-    public void Unsubscribe_WithNullHandler_ReturnsFalse()
+    public void Unsubscribe_WithNullHandler_ThrowsArgumentNullException()
     {
         // Arrange
         Delegate? nullHandler = null;
 
         // Act
-        var result = _eventBus.Unsubscribe<ServiceRegisteredEvent>(nullHandler!);
+        Action act = () => _eventBus.Unsubscribe<ServiceRegisteredEvent>(nullHandler!);
 
         // Assert
-        result.Should().BeFalse("because null handlers cannot be unsubscribed");
+        act.Should().Throw<ArgumentNullException>("because null handlers are not allowed");
     }
 
     [Fact]
@@ -334,7 +334,7 @@ public sealed class EventBusTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishAsync_WithExceptionInHandler_LogsErrorAndContinues()
+    public async Task PublishAsync_WithExceptionInHandler_AggregatesAndThrowsEventBusException()
     {
         // Arrange
         void ThrowingHandler(ServiceRegisteredEvent @event) => throw new InvalidOperationException("Test exception");
@@ -351,11 +351,12 @@ public sealed class EventBusTests : IDisposable
         };
 
         // Act
-        var act = async () => await _eventBus.PublishAsync(@event);
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
 
         // Assert
-        await act.Should().NotThrowAsync("because exceptions in handlers should be caught and logged");
-        // Normal handler should still be called
+        await act.Should().ThrowAsync<EventBusException>("because exceptions in handlers should be aggregated and thrown");
+
+        // Normal handler should still be called despite exception in another handler
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(2);
     }
 
@@ -534,7 +535,7 @@ public sealed class EventBusTests : IDisposable
     }
 
     [Fact]
-    public void Dispose_ClearsSubscribers()
+    public void Dispose_SetsIsDisposedFlag()
     {
         // Arrange
         void Handler(ServiceRegisteredEvent @event) { }
@@ -545,7 +546,21 @@ public sealed class EventBusTests : IDisposable
         _eventBus.Dispose();
 
         // Assert
-        _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(0);
+        _eventBus.IsDisposed.Should().BeTrue("because Dispose should set the IsDisposed flag");
+    }
+
+    [Fact]
+    public void Dispose_CanOnlyBeCalledOnce()
+    {
+        // Arrange
+        var initialCount = _eventBus.GetSubscriberCount<ServiceRegisteredEvent>();
+
+        // Act
+        _eventBus.Dispose();
+        _eventBus.Dispose();
+
+        // Assert - Should not throw on multiple Dispose calls
+        _eventBus.IsDisposed.Should().BeTrue();
     }
 
     [Fact]
@@ -693,5 +708,155 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         history.Should().HaveCount(2);
+    }
+
+
+    [Fact]
+    public async Task PublishAsync_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        void Handler(ServiceRegisteredEvent @event) { }
+        _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
+        _eventBus.Dispose();
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
+
+        // Assert
+        await act.Should().ThrowAsync<ObjectDisposedException>("because publishing after dispose should throw");
+    }
+
+    [Fact]
+    public void Subscribe_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        void Handler(ServiceRegisteredEvent @event) { }
+        _eventBus.Dispose();
+
+        // Act
+        Action act = () => _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
+
+        // Assert
+        act.Should().Throw<ObjectDisposedException>("because subscribing after dispose should throw");
+    }
+
+    [Fact]
+    public void Unsubscribe_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        void Handler(ServiceRegisteredEvent @event) { }
+        _eventBus.Dispose();
+
+        // Act
+        Action act = () => _eventBus.Unsubscribe<ServiceRegisteredEvent>(Handler);
+
+        // Assert
+        act.Should().Throw<ObjectDisposedException>("because unsubscribing after dispose should throw");
+    }
+
+    [Fact]
+    public void GetSubscriberCount_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _eventBus.Dispose();
+
+        // Act
+        Action act = () => _eventBus.GetSubscriberCount<ServiceRegisteredEvent>();
+
+        // Assert
+        act.Should().Throw<ObjectDisposedException>("because getting subscriber count after dispose should throw");
+    }
+
+    [Fact]
+    public void GetEventHistory_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _eventBus.Dispose();
+
+        // Act
+        Action act = () => _eventBus.GetEventHistory();
+
+        // Assert
+        act.Should().Throw<ObjectDisposedException>("because getting event history after dispose should throw");
+    }
+
+    [Fact]
+    public void ClearSubscribers_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _eventBus.Dispose();
+
+        // Act
+        Action act = () => _eventBus.ClearSubscribers();
+
+        // Assert
+        act.Should().Throw<ObjectDisposedException>("because clearing subscribers after dispose should throw");
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithMultipleExceptions_AggregatesAllExceptions()
+    {
+        // Arrange
+        void ThrowingHandler1(ServiceRegisteredEvent @event) => throw new InvalidOperationException("Exception 1");
+        void ThrowingHandler2(ServiceRegisteredEvent @event) => throw new ArgumentException("Exception 2");
+        void NormalHandler(ServiceRegisteredEvent @event) { }
+
+        _eventBus.Subscribe<ServiceRegisteredEvent>(ThrowingHandler1);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(ThrowingHandler2);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(NormalHandler);
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
+
+        // Assert
+        var exception = await act.Should().ThrowAsync<EventBusException>();
+        exception.And.InnerException.Should().BeOfType<AggregateException>();
+        var aggregateException = (AggregateException)exception.And.InnerException;
+        aggregateException.InnerExceptions.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithExceptionInAsyncHandler_AggregatesException()
+    {
+        // Arrange
+        Task ThrowingAsyncHandler(ServiceRegisteredEvent @event) => throw new InvalidOperationException("Async exception");
+        void NormalHandler(ServiceRegisteredEvent @event) { }
+
+        _eventBus.Subscribe<ServiceRegisteredEvent>(ThrowingAsyncHandler);
+        _eventBus.Subscribe<ServiceRegisteredEvent>(NormalHandler);
+
+        var @event = new ServiceRegisteredEvent
+        {
+            ServiceId = "test-service-id",
+            ServiceName = "TestService",
+            Endpoint = "http://localhost:5000"
+        };
+
+        // Act
+        Func<Task> act = async () => await _eventBus.PublishAsync(@event);
+
+        // Assert
+        await act.Should().ThrowAsync<EventBusException>();
+    }
+
+    [Fact]
+    public void IsDisposed_ReturnsFalse_WhenNotDisposed()
+    {
+        // Arrange & Act & Assert
+        _eventBus.IsDisposed.Should().BeFalse("because the bus should not be disposed initially");
     }
 }
