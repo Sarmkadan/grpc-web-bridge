@@ -3,15 +3,18 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// ====================================================================
 
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Services;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace GrpcWebBridge.Endpoints;
 
 /// <summary>
-/// Endpoints for health monitoring and diagnostics
+/// Endpoints for health monitoring and diagnostics using ASP.NET Core IHealthCheck infrastructure
 /// </summary>
 public static class HealthEndpoints
 {
@@ -26,18 +29,65 @@ public static class HealthEndpoints
     }
 
     /// <summary>
-    /// Maps health-related endpoints to the application
+    /// Maps health-related endpoints to the application using ASP.NET Core health check infrastructure
     /// </summary>
     public static void MapHealthEndpoints(this WebApplication app)
     {
-        if (app is null)
-            throw new ArgumentNullException(nameof(app));
+        ArgumentNullException.ThrowIfNull(app);
 
-        // Detailed health check endpoint
+        // Standard Kubernetes-style health check endpoints
+        // /healthz - Liveness probe (should always return 200 unless app is completely dead)
+        app.MapHealthChecks("/healthz", new HealthCheckOptions
+        {
+            Predicate = _ => true,
+            ResponseWriter = HealthCheckResponseWriter.WriteHealthCheckResponse,
+            AllowCachingResponses = false,
+            ResultStatusCodes =
+            {
+                [HealthStatus.Healthy] = StatusCodes.Status200OK,
+                [HealthStatus.Degraded] = StatusCodes.Status503ServiceUnavailable,
+                [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+            }
+        })
+        .WithName("Liveness Health Check")
+        .WithOpenApi();
+
+        // /ready - Readiness probe (returns 503 when not ready to serve traffic)
+        app.MapHealthChecks("/ready", new HealthCheckOptions
+        {
+            Predicate = _ => true,
+            ResponseWriter = HealthCheckResponseWriter.WriteHealthCheckResponse,
+            AllowCachingResponses = false,
+            ResultStatusCodes =
+            {
+                [HealthStatus.Healthy] = StatusCodes.Status200OK,
+                [HealthStatus.Degraded] = StatusCodes.Status503ServiceUnavailable,
+                [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+            }
+        })
+        .WithName("Readiness Health Check")
+        .WithOpenApi();
+
+        // /health - Standard health endpoint (backward compatibility)
+        app.MapHealthChecks("/health", new HealthCheckOptions
+        {
+            Predicate = _ => true,
+            ResponseWriter = HealthCheckResponseWriter.WriteHealthCheckResponse,
+            AllowCachingResponses = false,
+            ResultStatusCodes =
+            {
+                [HealthStatus.Healthy] = StatusCodes.Status200OK,
+                [HealthStatus.Degraded] = StatusCodes.Status503ServiceUnavailable,
+                [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+            }
+        })
+        .WithName("Standard Health Check")
+        .WithOpenApi();
+
+        // Detailed health check endpoint (backward compatibility)
         app.MapGet("/health/detailed", async (
             ServiceRegistry registry,
-            StreamingService streaming,
-            TimeProvider timeProvider) =>
+            StreamingService streaming) =>
         {
             var uptime = DateTime.UtcNow - _startupTime;
 
@@ -100,7 +150,7 @@ public static class HealthEndpoints
                 total_service_count = snapshot.TotalServiceCount,
                 registered_services = snapshot.ServiceRegistrationTimestamps.Count,
                 service_registration_timestamps = snapshot.ServiceRegistrationTimestamps
-                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString("o")),
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString("o")),
                 timestamp = DateTime.UtcNow
             };
 
@@ -135,12 +185,39 @@ public static class HealthEndpoints
     /// </summary>
     public sealed class DetailedHealthResponse
     {
+        /// <summary>
+        /// Gets or sets the overall health status
+        /// </summary>
         public string? status { get; set; }
+
+        /// <summary>
+        /// Gets or sets the timestamp when the response was generated
+        /// </summary>
         public DateTime timestamp { get; set; }
+
+        /// <summary>
+        /// Gets or sets the application uptime as a formatted string
+        /// </summary>
         public string? uptime { get; set; }
+
+        /// <summary>
+        /// Gets or sets the application uptime in seconds
+        /// </summary>
         public int uptime_seconds { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service health summary
+        /// </summary>
         public ServiceHealthSummary? services { get; set; }
+
+        /// <summary>
+        /// Gets or sets the worker status summary
+        /// </summary>
         public WorkerStatusSummary? workers { get; set; }
+
+        /// <summary>
+        /// Gets or sets the system status information
+        /// </summary>
         public SystemStatus? system { get; set; }
     }
 
@@ -149,8 +226,19 @@ public static class HealthEndpoints
     /// </summary>
     public sealed class ServiceHealthSummary
     {
+        /// <summary>
+        /// Gets or sets the total number of registered services
+        /// </summary>
         public int registered_count { get; set; }
+
+        /// <summary>
+        /// Gets or sets the overall health status of services
+        /// </summary>
         public string? health_status { get; set; }
+
+        /// <summary>
+        /// Gets or sets the list of individual service health items
+        /// </summary>
         public List<ServiceHealthItem>? services { get; set; }
     }
 
@@ -159,15 +247,54 @@ public static class HealthEndpoints
     /// </summary>
     public sealed class ServiceHealthItem
     {
+        /// <summary>
+        /// Gets or sets the service identifier
+        /// </summary>
         public string? id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service name
+        /// </summary>
         public string? name { get; set; }
+
+        /// <summary>
+        /// Gets or sets the full service name (package.service)
+        /// </summary>
         public string? full_name { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service endpoint
+        /// </summary>
         public string? endpoint { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service port
+        /// </summary>
         public int port { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service status
+        /// </summary>
         public string? status { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service health status
+        /// </summary>
         public string? health_status { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of methods in the service
+        /// </summary>
         public int method_count { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service creation timestamp
+        /// </summary>
         public DateTime created_at { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service last update timestamp
+        /// </summary>
         public DateTime updated_at { get; set; }
     }
 
@@ -176,6 +303,9 @@ public static class HealthEndpoints
     /// </summary>
     public sealed class WorkerStatusSummary
     {
+        /// <summary>
+        /// Gets or sets the streaming service worker status
+        /// </summary>
         public StreamingWorkerStatus? streaming_service { get; set; }
     }
 
@@ -184,9 +314,24 @@ public static class HealthEndpoints
     /// </summary>
     public sealed class StreamingWorkerStatus
     {
+        /// <summary>
+        /// Gets or sets the active stream count
+        /// </summary>
         public int active_stream_count { get; set; }
+
+        /// <summary>
+        /// Gets or sets the maximum stream count
+        /// </summary>
         public int max_stream_count { get; set; }
+
+        /// <summary>
+        /// Gets or sets the stream capacity as a formatted string
+        /// </summary>
         public string? stream_capacity { get; set; }
+
+        /// <summary>
+        /// Gets or sets the worker status
+        /// </summary>
         public string? status { get; set; }
     }
 
@@ -195,9 +340,24 @@ public static class HealthEndpoints
     /// </summary>
     public sealed class SystemStatus
     {
+        /// <summary>
+        /// Gets or sets the environment name
+        /// </summary>
         public string? environment { get; set; }
+
+        /// <summary>
+        /// Gets or sets the application name
+        /// </summary>
         public string? application_name { get; set; }
+
+        /// <summary>
+        /// Gets or sets the application version
+        /// </summary>
         public string? version { get; set; }
+
+        /// <summary>
+        /// Gets or sets the timestamp when the status was generated
+        /// </summary>
         public DateTime timestamp { get; set; }
     }
 
@@ -206,9 +366,24 @@ public static class HealthEndpoints
     /// </summary>
     public sealed class RegistryHealthResponse
     {
+        /// <summary>
+        /// Gets or sets the total service count
+        /// </summary>
         public int total_service_count { get; set; }
+
+        /// <summary>
+        /// Gets or sets the registered services count
+        /// </summary>
         public int registered_services { get; set; }
+
+        /// <summary>
+        /// Gets or sets the service registration timestamps
+        /// </summary>
         public Dictionary<string, string>? service_registration_timestamps { get; set; }
+
+        /// <summary>
+        /// Gets or sets the timestamp when the response was generated
+        /// </summary>
         public DateTime timestamp { get; set; }
     }
 }
