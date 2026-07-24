@@ -7,6 +7,7 @@
 
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Services;
+using GrpcWebBridge.BackgroundWorkers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -37,7 +38,7 @@ public static class HealthEndpoints
 
         // Standard Kubernetes-style health check endpoints
         // /healthz - Liveness probe (should always return 200 unless app is completely dead)
-        app.MapHealthChecks("/healthz", new HealthCheckOptions
+        app.MapHealthChecks("/healthz", new global::Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
         {
             Predicate = _ => true,
             ResponseWriter = HealthCheckResponseWriter.WriteHealthCheckResponse,
@@ -53,7 +54,7 @@ public static class HealthEndpoints
         .WithOpenApi();
 
         // /ready - Readiness probe (returns 503 when not ready to serve traffic)
-        app.MapHealthChecks("/ready", new HealthCheckOptions
+        app.MapHealthChecks("/ready", new global::Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
         {
             Predicate = _ => true,
             ResponseWriter = HealthCheckResponseWriter.WriteHealthCheckResponse,
@@ -69,7 +70,7 @@ public static class HealthEndpoints
         .WithOpenApi();
 
         // /health - Standard health endpoint (backward compatibility)
-        app.MapHealthChecks("/health", new HealthCheckOptions
+        app.MapHealthChecks("/health", new global::Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
         {
             Predicate = _ => true,
             ResponseWriter = HealthCheckResponseWriter.WriteHealthCheckResponse,
@@ -85,7 +86,10 @@ public static class HealthEndpoints
         .WithOpenApi();
 
         // Configuration for detailed health endpoint authentication
-        var healthConfig = app.Services.GetRequiredService<GrpcWebBridge.Configuration.GrpcWebBridgeOptions>();
+        // Get supervisor from DI if available
+var supervisor = app.Services.GetService<StreamingWorkerSupervisor>();
+
+var healthConfig = app.Services.GetRequiredService<GrpcWebBridge.Configuration.GrpcWebBridgeOptions>();
         var requireAuthForDetailedHealth = healthConfig.Configuration.RequireAuthenticationForDetailedHealth;
 
         // Detailed health check endpoint with optional authentication
@@ -400,6 +404,26 @@ public static class HealthEndpoints
         /// Gets or sets the worker status
         /// </summary>
         public string? status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the consecutive failure count
+    /// </summary>
+    public int consecutive_failure_count { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total restart count
+    /// </summary>
+    public int total_restart_count { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last healthy timestamp
+    /// </summary>
+    public DateTime? last_healthy_time { get; set; }
+
+    /// <summary>
+    /// Gets or sets the supervisor status
+    /// </summary>
+    public string? supervisor_status { get; set; }
     }
 
     /// <summary>
