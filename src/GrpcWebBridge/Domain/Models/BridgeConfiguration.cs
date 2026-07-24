@@ -22,8 +22,9 @@ public sealed class BridgeConfiguration
 
 /// <summary>
 /// Gets or sets whether detailed health checks require authentication
+/// Defaults to true for security - detailed health information should not be publicly accessible
 /// </summary>
-public bool RequireAuthenticationForDetailedHealth { get; set; }
+public bool RequireAuthenticationForDetailedHealth { get; set; } = true;
     public int MaxStreamCount { get; set; } = Constants.Streaming.MaxStreamCount;
     public int StreamIdleTimeoutSeconds { get; set; } = Constants.Streaming.StreamIdleTimeoutSeconds;
     public int StreamHeartbeatIntervalSeconds { get; set; } = Constants.Streaming.StreamHeartbeatIntervalSeconds;
