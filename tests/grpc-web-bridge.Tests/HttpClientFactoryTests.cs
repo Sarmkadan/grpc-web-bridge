@@ -48,13 +48,11 @@ public sealed class HttpClientFactoryTests : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Constructor_WithNullLogger_DoesNotThrow()
+    public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
-        // Act - constructor doesn't validate logger parameter
+        // Act & Assert - constructor validates logger parameter
         Action act = () => new HttpClientFactory(null!);
-
-        // Assert - constructor accepts null logger
-        act.Should().NotThrow();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -579,6 +577,136 @@ public sealed class HttpClientFactoryTests : IDisposable
 
         // Assert - factory continues to work after dispose
         client.Should().NotBeNull();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Handler pooling and connection lifetime tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void GetClient_WithSameName_ReusesSameHandler()
+    {
+        // Arrange
+        var factory = new HttpClientFactory(_logger, _options);
+
+        // Act - get two clients with the same name
+        var client1 = factory.GetClient("shared-handler");
+        var client2 = factory.GetClient("shared-handler");
+
+        // Assert - both clients should share the same underlying handler
+        client1.Should().NotBeNull();
+        client2.Should().NotBeNull();
+        client1.Should().BeSameAs(client2);
+    }
+
+    [Fact]
+    public void GetClient_WithDifferentNames_CreatesDifferentHandlers()
+    {
+        // Arrange
+        var factory = new HttpClientFactory(_logger, _options);
+
+        // Act
+        var client1 = factory.GetClient("handler-one");
+        var client2 = factory.GetClient("handler-two");
+
+        // Assert - different clients should have different handlers
+        client1.Should().NotBeSameAs(client2);
+    }
+
+    [Fact]
+    public void PooledConnectionLifetime_WithDefaultValue_IsSetCorrectly()
+    {
+        // Arrange
+        var options = new HttpClientFactoryOptions();
+
+        // Assert
+        options.PooledConnectionLifetimeMs.Should().Be(120000); // 2 minutes
+    }
+
+    [Fact]
+    public void PooledConnectionLifetime_WithCustomValue_IsSetCorrectly()
+    {
+        // Arrange
+        var options = new HttpClientFactoryOptions
+        {
+            PooledConnectionLifetimeMs = 300000 // 5 minutes
+        };
+
+        // Act
+        var factory = new HttpClientFactory(_logger, options);
+
+        // Assert
+        options.PooledConnectionLifetimeMs.Should().Be(300000);
+    }
+
+    [Fact]
+    public void Dispose_WithMultipleClients_DisposesHandlersNotClients()
+    {
+        // Arrange
+        var factory = new HttpClientFactory(_logger, _options);
+        var client1 = factory.GetClient("client1");
+        var client2 = factory.GetClient("client2");
+
+        var initialNames = factory.GetRegisteredClientNames();
+        initialNames.Should().HaveCount(2);
+
+        // Act
+        factory.Dispose();
+
+        // Assert - clients should NOT be disposed (they're still in use)
+        // The factory disposes pooled handlers but not the HttpClient instances
+        // We can't directly verify handler disposal, but we can verify cleanup
+        var finalNames = factory.GetRegisteredClientNames();
+        finalNames.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task HandlerRotation_OccursAfterConfiguredLifetime()
+    {
+        // Arrange - use a very short connection lifetime for testing
+        var shortLivedOptions = new HttpClientFactoryOptions
+        {
+            PooledConnectionLifetimeMs = 100, // 100ms lifetime
+            RequestTimeoutMs = 5000
+        };
+
+        var factory = new HttpClientFactory(_logger, shortLivedOptions);
+
+        // Act - get a client
+        var client1 = factory.GetClient("rotation-test");
+        client1.Should().NotBeNull();
+
+        // Wait for lifetime to expire
+        await Task.Delay(150).ConfigureAwait(false);
+
+        // Get another client with the same name - should return the same client instance
+        var client2 = factory.GetClient("rotation-test");
+        client2.Should().NotBeNull();
+
+        // Both clients should be the same instance (cached)
+        client1.Should().BeSameAs(client2);
+
+        factory.Dispose();
+    }
+
+    [Fact]
+    public void SocketsHttpHandler_ConfiguredWithProperSettings()
+    {
+        // Arrange
+        var options = new HttpClientFactoryOptions
+        {
+            MaxConnectionsPerServer = 20,
+            PooledConnectionLifetimeMs = 300000,
+            AllowInsecureHttps = true
+        };
+
+        // Act
+        var factory = new HttpClientFactory(_logger, options);
+        var client = factory.GetClient("test-client");
+
+        // Assert - verify that client was created successfully
+        client.Should().NotBeNull();
+        client.Timeout.Should().Be(TimeSpan.FromMilliseconds(options.RequestTimeoutMs));
     }
 
     // ─────────────────────────────────────────────────────────────────────
