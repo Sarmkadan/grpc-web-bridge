@@ -95,12 +95,16 @@ public sealed class ReflectionResult<T>
     /// <summary>Gets the UTC timestamp at which the reflection query was evaluated.</summary>
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
 
-    /// <summary>Creates a successful result wrapping <paramref name="data"/>.</summary>
+    /// <summary>
+    /// Creates a successful result wrapping <paramref name="data"/>.
+    /// </summary>
     /// <param name="data">The payload to return to the caller.</param>
     public static ReflectionResult<T> Ok(T data) =>
         new() { Data = data, Success = true };
 
-    /// <summary>Creates a failed result with a descriptive <paramref name="errorMessage"/>.</summary>
+    /// <summary>
+    /// Creates a failed result with a descriptive <paramref name="errorMessage"/>.
+    /// </summary>
     /// <param name="errorMessage">A human-readable explanation of the failure.</param>
     public static ReflectionResult<T> Fail(string errorMessage) =>
         new() { Success = false, ErrorMessage = errorMessage };
