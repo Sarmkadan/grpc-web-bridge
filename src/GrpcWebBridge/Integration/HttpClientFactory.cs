@@ -64,6 +64,7 @@ public sealed class HttpClientFactory : IDisposable
     private readonly ConcurrentDictionary<string, PooledHandler> _pooledHandlers;
     private readonly object _handlerRotationLock = new object();
     private DateTime _lastHandlerRotation;
+    private bool _disposed;
 
     public HttpClientFactory(ILogger<HttpClientFactory> logger, HttpClientFactoryOptions? options = null)
     {
@@ -84,11 +85,15 @@ public sealed class HttpClientFactory : IDisposable
     /// </summary>
     /// <param name="name">The name of the client.</param>
     /// <returns>An HTTP client instance.</returns>
-    /// <exception cref="ConfigurationException">Thrown if name is null or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if name is null.</exception>
+    /// <exception cref="ConfigurationException">Thrown if name is empty.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the factory has been disposed.</exception>
     public HttpClient GetClient(string name = "default")
     {
-        if (string.IsNullOrEmpty(name))
-            throw new ConfigurationException(nameof(name), "HTTP client name cannot be null or empty");
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has been disposed and cannot create new clients.");
 
         // Check if handlers need rotation based on connection lifetime
         CheckHandlerRotation();
@@ -396,8 +401,14 @@ public sealed class HttpClientFactory : IDisposable
     /// Note: Disposes only the clients managed by this factory.
     /// Clients registered via RegisterClient are disposed by the caller.
     /// </summary>
+    /// <exception cref="ObjectDisposedException">Thrown if the factory has already been disposed.</exception>
     public void Dispose()
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has already been disposed.");
+
+        _disposed = true;
+
         // Dispose pooled handlers first (they're shared resources)
         foreach (var handlerEntry in _pooledHandlers)
         {

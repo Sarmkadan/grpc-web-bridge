@@ -747,6 +747,106 @@ public sealed class HttpClientFactoryTests : IDisposable
         // Assert
         client.Timeout.Should().Be(TimeSpan.FromMilliseconds(15000));
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Disposal tracking tests - NEW TESTS
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Dispose_WithGetClientAfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _factory.Dispose();
+
+        // Act & Assert - factory should throw when used after disposal
+        Action act = () => _factory.GetClient("new-client");
+        act.Should().Throw<ObjectDisposedException>()
+            .WithMessage("*The factory has been disposed*");
+    }
+
+    [Fact]
+    public void Dispose_WithRegisterClientAfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _factory.Dispose();
+
+        // Act & Assert - factory should throw when used after disposal
+        Action act = () => _factory.RegisterClient("test-client", new HttpClient());
+        act.Should().Throw<ObjectDisposedException>()
+            .WithMessage("*The factory has been disposed*");
+    }
+
+    [Fact]
+    public void Dispose_WithGetClientForUriAfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _factory.Dispose();
+
+        // Act & Assert - factory should throw when used after disposal
+        Action act = () => _factory.GetClientForUri("https://example.com");
+        act.Should().Throw<ObjectDisposedException>()
+            .WithMessage("*The factory has been disposed*");
+    }
+
+    [Fact]
+    public void Dispose_WithGetAsyncAfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _factory.Dispose();
+
+        // Act & Assert - factory should throw when used after disposal
+        Func<Task> act = async () => await _factory.GetAsync("https://example.com");
+        act.Should().ThrowAsync<ObjectDisposedException>()
+            .WithMessage("*The factory has been disposed*");
+    }
+
+    [Fact]
+    public void Dispose_WithPostJsonAsyncAfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _factory.Dispose();
+
+        // Act & Assert - factory should throw when used after disposal
+        Func<Task> act = async () => await _factory.PostJsonAsync("https://example.com/api", new { test = "data" });
+        act.Should().ThrowAsync<ObjectDisposedException>()
+            .WithMessage("*The factory has been disposed*");
+    }
+
+    [Fact]
+    public void Dispose_WithSendAsyncAfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _factory.Dispose();
+
+        // Act & Assert - factory should throw when used after disposal
+        Func<Task> act = async () => await _factory.SendAsync("https://example.com/api", HttpMethod.Get);
+        act.Should().ThrowAsync<ObjectDisposedException>()
+            .WithMessage("*The factory has been disposed*");
+    }
+
+    [Fact]
+    public void Dispose_WithRemoveClientAfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _factory.Dispose();
+
+        // Act & Assert - factory should throw when used after disposal
+        Action act = () => _factory.RemoveClient("test-client");
+        act.Should().Throw<ObjectDisposedException>()
+            .WithMessage("*The factory has been disposed*");
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        _factory.Dispose();
+
+        // Act & Assert - disposing twice should throw
+        Action act = () => _factory.Dispose();
+        act.Should().Throw<ObjectDisposedException>()
+            .WithMessage("*The factory has already been disposed*");
+    }
 }
 
 // Mock HttpMessageHandler for testing disposal
