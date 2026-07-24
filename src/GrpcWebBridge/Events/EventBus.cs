@@ -336,6 +336,21 @@ public sealed class MethodInvokedEvent : EventBase
 }
 
 /// <summary>
+/// Completion status of a stream.
+/// </summary>
+public enum StreamCompletionStatus
+{
+    /// <summary>Stream completed successfully.</summary>
+    Completed,
+
+    /// <summary>Stream was cancelled by the caller.</summary>
+    Cancelled,
+
+    /// <summary>Stream terminated due to an error.</summary>
+    Faulted
+}
+
+/// <summary>
 /// Fired when a stream starts.
 /// </summary>
 /// <param name="requestId">The correlation/request ID for tracing the operation.</param>
@@ -365,6 +380,19 @@ public sealed class StreamEndedEvent : EventBase
 
     /// <summary>Gets or sets the duration of the stream in milliseconds.</summary>
     public long DurationMs { get; set; }
+
+    /// <summary>Gets or sets the completion status of the stream.</summary>
+    public StreamCompletionStatus CompletionStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error code when <see cref="CompletionStatus"/> is <see cref="StreamCompletionStatus.Faulted"/>.
+    /// </summary>
+    public string? ErrorCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets a human-readable description of the termination reason.
+    /// </summary>
+    public string? CloseReason { get; set; }
 }
 
 /// <summary>
