@@ -1,3 +1,2 @@
 
-### Example 2 – Validating payload size before forwarding
-
+This file includes 6 test methods covering the happy path and edge cases for the `ToJson`, `FromJson`, and `TryFromJson` methods.
