@@ -165,6 +165,15 @@ public sealed class GrpcWebBridgeOptions
     }
 
     /// <summary>
+    /// Requires authentication for detailed health checks
+    /// </summary>
+    public GrpcWebBridgeOptions RequireAuthenticationForDetailedHealth()
+    {
+        Configuration.RequireAuthenticationForDetailedHealth = true;
+        return this;
+    }
+
+    /// <summary>
     /// Adds an allowed origin for CORS
     /// </summary>
     public GrpcWebBridgeOptions AddAllowedOrigin(string origin)
