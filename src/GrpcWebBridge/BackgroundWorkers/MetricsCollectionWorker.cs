@@ -6,6 +6,7 @@
 
 using GrpcWebBridge.Controllers;
 using GrpcWebBridge.Services;
+using GrpcWebBridge.Domain;
 
 namespace GrpcWebBridge.BackgroundWorkers;
 
@@ -237,7 +238,7 @@ public sealed class MetricsSnapshot
 public sealed class MetricsCollectionOptions
 {
     public int CollectionIntervalSeconds { get; set; } = 30;
-    public int MaxSnapshotsToKeep { get; set; } = 1440; // 12 hours at 30s intervals
+    public int MaxSnapshotsToKeep { get; set; } = Constants.ServiceRegistry.MaxCachedServices; // Using an existing constant as a default for this option
     public double CpuAlertThresholdPercent { get; set; } = 80;
     public double MemoryAlertThresholdMb { get; set; } = 1024;
     public double ErrorRateAlertThresholdPercent { get; set; } = 5;
