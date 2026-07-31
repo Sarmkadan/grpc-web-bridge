@@ -121,7 +121,7 @@ public sealed class StreamingSession
 ///   </item>
 /// </list>
 /// </summary>
-public sealed class StreamingSessionManager
+public sealed class StreamingSessionManager : IStreamingSessionManager
 {
     private readonly ConcurrentDictionary<string, StreamingSession> _sessions = new();
     private readonly ConcurrentDictionary<string, string> _streamToSession = new();
