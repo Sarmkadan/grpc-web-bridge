@@ -4,6 +4,8 @@
 // CTO & Software Architect
 // =============================================================================
 
+using GrpcWebBridge.Extensions;
+
 namespace GrpcWebBridge.Middleware;
 
 /// <summary>
@@ -21,20 +23,6 @@ namespace GrpcWebBridge.Middleware;
 /// </summary>
 public sealed class ContentTypeValidationMiddleware
 {
-    /// <summary>
-    /// Valid gRPC-Web <c>Content-Type</c> values (prefix-matched to tolerate
-    /// optional parameters such as <c>;charset=utf-8</c>).
-    /// </summary>
-    private static readonly string[] ValidContentTypePrefixes =
-    [
-        "application/grpc-web+proto",
-        "application/grpc-web-text+proto",
-        "application/grpc-web-text",
-        "application/grpc-web",
-        "application/grpc+proto",
-        "application/grpc",
-    ];
-
     /// <summary>
     /// Request path prefixes that bypass content-type validation.
     /// These correspond to infrastructure and REST API endpoints that are not
@@ -71,14 +59,12 @@ public sealed class ContentTypeValidationMiddleware
     {
         if (ShouldValidate(context))
         {
-            var contentType = context.Request.ContentType;
-
-            if (!IsValidGrpcWebContentType(contentType))
+            if (!context.IsGrpcWebRequest())
             {
                 _logger.LogWarning(
                     "Rejected request to {Path} — invalid Content-Type: '{ContentType}'. " +
                     "Expected a gRPC-Web media type.",
-                    context.Request.Path, contentType ?? "(none)");
+                    context.GetGrpcMethodPath(), context.Request.ContentType ?? "(none)");
 
                 context.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
                 context.Response.ContentType = "application/json";
@@ -86,10 +72,10 @@ public sealed class ContentTypeValidationMiddleware
                 await context.Response.WriteAsJsonAsync(new
                 {
                     error = "Unsupported Media Type",
-                    message = $"Content-Type '{contentType ?? "(none)"}' is not supported. " +
+                    message = $"Content-Type '{context.Request.ContentType ?? "(none)"}' is not supported. " +
                                "Use one of: application/grpc-web, application/grpc-web+proto, " +
                                "application/grpc-web-text, application/grpc-web-text+proto.",
-                    path = context.Request.Path.Value,
+                    path = context.GetGrpcMethodPath(),
                     traceId = context.TraceIdentifier
                 });
 
@@ -110,7 +96,7 @@ public sealed class ContentTypeValidationMiddleware
         if (!HttpMethods.IsPost(context.Request.Method))
             return false;
 
-        var path = context.Request.Path.Value ?? string.Empty;
+        var path = context.GetGrpcMethodPath();
 
         foreach (var prefix in ExcludedPathPrefixes)
         {
@@ -119,23 +105,6 @@ public sealed class ContentTypeValidationMiddleware
         }
 
         return true;
-    }
-
-    private static bool IsValidGrpcWebContentType(string? contentType)
-    {
-        if (string.IsNullOrWhiteSpace(contentType))
-            return false;
-
-        // Strip optional parameters (e.g. "; charset=utf-8") before comparing.
-        var mediaType = contentType.Split(';')[0].Trim();
-
-        foreach (var valid in ValidContentTypePrefixes)
-        {
-            if (mediaType.Equals(valid, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
     }
 }
 
