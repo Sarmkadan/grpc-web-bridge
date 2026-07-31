@@ -5,6 +5,7 @@
 // =============================================================================
 
 using GrpcWebBridge.Services;
+using GrpcWebBridge.Domain;
 
 namespace GrpcWebBridge.BackgroundWorkers;
 
@@ -159,8 +160,8 @@ public sealed class StreamCleanupWorker : BackgroundService
 /// </summary>
 public sealed class StreamCleanupOptions
 {
-    public int CleanupIntervalSeconds { get; set; } = 60;
-    public TimeSpan IdleTimeoutDuration { get; set; } = TimeSpan.FromMinutes(5);
-    public TimeSpan StaleStreamDuration { get; set; } = TimeSpan.FromMinutes(10);
+    public int CleanupIntervalSeconds { get; set; } = 60; // Could also be made a constant if needed, but wasn't in Constants.cs
+    public TimeSpan IdleTimeoutDuration { get; set; } = TimeSpan.FromSeconds(Constants.Streaming.StreamIdleTimeoutSeconds);
+    public TimeSpan StaleStreamDuration { get; set; } = TimeSpan.FromSeconds(Constants.Streaming.StreamHeartbeatIntervalSeconds);
     public int GcTriggerThreshold { get; set; } = 10;
 }
