@@ -71,7 +71,7 @@ public static class StreamingExtensions
                 sp.GetRequiredService<FlowControlOptions>(),
                 sp.GetService<EventBus>()));
 
-        services.TryAddSingleton<StreamingSessionManager>();
+        services.TryAddSingleton<IStreamingSessionManager, StreamingSessionManager>();
 
         if (options.Mode == FlowControlMode.Adaptive)
                     services.AddHostedService<AdaptiveFlowController>();

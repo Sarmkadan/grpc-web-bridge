@@ -11,6 +11,7 @@ using GrpcWebBridge.Endpoints;
 using GrpcWebBridge.Integration;
 using GrpcWebBridge.Middleware;
 using GrpcWebBridge.Services;
+using GrpcWebBridge.Streaming;
 using OpenTelemetry.Trace;
 using Prometheus;
 using Serilog;
@@ -85,6 +86,9 @@ services.AddControllers();
 
 // Add RequestContextManager for ambient context tracking
 services.AddRequestContextManager();
+
+// Add StreamingSessionManager as a singleton
+services.AddSingleton<IStreamingSessionManager, StreamingSessionManager>();
 
 var app = builder.Build();
 
