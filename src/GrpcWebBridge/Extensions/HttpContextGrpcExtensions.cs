@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Linq;
+using System.Net.Http.Headers;
 
 namespace GrpcWebBridge.Extensions;
 
@@ -24,8 +25,14 @@ public static class HttpContextGrpcExtensions
             return false;
         }
 
-        var mediaType = contentType.Split(';')[0].Trim();
-        return ValidContentTypePrefixes.Any(v => mediaType.Equals(v, StringComparison.OrdinalIgnoreCase));
+        if (MediaTypeHeaderValue.TryParse(contentType, out var header))
+        {
+            var mediaType = header.MediaType;
+            return ValidContentTypePrefixes.Any(v =>
+                string.Equals(mediaType, v, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return false;
     }
 
     public static string GetGrpcMethodPath(this HttpContext context)
