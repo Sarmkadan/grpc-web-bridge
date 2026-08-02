@@ -4,6 +4,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System;
 using GrpcWebBridge.Utilities;
 
 namespace GrpcWebBridge.Formatters;
@@ -12,13 +13,44 @@ namespace GrpcWebBridge.Formatters;
 /// Specialized JSON formatting with customization options.
 /// Provides formatting, pretty-printing, and schema enforcement.
 /// </summary>
-public sealed class JsonFormatter
+public sealed class JsonFormatter : IEquatable<JsonFormatter>
 {
     private readonly JsonFormatterOptions _options;
 
     public JsonFormatter(JsonFormatterOptions? options = null)
     {
         _options = options ?? new JsonFormatterOptions();
+    }
+
+    public bool Equals(JsonFormatter? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return _options.PrettyPrint == other._options.PrettyPrint &&
+               _options.SortKeys == other._options.SortKeys &&
+               _options.MaxDepth == other._options.MaxDepth &&
+               _options.IncludeNullValues == other._options.IncludeNullValues;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as JsonFormatter);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(_options.PrettyPrint, _options.SortKeys, _options.MaxDepth, _options.IncludeNullValues);
+    }
+
+    public static bool operator ==(JsonFormatter? left, JsonFormatter? right)
+    {
+        if (left is null) return right is null;
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
+    {
+        return !(left == right);
     }
 
     /// <summary>
