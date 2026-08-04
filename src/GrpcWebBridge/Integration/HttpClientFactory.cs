@@ -61,20 +61,24 @@ public sealed class HttpClientFactory : IDisposable
     private readonly ConcurrentDictionary<string, HttpClient> _clients;
     private readonly ILogger<HttpClientFactory> _logger;
     private readonly HttpClientFactoryOptions _options;
-    private readonly ConcurrentDictionary<string, PooledHandler> _pooledHandlers;
     private readonly object _handlerRotationLock = new object();
     private DateTime _lastHandlerRotation;
     private bool _disposed;
+
+    // Single shared handler used by all HttpClient instances
+    private PooledHandler _sharedHandler;
 
     public HttpClientFactory(ILogger<HttpClientFactory> logger, HttpClientFactoryOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
 
         _clients = new ConcurrentDictionary<string, HttpClient>();
-        _pooledHandlers = new ConcurrentDictionary<string, PooledHandler>();
         _logger = logger;
         _options = options ?? new HttpClientFactoryOptions();
         _lastHandlerRotation = DateTime.UtcNow;
+
+        // Create the shared handler once
+        _sharedHandler = new PooledHandler(_options, "shared");
 
         // Configure default HTTP client handler
         ConfigureDefaultHandler();
@@ -112,7 +116,7 @@ public sealed class HttpClientFactory : IDisposable
     /// <returns>A configured HTTP client.</returns>
     private HttpClient CreateConfiguredClient(string name)
     {
-        var handler = GetPooledHandler(name);
+        var handler = GetSharedHandler();
 
         var client = new HttpClient(handler.Handler, disposeHandler: false)
         {
@@ -128,21 +132,17 @@ public sealed class HttpClientFactory : IDisposable
     }
 
     /// <summary>
-    /// Gets or creates a pooled handler for the given client name.
+    /// Returns the shared pooled handler.
     /// </summary>
-    /// <param name="name">The client name.</param>
-    /// <returns>A pooled handler.</returns>
-    private PooledHandler GetPooledHandler(string name)
+    private PooledHandler GetSharedHandler()
     {
-        return _pooledHandlers.GetOrAdd(name, _ =>
-        {
-            _logger.LogDebug("Creating new pooled handler: Name={Name}", name);
-            return new PooledHandler(_options, name);
-        });
+        return _sharedHandler;
     }
 
     /// <summary>
     /// Checks if handlers need to be rotated based on pooled connection lifetime.
+    /// When rotating, also disposes any existing HttpClient instances that were
+    /// using the old handlers to avoid socket exhaustion or using disposed handlers.
     /// </summary>
     private void CheckHandlerRotation()
     {
@@ -157,19 +157,25 @@ public sealed class HttpClientFactory : IDisposable
         {
             lock (_handlerRotationLock)
             {
-                // Double-check after acquiring lock
+                // Double‑check after acquiring lock
                 if ((now - _lastHandlerRotation) >= lifetime)
                 {
                     _logger.LogInformation("Rotating HTTP handlers due to connection lifetime expiry: Lifetime={Lifetime}, Elapsed={Elapsed}",
                         lifetime, timeSinceLastRotation);
 
-                    // Dispose old handlers and clear the pool
-                    foreach (var handlerEntry in _pooledHandlers)
-                    {
-                        handlerEntry.Value.Dispose();
-                    }
+                    // Dispose old shared handler
+                    _sharedHandler.Dispose();
 
-                    _pooledHandlers.Clear();
+                    // Create a new shared handler
+                    _sharedHandler = new PooledHandler(_options, "shared");
+
+                    // Dispose any HttpClients that were using the old handler
+                    foreach (var clientEntry in _clients)
+                    {
+                        clientEntry.Value?.Dispose();
+                    }
+                    _clients.Clear();
+
                     _lastHandlerRotation = now;
                 }
             }
@@ -409,12 +415,8 @@ public sealed class HttpClientFactory : IDisposable
 
         _disposed = true;
 
-        // Dispose pooled handlers first (they're shared resources)
-        foreach (var handlerEntry in _pooledHandlers)
-        {
-            handlerEntry.Value.Dispose();
-        }
-        _pooledHandlers.Clear();
+        // Dispose the shared handler first (it's a shared resource)
+        _sharedHandler?.Dispose();
 
         // Dispose all clients managed by this factory
         foreach (var client in _clients.Values)
