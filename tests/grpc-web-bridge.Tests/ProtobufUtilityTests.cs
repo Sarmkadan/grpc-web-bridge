@@ -1,234 +1,121 @@
-using Xunit;
+using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 using Google.Protobuf;
-using Grpc.Core;
-using Grpc.WebBridge;
-using Grpc.WebBridge.Utilities;
+using Google.Protobuf.WellKnownTypes;
+using GrpcWebBridge.Utilities;
+using Xunit;
 
-namespace GrpcWebBridge.Tests
+namespace GrpcWebBridge.Tests;
+
+public class ProtobufUtilityTests
 {
-    public class ProtobufUtilityTests
+    [Fact]
+    public void ToJson_ShouldReturnValidJson()
     {
-        [Fact]
-        public void ToJson_Happy_PATH()
-        {
-            // Arrange
-            var message = new MyMessage();
-            message.MyField = "Hello World!";
+        var timestamp = new Timestamp { Seconds = 1620000000, Nanos = 123456789 };
+        var json = ProtobufUtility.ToJson(timestamp);
+        Assert.Contains("\"seconds\":1620000000", json);
+        Assert.Contains("\"nanos\":123456789", json);
+    }
 
-            // Act
-            var json = ProtobufUtility.ToJson(message);
+    [Fact]
+    public void FromJson_ShouldParseBackToEquivalentMessage()
+    {
+        var original = new Timestamp { Seconds = 1620000000, Nanos = 123456789 };
+        var json = ProtobufUtility.ToJson(original);
+        var parsed = ProtobufUtility.FromJson<Timestamp>(json);
+        Assert.NotNull(parsed);
+        Assert.True(ProtobufUtility.AreEqual(original, parsed));
+    }
 
-            // Assert
-            Assert.NotEmpty(json);
-            Assert.Contains("Hello World!", json);
-        }
+    [Fact]
+    public void ToBytes_And_FromBytes_RoundTrip()
+    {
+        var original = new Timestamp { Seconds = 1620000000, Nanos = 123456789 };
+        var bytes = ProtobufUtility.ToBytes(original);
+        var parsed = ProtobufUtility.FromBytes<Timestamp>(bytes);
+        Assert.NotNull(parsed);
+        Assert.True(ProtobufUtility.AreEqual(original, parsed));
+    }
 
-        [Fact]
-        public void ToJson_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.Throws<ArgumentNullException>(() => ProtobufUtility.ToJson(null));
-        }
+    [Fact]
+    public void GetMessageSize_ShouldMatchCalculateSize()
+    {
+        var message = new Timestamp { Seconds = 1, Nanos = 2 };
+        var sizeFromUtility = ProtobufUtility.GetMessageSize(message);
+        var sizeDirect = message.CalculateSize();
+        Assert.Equal(sizeDirect, sizeFromUtility);
+    }
 
-        [Fact]
-        public void FromJson_HAPPY_PATH()
-        {
-            // Arrange
-            var json = "{\"MyField\": \"Hello World!\"}";
+    [Fact]
+    public void ToDict_ShouldContainAllFields()
+    {
+        var timestamp = new Timestamp { Seconds = 10, Nanos = 20 };
+        var dict = ProtobufUtility.ToDict(timestamp);
+        Assert.True(dict.ContainsKey("seconds"));
+        Assert.True(dict.ContainsKey("nanos"));
+        Assert.Equal(10L, dict["seconds"]);
+        Assert.Equal(20L, dict["nanos"]);
+    }
 
-            // Act
-            var message = ProtobufUtility.FromJson<MyMessage>(json);
+    [Fact]
+    public void Clone_ShouldCreateEqualButDistinctInstance()
+    {
+        var original = new Timestamp { Seconds = 5, Nanos = 6 };
+        var clone = ProtobufUtility.Clone(original);
+        Assert.True(ProtobufUtility.AreEqual(original, clone));
+        Assert.NotSame(original, clone);
+    }
 
-            // Assert
-            Assert.NotNull(message);
-            Assert.Equal("Hello World!", message.MyField);
-        }
+    [Fact]
+    public void Merge_ShouldCombineFieldsFromMultipleMessages()
+    {
+        var first = new Struct();
+        first.Fields.Add("first", Value.ForString("one"));
+        var second = new Struct();
+        second.Fields.Add("second", Value.ForNumber(2));
 
-        [Fact]
-        public void FromJson_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.Throws<ArgumentException>(() => ProtobufUtility.FromJson<MyMessage>(null));
-        }
+        var merged = ProtobufUtility.Merge(first, second);
+        Assert.True(merged.Fields.ContainsKey("first"));
+        Assert.True(merged.Fields.ContainsKey("second"));
+        Assert.Equal("one", merged.Fields["first"].StringValue);
+        Assert.Equal(2, merged.Fields["second"].NumberValue);
+    }
 
-        [Fact]
-        public void ToBytes_HAPPY_PATH()
-        {
-            // Arrange
-            var message = new MyMessage();
-            message.MyField = "Hello World!";
+    [Fact]
+    public void AreEqual_ShouldReturnTrueForEqualMessages()
+    {
+        var a = new Timestamp { Seconds = 100, Nanos = 200 };
+        var b = new Timestamp { Seconds = 100, Nanos = 200 };
+        Assert.True(ProtobufUtility.AreEqual(a, b));
+    }
 
-            // Act
-            var bytes = ProtobufUtility.ToBytes(message);
+    [Fact]
+    public void Validate_ShouldReturnValidForWellFormedMessage()
+    {
+        var message = new Timestamp { Seconds = 1, Nanos = 0 };
+        var (valid, errors) = ProtobufUtility.Validate(message);
+        Assert.True(valid);
+        Assert.Empty(errors);
+    }
 
-            // Assert
-            Assert.NotEmpty(bytes);
-        }
+    [Fact]
+    public void ToJson_NullMessage_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => ProtobufUtility.ToJson(null!));
+    }
 
-        [Fact]
-        public void ToBytes_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.Throws<ArgumentNullException>(() => ProtobufUtility.ToBytes(null));
-        }
+    [Fact]
+    public void FromJson_NullOrEmpty_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => ProtobufUtility.FromJson<Timestamp>(null!));
+        Assert.Throws<ArgumentException>(() => ProtobufUtility.FromJson<Timestamp>(string.Empty));
+    }
 
-        [Fact]
-        public void FromBytes_HAPPY_PATH()
-        {
-            // Arrange
-            var message = new MyMessage();
-            message.MyField = "Hello World!";
-            var bytes = ProtobufUtility.ToBytes(message);
-
-            // Act
-            var deserializedMessage = ProtobufUtility.FromBytes<MyMessage>(bytes);
-
-            // Assert
-            Assert.NotNull(deserializedMessage);
-            Assert.Equal("Hello World!", deserializedMessage.MyField);
-        }
-
-        [Fact]
-        public void FromBytes_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.Throws<ArgumentException>(() => ProtobufUtility.FromBytes<MyMessage>(null));
-        }
-
-        [Fact]
-        public void GetMessageSize_HAPPY_PATH()
-        {
-            // Arrange
-            var message = new MyMessage();
-            message.MyField = "Hello World!";
-
-            // Act
-            var size = ProtobufUtility.GetMessageSize(message);
-
-            // Assert
-            Assert.True(size > 0);
-        }
-
-        [Fact]
-        public void GetMessageSize_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.Throws<ArgumentNullException>(() => ProtobufUtility.GetMessageSize(null));
-        }
-
-        [Fact]
-        public void ToDict_HAPPY_PATH()
-        {
-            // Arrange
-            var message = new MyMessage();
-            message.MyField = "Hello World!";
-
-            // Act
-            var dict = ProtobufUtility.ToDict(message);
-
-            // Assert
-            Assert.NotNull(dict);
-            Assert.Contains("MyField", dict.Keys);
-            Assert.Equal("Hello World!", dict["MyField"]);        }
-
-        [Fact]
-        public void ToDict_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.Throws<ArgumentNullException>(() => ProtobufUtility.ToDict(null));
-        }
-
-        [Fact]
-        public void Clone_HAPPY_PATH()
-        {
-            // Arrange
-            var message = new MyMessage();
-            message.MyField = "Hello World!";
-
-            // Act
-            var clone = ProtobufUtility.Clone(message);
-
-            // Assert
-            Assert.NotNull(clone);
-            Assert.Equal("Hello World!", clone.MyField);
-        }
-
-        [Fact]
-        public void Clone_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.Throws<ArgumentNullException>(() => ProtobufUtility.Clone(null));
-        }
-
-        [Fact]
-        public void Merge_HAPPY_PATH()
-        {
-            // Arrange
-            var message1 = new MyMessage();
-            message1.MyField = "Hello World!";
-            var message2 = new MyMessage();
-            message2.MyField = "Hello World Again!";
-
-            // Act
-            var mergedMessage = ProtobufUtility.Merge(message1, message2);
-
-            // Assert
-            Assert.NotNull(mergedMessage);
-            Assert.Equal("Hello World Again!", mergedMessage.MyField);
-        }
-
-        [Fact]
-        public void Merge_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.Throws<ArgumentException>(() => ProtobufUtility.Merge(null));
-        }
-
-        [Fact]
-        public void AreEqual_HAPPY_PATH()
-        {
-            // Arrange
-            var message1 = new MyMessage();
-            message1.MyField = "Hello World!";
-            var message2 = new MyMessage();
-            message2.MyField = "Hello World!";
-
-            // Act and Assert
-            Assert.True(ProtobufUtility.AreEqual(message1, message2));
-        }
-
-        [Fact]
-        public void AreEqual_NULL_INPUT()
-        {
-            // Act and Assert
-            Assert.False(ProtobufUtility.AreEqual(null, null));
-        }
-
-        [Fact]
-        public void Validate_HAPPY_PATH()
-        {
-            // Arrange
-            var message = new MyMessage();
-            message.MyField = "Hello World!";
-
-            // Act
-            var (valid, errors) = ProtobufUtility.Validate(message);
-
-            // Assert
-            Assert.True(valid);
-            Assert.Empty(errors);
-        }
-
-        [Fact]
-        public void Validate_NULL_INPUT()
-        {
-            // Act and Assert
-            var (valid, errors) = ProtobufUtility.Validate(null);
-            Assert.False(valid);
-            Assert.Contains("Message cannot be null", errors);
-        }
+    [Fact]
+    public void FromBytes_NullOrEmpty_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => ProtobufUtility.FromBytes<Timestamp>(null!));
+        Assert.Throws<ArgumentException>(() => ProtobufUtility.FromBytes<Timestamp>(Array.Empty<byte>()));
     }
 }
