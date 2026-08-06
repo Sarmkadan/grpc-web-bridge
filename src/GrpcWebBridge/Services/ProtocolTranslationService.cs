@@ -13,7 +13,9 @@ using System.Text.Json;
 namespace GrpcWebBridge.Services;
 
 /// <summary>
-/// Service for translating between gRPC, gRPC-Web, and other protocol formats
+/// Service for translating between gRPC, gRPC-Web, and other protocol formats.
+/// This service handles the translation of the gRPC message payload (without the gRPC-Web framing).
+/// The gRPC-Web framing (5-byte header for length and flags) is expected to be handled by the caller.
 /// </summary>
 public sealed class ProtocolTranslationService
 {
@@ -27,7 +29,8 @@ public sealed class ProtocolTranslationService
     }
 
     /// <summary>
-    /// Converts HTTP request data to a gRPC request
+    /// Converts HTTP request data to a gRPC request.
+    /// This method does not handle the gRPC-Web framing (5-byte header for length and flags); the caller is responsible for handling the framing.
     /// </summary>
     public GrpcRequest TranslateHttpToGrpc(string serviceName, string methodName, byte[] httpBody, SerializationFormat format)
     {
@@ -53,7 +56,8 @@ public sealed class ProtocolTranslationService
     }
 
     /// <summary>
-    /// Converts a gRPC response to HTTP format
+    /// Converts a gRPC response to HTTP format.
+    /// This method does not handle the gRPC-Web framing (5-byte header for length and flags); the caller is responsible for handling the framing.
     /// </summary>
     public byte[] TranslateGrpcToHttp(GrpcResponse response, SerializationFormat targetFormat)
     {
