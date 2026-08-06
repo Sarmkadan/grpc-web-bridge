@@ -45,6 +45,7 @@ public sealed class ProtocolTranslationServiceTests
     [Fact]
     public void TranslateHttpToGrpc_WithValidInput_ReturnsGrpcRequest()
     {
+        _logger.LogInformation("TranslateHttpToGrpc_WithValidInput_ReturnsGrpcRequest started");
         // Arrange
         var payload = "{}".AsBytes();
 
@@ -57,6 +58,7 @@ public sealed class ProtocolTranslationServiceTests
         request.MethodName.Should().Be("TestMethod");
         request.Payload.Should().BeEquivalentTo(payload);
         request.PayloadFormat.Should().Be(SerializationFormat.Json);
+        _logger.LogInformation("TranslateHttpToGrpc_WithValidInput_ReturnsGrpcRequest completed");
     }
 
     /// <summary>
@@ -356,6 +358,7 @@ public sealed class ProtocolTranslationServiceTests
     [Fact]
     public async Task TranslateAndInvokeAsync_WithNullRequest_ThrowsArgumentNullException()
     {
+        _logger.LogInformation("TranslateAndInvokeAsync_WithNullRequest_ThrowsArgumentNullException started");
         // Arrange
         GrpcRequest? request = null;
         AuthenticationContext? authContext = null;
@@ -365,5 +368,6 @@ public sealed class ProtocolTranslationServiceTests
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
+        _logger.LogInformation("TranslateAndInvokeAsync_WithNullRequest_ThrowsArgumentNullException completed");
     }
 }
