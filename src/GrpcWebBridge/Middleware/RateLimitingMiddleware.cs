@@ -35,11 +35,14 @@ public sealed class RateLimitingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        _logger.LogInformation("Processing request: {Path}", context.Request.Path);
+
         // Skip rate limiting for health checks
         if (context.Request.Path.StartsWithSegments("/health") ||
             context.Request.Path.StartsWithSegments("/swagger"))
         {
             await _next(context);
+            _logger.LogInformation("Request processed: {Path}", context.Request.Path);
             return;
         }
 
@@ -91,6 +94,7 @@ public sealed class RateLimitingMiddleware
         }
 
         await _next(context);
+        _logger.LogInformation("Request processed: {Path}", context.Request.Path);
     }
 
     /// <summary>
