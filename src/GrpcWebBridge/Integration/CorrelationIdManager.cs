@@ -21,6 +21,7 @@ public sealed class CorrelationIdManager
 
     public CorrelationIdManager(ILogger<CorrelationIdManager> logger)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
         _traces = new ConcurrentDictionary<string, CorrelationTrace>();
     }
@@ -42,13 +43,12 @@ public sealed class CorrelationIdManager
     /// <summary>
     /// Sets the correlation ID.
     /// </summary>
-    public void SetCorrelationId(string correlationId)
-    {
-        if (string.IsNullOrEmpty(correlationId))
-            throw new ArgumentException("Correlation ID cannot be null or empty", nameof(correlationId));
-
-        _correlationId.Value = correlationId;
-    }
+    public void SetCorrelationId(string? correlationId)
+        {
+            if (string.IsNullOrEmpty(correlationId))
+                throw new ArgumentException("Correlation ID cannot be null or empty", nameof(correlationId));
+            _correlationId.Value = correlationId;
+        }
 
     /// <summary>
     /// Gets the current correlation ID without creating a new one.
