@@ -23,6 +23,7 @@ public sealed class RequestContextManager : IDisposable
 
     public RequestContextManager(ILogger<RequestContextManager> logger)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
     }
 
@@ -244,6 +245,7 @@ public sealed class RequestContextManager : IDisposable
         }
 
         ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentException.ThrowIfNullOrEmpty(value);
 
         // Sanitize the key and value
         var sanitizedKey = SanitizeMetadataKey(key);
@@ -297,6 +299,7 @@ public sealed class RequestContextManager : IDisposable
     /// </summary>
     public string? GetMetadata(string key)
     {
+        ArgumentNullException.ThrowIfNull(key);
         if (_context.Value is null)
             return null;
 
