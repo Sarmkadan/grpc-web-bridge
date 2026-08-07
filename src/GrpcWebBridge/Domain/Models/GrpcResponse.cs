@@ -28,12 +28,15 @@ public sealed class GrpcResponse
 
     public GrpcResponse(string requestId, byte[] payload)
     {
+        ArgumentException.ThrowIfNullOrEmpty(requestId);
+        ArgumentNullException.ThrowIfNull(payload);
         RequestId = ValidateRequestId(requestId);
         Payload = payload ?? [];
     }
 
     public GrpcResponse(string requestId, GrpcStatusCode status, string? message = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(requestId);
         RequestId = ValidateRequestId(requestId);
         Status = status;
         StatusMessage = message;
@@ -41,6 +44,7 @@ public sealed class GrpcResponse
 
     public void SetSuccess(byte[] payload, SerializationFormat format = SerializationFormat.Protobuf)
     {
+        ArgumentNullException.ThrowIfNull(payload);
         Status = GrpcStatusCode.Ok;
         StatusMessage = "OK";
         Payload = payload ?? [];
@@ -49,6 +53,8 @@ public sealed class GrpcResponse
 
     public void SetError(GrpcStatusCode statusCode, string message, string? details = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(message);
+
         if (statusCode == GrpcStatusCode.Ok)
             throw new ArgumentException("Cannot set error status to Ok", nameof(statusCode));
 
@@ -62,6 +68,7 @@ public sealed class GrpcResponse
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Metadata key cannot be empty", nameof(key));
+        ArgumentException.ThrowIfNullOrEmpty(value);
 
         Metadata[key] = value;
     }
@@ -70,12 +77,14 @@ public sealed class GrpcResponse
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Metadata key cannot be empty", nameof(key));
+        ArgumentException.ThrowIfNullOrEmpty(value);
 
         TrailingMetadata[key] = value;
     }
 
     public string? GetMetadata(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         return Metadata.TryGetValue(key, out var value) ? value : null;
     }
 
