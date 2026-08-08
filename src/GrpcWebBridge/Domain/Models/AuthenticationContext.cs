@@ -31,6 +31,7 @@ public sealed class AuthenticationContext
 
     public AuthenticationContext(string userId, AuthenticationScheme scheme, string? token = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         UserId = ValidateUserId(userId);
         Scheme = scheme;
         Token = token;
@@ -39,6 +40,7 @@ public sealed class AuthenticationContext
 
     public void AddRole(string role)
     {
+        ArgumentException.ThrowIfNullOrEmpty(role);
         if (string.IsNullOrWhiteSpace(role))
             throw new ArgumentException("Role cannot be empty", nameof(role));
 
@@ -48,6 +50,7 @@ public sealed class AuthenticationContext
 
     public bool HasRole(string role)
     {
+        ArgumentException.ThrowIfNullOrEmpty(role);
         if (string.IsNullOrWhiteSpace(role))
             return false;
 
@@ -56,6 +59,7 @@ public sealed class AuthenticationContext
 
     public bool HasAnyRole(params string[] roles)
     {
+        ArgumentNullException.ThrowIfNull(roles);
         if (roles.Length == 0)
             return false;
 
@@ -64,6 +68,7 @@ public sealed class AuthenticationContext
 
     public bool HasAllRoles(params string[] roles)
     {
+        ArgumentNullException.ThrowIfNull(roles);
         if (roles.Length == 0)
             return false;
 
@@ -72,6 +77,8 @@ public sealed class AuthenticationContext
 
     public void AddClaim(string key, string value)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentException.ThrowIfNullOrEmpty(value);
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Claim key cannot be empty", nameof(key));
 
@@ -80,10 +87,15 @@ public sealed class AuthenticationContext
 
     public string? GetClaim(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         return Claims.TryGetValue(key, out var value) ? value : null;
     }
 
-    public bool HasClaim(string key) => Claims.ContainsKey(key);
+    public bool HasClaim(string key)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        return Claims.ContainsKey(key);
+    }
 
     public void SetExpiration(int minutesFromNow)
     {
@@ -114,6 +126,8 @@ public sealed class AuthenticationContext
 
     public void AddCustomData(string key, object value)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(value);
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Key cannot be empty", nameof(key));
 
@@ -122,6 +136,7 @@ public sealed class AuthenticationContext
 
     public object? GetCustomData(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         return CustomData.TryGetValue(key, out var value) ? value : null;
     }
 
