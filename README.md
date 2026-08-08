@@ -224,6 +224,27 @@ string nullableJson = nullableDate.ToJson();
 Console.WriteLine(nullableJson);
 ```
 
+## EventBusJsonExtensionsTests
+
+The `EventBusJsonExtensionsTests` class provides comprehensive unit tests for the `EventBusJsonExtensions` class, covering serialization and deserialization scenarios including handling of nulls, invalid JSON, and formatting options. It ensures robust JSON processing for `EventBus` instances using `ToJson`, `FromJson`, and `TryFromJson` methods.
+
+```csharp
+// Example usage of EventBusJsonExtensions (which is tested by EventBusJsonExtensionsTests)
+var eventBus = new EventBus(logger); // Assuming logger is available
+
+// Serialize to JSON
+string json = eventBus.ToJson(indented: true);
+
+// Deserialize from JSON
+var restoredEventBus = EventBusJsonExtensions.FromJson(json);
+
+// Safe deserialization
+if (EventBusJsonExtensions.TryFromJson(json, out var safeEventBus))
+{
+    // Process deserialized EventBus
+}
+```
+
 ## ServiceRegistryTestsExtensions
 
 The `ServiceRegistryTestsExtensions` class provides extension methods for `ServiceRegistryTests` that simplify testing of service registry functionality. These methods create test services, manage registry state, and provide utilities for service discovery and health checks, making it easier to write comprehensive unit tests for service registration and discovery scenarios.
