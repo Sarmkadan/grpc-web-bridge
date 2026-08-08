@@ -43,6 +43,7 @@ public bool RequireAuthenticationForDetailedHealth { get; set; } = true;
 
     public BridgeConfiguration(string environment, string? instanceName = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(environment);
         Environment = ValidateEnvironment(environment);
         InstanceName = instanceName;
     }
