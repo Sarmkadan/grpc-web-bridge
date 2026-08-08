@@ -60,6 +60,9 @@ public sealed class BridgePrometheusMetrics
     /// <param name="durationSeconds">Call duration in seconds.</param>
     public static void RecordCall(string service, string method, string grpcStatus, double durationSeconds)
     {
+        ArgumentException.ThrowIfNullOrEmpty(service);
+        ArgumentException.ThrowIfNullOrEmpty(method);
+        ArgumentException.ThrowIfNullOrEmpty(grpcStatus);
         RequestsTotal.WithLabels(service, method, grpcStatus).Inc();
         RequestDuration.WithLabels(service, method).Observe(durationSeconds);
     }
@@ -69,6 +72,8 @@ public sealed class BridgePrometheusMetrics
     /// </summary>
     public static void RecordStreamError(string service, string method)
     {
+        ArgumentException.ThrowIfNullOrEmpty(service);
+        ArgumentException.ThrowIfNullOrEmpty(method);
         StreamErrorsTotal.WithLabels(service, method).Inc();
     }
 }
