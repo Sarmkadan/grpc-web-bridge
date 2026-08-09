@@ -24,6 +24,9 @@ public sealed class RateLimitingMiddleware
 
     public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger, RateLimitingOptions options)
     {
+        ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
         _next = next;
         _logger = logger;
         _options = options;
@@ -35,6 +38,7 @@ public sealed class RateLimitingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         _logger.LogInformation("Processing request: {Path}", context.Request.Path);
 
         // Skip rate limiting for health checks
