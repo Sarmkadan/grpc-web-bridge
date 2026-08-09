@@ -63,6 +63,7 @@ public sealed class ContentTypeValidationMiddlewareTests
     [InlineData("application/grpc-web; charset=utf-8")]
     public async Task InvokeAsync_WithValidGrpcContentType_CallsNextMiddleware(string contentType)
     {
+        ArgumentException.ThrowIfNullOrEmpty(contentType);
         bool nextCalled = false;
         var middleware = CreateMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
         var context = CreatePostContext("/grpc/TestService/TestMethod", contentType);
@@ -89,6 +90,7 @@ public sealed class ContentTypeValidationMiddlewareTests
     [InlineData("multipart/form-data")]
     public async Task InvokeAsync_WithInvalidContentType_Returns415(string contentType)
     {
+        ArgumentException.ThrowIfNullOrEmpty(contentType);
         bool nextCalled = false;
         var middleware = CreateMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
         var context = CreatePostContext("/grpc/TestService/TestMethod", contentType);
@@ -134,6 +136,7 @@ public sealed class ContentTypeValidationMiddlewareTests
     [InlineData("/_internal")]
     public async Task InvokeAsync_WithExcludedPath_BypassesValidation(string path)
     {
+        ArgumentException.ThrowIfNullOrEmpty(path);
         bool nextCalled = false;
         var middleware = CreateMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
         var context = CreatePostContext(path, contentType: "application/json");
@@ -159,6 +162,7 @@ public sealed class ContentTypeValidationMiddlewareTests
     [InlineData("OPTIONS")]
     public async Task InvokeAsync_WithNonPostMethod_BypassesValidation(string method)
     {
+        ArgumentException.ThrowIfNullOrEmpty(method);
         bool nextCalled = false;
         var middleware = CreateMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
         var context = new DefaultHttpContext();
