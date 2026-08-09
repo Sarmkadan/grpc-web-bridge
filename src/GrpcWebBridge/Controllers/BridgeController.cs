@@ -34,6 +34,12 @@ public sealed class BridgeController : ControllerBase
         StreamingService streamingService,
         ILogger<BridgeController> logger)
     {
+        ArgumentNullException.ThrowIfNull(protocolService);
+        ArgumentNullException.ThrowIfNull(serviceRegistry);
+        ArgumentNullException.ThrowIfNull(authService);
+        ArgumentNullException.ThrowIfNull(streamingService);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _protocolService = protocolService;
         _serviceRegistry = serviceRegistry;
         _authService = authService;
@@ -123,6 +129,7 @@ public sealed class BridgeController : ControllerBase
     [HttpPost("stream")]
     public async Task StreamMessages([FromBody] StreamRequest streamRequest, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(streamRequest);
         var streamId = Guid.NewGuid().ToString();
         GrpcWebBridge.Services.Stream? stream = null;
 
