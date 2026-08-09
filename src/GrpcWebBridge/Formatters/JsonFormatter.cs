@@ -19,11 +19,13 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
 
     public JsonFormatter(JsonFormatterOptions? options = null)
     {
+        ArgumentNullException.ThrowIfNull(options);
         _options = options ?? new JsonFormatterOptions();
     }
 
     public bool Equals(JsonFormatter? other)
     {
+        ArgumentNullException.ThrowIfNull(other);
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
         return _options.PrettyPrint == other._options.PrettyPrint &&
@@ -58,6 +60,7 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
     /// </summary>
     public string Format<T>(T obj) where T : class
     {
+        ArgumentNullException.ThrowIfNull(obj);
         return JsonUtility.Serialize(obj, _options.PrettyPrint);
     }
 
@@ -67,6 +70,7 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
     /// </summary>
     public string FormatWithSortedKeys<T>(T obj) where T : class
     {
+        ArgumentNullException.ThrowIfNull(obj);
         var json = JsonUtility.Serialize(obj);
         var dict = JsonUtility.DeserializeToDictionary(json);
 
@@ -107,6 +111,7 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
     /// </summary>
     public string FormatForDocumentation(object obj, string title = "", string description = "")
     {
+        ArgumentNullException.ThrowIfNull(obj);
         var data = new
         {
             title = title,
@@ -127,6 +132,8 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
     /// </summary>
     public (bool Valid, List<string> Errors) Validate(string json, string[] requiredFields)
     {
+        ArgumentNullException.ThrowIfNull(json);
+        ArgumentNullException.ThrowIfNull(requiredFields);
         var errors = new List<string>();
 
         if (string.IsNullOrWhiteSpace(json))
@@ -160,9 +167,11 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
 
     /// <summary>
     /// Compares two JSON objects for equality.
-    /// </summary>
+    /// </>
     public bool AreEqual(string json1, string json2)
     {
+        ArgumentNullException.ThrowIfNull(json1);
+        ArgumentNullException.ThrowIfNull(json2);
         try
         {
             var dict1 = JsonUtility.DeserializeToDictionary(json1);
@@ -240,8 +249,9 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
         return result;
     }
 
-    private Dictionary<string, object> GetPropertyDescriptions(object obj)
+    public Dictionary<string, object?> GetPropertyDescriptions(object obj)
     {
+        ArgumentNullException.ThrowIfNull(obj);
         var descriptions = new Dictionary<string, object>();
 
         if (obj is null)
