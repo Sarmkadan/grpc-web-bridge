@@ -19,6 +19,7 @@ public sealed class GrpcWebBridgeOptions
 
     public GrpcWebBridgeOptions(string environment, string? instanceName = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(environment);
         Configuration = new BridgeConfiguration(environment, instanceName);
     }
 
