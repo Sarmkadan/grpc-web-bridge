@@ -27,7 +27,8 @@ public sealed class CsvFormatter
     /// </summary>
     public string ToCsv<T>(IEnumerable<T> items) where T : class
     {
-        if (items is null || !items.Any())
+        ArgumentNullException.ThrowIfNull(items);
+        if (!items.Any())
             return string.Empty;
 
         var sb = new StringBuilder();
@@ -58,6 +59,7 @@ public sealed class CsvFormatter
     /// </summary>
     public List<Dictionary<string, string>> FromCsv(string csv)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(csv));
         if (string.IsNullOrEmpty(csv))
             return new List<Dictionary<string, string>>();
 
@@ -92,6 +94,7 @@ public sealed class CsvFormatter
     /// </summary>
     public List<T> FromCsv<T>(string csv) where T : class, new()
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(csv));
         if (string.IsNullOrEmpty(csv))
             return new List<T>();
 
@@ -130,6 +133,7 @@ public sealed class CsvFormatter
     /// </summary>
     public async Task ExportToFileAsync<T>(IEnumerable<T> items, string filePath) where T : class
     {
+        ArgumentNullException.ThrowIfNull(items);
         if (string.IsNullOrEmpty(filePath))
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
 
@@ -142,8 +146,7 @@ public sealed class CsvFormatter
     /// </summary>
     public async Task<List<Dictionary<string, string>>> ImportFromFileAsync(string filePath)
     {
-        if (string.IsNullOrEmpty(filePath))
-            throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(filePath));
 
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
@@ -157,8 +160,7 @@ public sealed class CsvFormatter
     /// </summary>
     public async Task<List<T>> ImportFromFileAsync<T>(string filePath) where T : class, new()
     {
-        if (string.IsNullOrEmpty(filePath))
-            throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(filePath));
 
         var csv = await File.ReadAllTextAsync(filePath, Encoding.UTF8).ConfigureAwait(false);
         return FromCsv<T>(csv);
