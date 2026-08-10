@@ -20,7 +20,9 @@ public static class CacheUtility
     /// </summary>
     public static string GenerateKey(params object?[] components)
     {
-        if (components is null || components.Length == 0)
+        if (components == null)
+            throw new ArgumentNullException(nameof(components));
+        if (components.Length == 0)
             throw new ArgumentException("At least one component is required", nameof(components));
 
         var parts = components
@@ -40,7 +42,9 @@ public static class CacheUtility
     /// </summary>
     public static string GenerateNamespacedKey(string @namespace, params object?[] components)
     {
-        if (string.IsNullOrEmpty(@namespace))
+        if (@namespace == null)
+            throw new ArgumentNullException(nameof(@namespace));
+        if (@namespace.Length == 0)
             throw new ArgumentException("Namespace cannot be null or empty", nameof(@namespace));
 
         var sanitized = SanitizeKeyComponent(@namespace);
@@ -54,8 +58,10 @@ public static class CacheUtility
     /// </summary>
     public static string SanitizeKeyComponent(string component)
     {
-        if (string.IsNullOrEmpty(component))
+        if (component == null)
             return string.Empty;
+        if (component.Length == 0)
+            throw new ArgumentException("Component cannot be null or empty", nameof(component));
 
         return System.Text.RegularExpressions.Regex.Replace(
             component,
@@ -68,7 +74,9 @@ public static class CacheUtility
     /// </summary>
     public static string CreatePatternKey(string prefix)
     {
-        if (string.IsNullOrEmpty(prefix))
+        if (prefix == null)
+            throw new ArgumentNullException(nameof(prefix));
+        if (prefix.Length == 0)
             throw new ArgumentException("Prefix cannot be null or empty", nameof(prefix));
 
         return $"{SanitizeKeyComponent(prefix)}*";
@@ -80,8 +88,14 @@ public static class CacheUtility
     /// </summary>
     public static bool MatchesPattern(string key, string pattern)
     {
-        if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(pattern))
-            return false;
+        if (key == null)
+            throw new ArgumentNullException(nameof(key));
+        if (pattern == null)
+            throw new ArgumentNullException(nameof(pattern));
+        if (key.Length == 0)
+            throw new ArgumentException("Key cannot be empty", nameof(key));
+        if (pattern.Length == 0)
+            throw new ArgumentException("Pattern cannot be empty", nameof(pattern));
 
         if (pattern == "*")
             return true;
@@ -98,8 +112,10 @@ public static class CacheUtility
     /// </summary>
     public static int GetKeyHash(string key)
     {
-        if (string.IsNullOrEmpty(key))
-            return 0;
+        if (key == null)
+            throw new ArgumentNullException(nameof(key));
+        if (key.Length == 0)
+            throw new ArgumentException("Key cannot be empty", nameof(key));
 
         return key.GetHashCode();
     }
@@ -109,8 +125,10 @@ public static class CacheUtility
     /// </summary>
     public static long EstimateKeySize(string key)
     {
-        if (string.IsNullOrEmpty(key))
-            return 0;
+        if (key == null)
+            throw new ArgumentNullException(nameof(key));
+        if (key.Length == 0)
+            throw new ArgumentException("Key cannot be empty", nameof(key));
 
         // Each char in .NET string is 2 bytes + string overhead
         return (key.Length * 2) + 26; // 26 bytes for string object overhead
@@ -121,8 +139,10 @@ public static class CacheUtility
     /// </summary>
     public static string[] ParseKey(string key, string separator = "|")
     {
-        if (string.IsNullOrEmpty(key))
-            return [];
+        if (key == null)
+            throw new ArgumentNullException(nameof(key));
+        if (key.Length == 0)
+            throw new ArgumentException("Key cannot be empty", nameof(key));
 
         return key.Split(separator);
     }
@@ -132,8 +152,14 @@ public static class CacheUtility
     /// </summary>
     public static string GenerateMethodCacheKey(string serviceId, string methodName, object? parameters = null)
     {
-        if (string.IsNullOrEmpty(serviceId))
+        if (serviceId == null)
+            throw new ArgumentNullException(nameof(serviceId));
+        if (serviceId.Length == 0)
             throw new ArgumentException("Service ID cannot be null or empty", nameof(serviceId));
+        if (methodName == null)
+            throw new ArgumentNullException(nameof(methodName));
+        if (methodName.Length == 0)
+            throw new ArgumentException("Method name cannot be null or empty", nameof(methodName));
 
         if (string.IsNullOrEmpty(methodName))
             throw new ArgumentException("Method name cannot be null or empty", nameof(methodName));
@@ -154,7 +180,9 @@ public static class CacheUtility
     /// </summary>
     public static string GenerateStreamCacheKey(string streamId)
     {
-        if (string.IsNullOrEmpty(streamId))
+        if (streamId == null)
+            throw new ArgumentNullException(nameof(streamId));
+        if (streamId.Length == 0)
             throw new ArgumentException("Stream ID cannot be null or empty", nameof(streamId));
 
         return GenerateNamespacedKey("stream", streamId);
@@ -165,7 +193,9 @@ public static class CacheUtility
     /// </summary>
     public static string GenerateServiceCacheKey(string serviceId)
     {
-        if (string.IsNullOrEmpty(serviceId))
+        if (serviceId == null)
+            throw new ArgumentNullException(nameof(serviceId));
+        if (serviceId.Length == 0)
             throw new ArgumentException("Service ID cannot be null or empty", nameof(serviceId));
 
         return GenerateNamespacedKey("service", serviceId);
