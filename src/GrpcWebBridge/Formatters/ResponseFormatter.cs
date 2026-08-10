@@ -20,6 +20,16 @@ public static class ResponseFormatter
     /// </summary>
     public static object FormatSuccess<T>(T data, string? message = null, Dictionary<string, object>? metadata = null)
     {
+        if (message != null)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(message);
+        }
+
+        if (metadata != null)
+        {
+            ArgumentNullException.ThrowIfNull(metadata);
+        }
+
         return new
         {
             success = true,
@@ -40,6 +50,16 @@ public static class ResponseFormatter
         int pageSize = 50,
         string? message = null)
     {
+        if (items == null)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+        }
+
+        if (message != null)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(message);
+        }
+
         return new
         {
             success = true,
@@ -65,6 +85,13 @@ public static class ResponseFormatter
         int statusCode = 500,
         object? details = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(error);
+
+        if (message != null)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(message);
+        }
+
         return new
         {
             success = false,
@@ -81,6 +108,8 @@ public static class ResponseFormatter
     /// </summary>
     public static object FormatValidationError(Dictionary<string, string> validationErrors)
     {
+        ArgumentNullException.ThrowIfNull(validationErrors);
+
         return new
         {
             success = false,
@@ -101,6 +130,9 @@ public static class ResponseFormatter
         int messageCount = 0,
         object? lastMessage = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(streamId);
+        ArgumentException.ThrowIfNullOrEmpty(status);
+
         return new
         {
             success = true,
@@ -121,6 +153,11 @@ public static class ResponseFormatter
         int failureCount,
         List<object>? results = null)
     {
+        if (results != null)
+        {
+            ArgumentNullException.ThrowIfNull(results);
+        }
+
         return new
         {
             success = failureCount == 0,
@@ -142,6 +179,8 @@ public static class ResponseFormatter
         Dictionary<string, object>? metrics = null,
         List<string>? warnings = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(status);
+
         return new
         {
             success = true,
@@ -160,6 +199,11 @@ public static class ResponseFormatter
         Dictionary<string, object>? statistics,
         string? period = null)
     {
+        if (statistics != null)
+        {
+            ArgumentNullException.ThrowIfNull(statistics);
+        }
+
         return new
         {
             success = true,
@@ -178,6 +222,16 @@ public static class ResponseFormatter
         string? message = null,
         int statusCode = 200)
     {
+        if (data == null)
+        {
+            ArgumentNullException.ThrowIfNull(data);
+        }
+
+        if (message != null)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(message);
+        }
+
         return new
         {
             success = success,
@@ -193,6 +247,11 @@ public static class ResponseFormatter
     /// </summary>
     public static string ToJson(object response, bool indented = false)
     {
+        if (response == null)
+        {
+            ArgumentNullException.ThrowIfNull(response);
+        }
+
         return JsonUtility.Serialize(response, indented);
     }
 
@@ -206,6 +265,16 @@ public static class ResponseFormatter
         Dictionary<string, object>? headers = null,
         int statusCode = 200)
     {
+        if (body == null)
+        {
+            ArgumentNullException.ThrowIfNull(body);
+        }
+
+        if (headers != null)
+        {
+            ArgumentNullException.ThrowIfNull(headers);
+        }
+
         var response = new Dictionary<string, object>
         {
             { "success", success },
