@@ -30,6 +30,9 @@ namespace GrpcWebBridge.Examples
             ILogger<GrpcWebBridgeClientExample> logger,
             string? jwtToken = null)
         {
+            ArgumentException.ThrowIfNullOrEmpty(bridgeUrl);
+            ArgumentNullException.ThrowIfNull(httpClient);
+            ArgumentNullException.ThrowIfNull(logger);
             _bridgeUrl = bridgeUrl;
             _httpClient = httpClient;
             _logger = logger;
@@ -104,6 +107,8 @@ namespace GrpcWebBridge.Examples
             string grpcAddress,
             bool enableHealthCheck = false)
         {
+            ArgumentException.ThrowIfNullOrEmpty(serviceName);
+            ArgumentException.ThrowIfNullOrEmpty(grpcAddress);
             try
             {
                 _logger.LogInformation("Registering service: {ServiceName}", serviceName);
@@ -138,6 +143,9 @@ namespace GrpcWebBridge.Examples
             string methodName,
             object request) where T : class
         {
+            ArgumentException.ThrowIfNullOrEmpty(serviceName);
+            ArgumentException.ThrowIfNullOrEmpty(methodName);
+            ArgumentNullException.ThrowIfNull(request);
             try
             {
                 _logger.LogInformation(
@@ -225,6 +233,9 @@ namespace GrpcWebBridge.Examples
             object request,
             int maxRetries = 3) where T : class
         {
+            ArgumentException.ThrowIfNullOrEmpty(serviceName);
+            ArgumentException.ThrowIfNullOrEmpty(methodName);
+            ArgumentNullException.ThrowIfNull(request);
             var delay = 1000; // Start with 1 second
 
             for (int attempt = 0; attempt < maxRetries; attempt++)
@@ -268,6 +279,9 @@ namespace GrpcWebBridge.Examples
             string methodName,
             IEnumerable<T> items) where T : class
         {
+            ArgumentException.ThrowIfNullOrEmpty(serviceName);
+            ArgumentException.ThrowIfNullOrEmpty(methodName);
+            ArgumentNullException.ThrowIfNull(items);
             try
             {
                 _logger.LogInformation(
