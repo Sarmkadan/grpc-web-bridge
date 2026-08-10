@@ -28,6 +28,8 @@ public static class DateTimeUtility
     /// </summary>
     public static DateTime? FromIso8601(string iso8601String)
     {
+        ArgumentException.ThrowIfNullOrEmpty(iso8601String);
+
         if (string.IsNullOrEmpty(iso8601String))
             return null;
 
@@ -100,6 +102,7 @@ public static class DateTimeUtility
     /// </summary>
     public static DateTime ConvertToTimeZone(DateTime dateTime, string timeZoneId)
     {
+        ArgumentException.ThrowIfNullOrEmpty(timeZoneId);
         try
         {
             var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
