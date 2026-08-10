@@ -25,8 +25,7 @@ public static class CryptographyUtility
     /// </summary>
     public static string HashPassword(string password)
     {
-        if (string.IsNullOrEmpty(password))
-            throw new ArgumentException("Password cannot be null or empty", nameof(password));
+        ArgumentException.ThrowIfNullOrEmpty(password);
 
         using (var rng = RandomNumberGenerator.Create())
         {
@@ -51,8 +50,8 @@ public static class CryptographyUtility
     /// </summary>
     public static bool VerifyPassword(string password, string hash)
     {
-        if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hash))
-            return false;
+        ArgumentException.ThrowIfNullOrEmpty(password);
+        ArgumentException.ThrowIfNullOrEmpty(hash);
 
         try
         {
@@ -127,8 +126,7 @@ public static class CryptographyUtility
     /// </summary>
     public static string ComputeSha256(string input)
     {
-        if (string.IsNullOrEmpty(input))
-            throw new ArgumentException("Input cannot be null or empty", nameof(input));
+        ArgumentException.ThrowIfNullOrEmpty(input);
 
         using (var sha256 = SHA256.Create())
         {
@@ -143,11 +141,8 @@ public static class CryptographyUtility
     /// </summary>
     public static string ComputeHmacSha256(string input, string secretKey)
     {
-        if (string.IsNullOrEmpty(input))
-            throw new ArgumentException("Input cannot be null or empty", nameof(input));
-
-        if (string.IsNullOrEmpty(secretKey))
-            throw new ArgumentException("Secret key cannot be null or empty", nameof(secretKey));
+        ArgumentException.ThrowIfNullOrEmpty(input);
+        ArgumentException.ThrowIfNullOrEmpty(secretKey);
 
         using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey)))
         {
@@ -162,10 +157,10 @@ public static class CryptographyUtility
     /// </summary>
     public static string EncryptAes256(string plaintext, string key)
     {
-        if (string.IsNullOrEmpty(plaintext))
-            throw new ArgumentException("Plaintext cannot be null or empty", nameof(plaintext));
+        ArgumentException.ThrowIfNullOrEmpty(plaintext);
+        ArgumentException.ThrowIfNullOrEmpty(key);
 
-        if (string.IsNullOrEmpty(key) || key.Length < 32)
+        if (key.Length < 32)
             throw new ArgumentException("Key must be at least 32 characters", nameof(key));
 
         try
