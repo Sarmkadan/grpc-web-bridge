@@ -42,6 +42,7 @@ public static class JsonUtility
     /// </summary>
     public static string Serialize<T>(T obj, bool indented = false)
     {
+        ArgumentNullException.ThrowIfNull(obj);
         if (obj is null)
             return "null";
 
@@ -54,6 +55,7 @@ public static class JsonUtility
     /// </summary>
     public static string SerializeWithOptions<T>(T obj, JsonSerializerOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
         return obj is null ? "null" : JsonSerializer.Serialize(obj, options);
     }
 
@@ -63,9 +65,7 @@ public static class JsonUtility
     /// </summary>
     public static T? Deserialize<T>(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-            return default;
-
+        ArgumentException.ThrowIfNullOrEmpty(json);
         try
         {
             return JsonSerializer.Deserialize<T>(json, DefaultOptions);
@@ -82,9 +82,7 @@ public static class JsonUtility
     /// </summary>
     public static Dictionary<string, object>? DeserializeToDictionary(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-            return null;
-
+        ArgumentException.ThrowIfNullOrEmpty(json);
         try
         {
             return JsonSerializer.Deserialize<Dictionary<string, object>>(json, DefaultOptions);
@@ -128,6 +126,8 @@ public static class JsonUtility
     /// </summary>
     public static string MergeJson(string targetJson, string sourceJson)
     {
+        ArgumentException.ThrowIfNullOrEmpty(targetJson);
+        ArgumentException.ThrowIfNullOrEmpty(sourceJson);
         try
         {
             var targetDict = DeserializeToDictionary(targetJson) ?? new Dictionary<string, object>();
@@ -152,6 +152,8 @@ public static class JsonUtility
     /// </summary>
     public static object? GetPropertyValue(string json, string propertyPath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentException.ThrowIfNullOrEmpty(propertyPath);
         try
         {
             var jsonElement = JsonDocument.Parse(json).RootElement;
@@ -179,6 +181,8 @@ public static class JsonUtility
     /// </summary>
     public static string SetPropertyValue(string json, string propertyPath, object value)
     {
+        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentException.ThrowIfNullOrEmpty(propertyPath);
         try
         {
             var dict = DeserializeToDictionary(json) ?? new Dictionary<string, object>();
@@ -211,6 +215,8 @@ public static class JsonUtility
     /// </summary>
     public static bool ValidateRequired(string json, params string[] requiredProperties)
     {
+        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentNullException.ThrowIfNull(requiredProperties);
         try
         {
             var dict = DeserializeToDictionary(json);
