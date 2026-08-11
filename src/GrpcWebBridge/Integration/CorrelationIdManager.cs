@@ -37,6 +37,7 @@ public sealed class CorrelationIdManager
 
         var id = Guid.NewGuid().ToString();
         _correlationId.Value = id;
+        _logger.LogInformation("Created new correlation ID {CorrelationId}", id);
         return id;
     }
 
@@ -48,6 +49,7 @@ public sealed class CorrelationIdManager
             if (string.IsNullOrEmpty(correlationId))
                 throw new ArgumentException("Correlation ID cannot be null or empty", nameof(correlationId));
             _correlationId.Value = correlationId;
+            _logger.LogInformation("Set correlation ID {CorrelationId}", correlationId);
         }
 
     /// <summary>
@@ -119,6 +121,8 @@ public sealed class CorrelationIdManager
             return null;
 
         _traces.TryGetValue(traceId, out var trace);
+        if (trace is null)
+            _logger.LogWarning("Trace {TraceId} not found", traceId);
         return trace;
     }
 
@@ -147,6 +151,10 @@ public sealed class CorrelationIdManager
         if (_traces.TryGetValue(traceId, out var trace))
         {
             trace.Metadata[key] = value;
+        }
+        else
+        {
+            _logger.LogWarning("Cannot add metadata to unknown trace {TraceId}", traceId);
         }
     }
 
@@ -188,6 +196,7 @@ public sealed class CorrelationIdManager
             _traces.TryRemove(key, out _);
         }
 
+        _logger.LogInformation("Cleaned up {Count} old traces older than {OlderThan}", keysToRemove.Count, olderThan);
         return keysToRemove.Count;
     }
 
@@ -197,6 +206,7 @@ public sealed class CorrelationIdManager
     public void ClearAllTraces()
     {
         _traces.Clear();
+        _logger.LogInformation("Cleared all correlation traces");
     }
 
     /// <summary>
