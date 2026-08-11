@@ -241,6 +241,8 @@ public sealed class ServiceDiscoveryClient : IDisposable
     {
         _refreshTimer?.Dispose();
     }
+
+    public override string ToString() => $"ServiceDiscoveryClient {{ DiscoveryServiceUrl = {_options.DiscoveryServiceUrl}, CachedServiceCount = {_serviceCache.Count} }}";
 }
 
 /// <summary>
@@ -256,6 +258,8 @@ public sealed class ServiceInstance
     public Dictionary<string, string>? Metadata { get; set; }
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastHeartbeat { get; set; }
+
+    public override string ToString() => $"ServiceInstance {{ Id = {Id}, Name = {Name}, Host = {Host}, Port = {Port}, Status = {Status}, Metadata = {Metadata} }}";
 }
 
 /// <summary>
