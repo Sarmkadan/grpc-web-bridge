@@ -57,6 +57,10 @@ public sealed class ContentTypeValidationMiddleware
     /// <inheritdoc cref="IMiddleware.InvokeAsync"/>
     public async Task InvokeAsync(HttpContext context)
     {
+        _logger.LogInformation(
+            "ContentTypeValidationMiddleware invoked for {Method} {Path}",
+            context.Request.Method, context.GetGrpcMethodPath());
+
         if (ShouldValidate(context))
         {
             if (!context.IsGrpcWebRequest())
@@ -69,6 +73,7 @@ public sealed class ContentTypeValidationMiddleware
                 context.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
                 context.Response.ContentType = "application/json";
 
+                _logger.LogInformation("Response written for {Path}", context.GetGrpcMethodPath());
                 await context.Response.WriteAsJsonAsync(new
                 {
                     error = "Unsupported Media Type",
