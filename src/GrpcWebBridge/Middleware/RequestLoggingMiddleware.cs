@@ -36,6 +36,7 @@ public sealed class RequestLoggingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        _logger.LogInformation("InvokeAsync started for {Method} {Path}", context.Request.Method, context.Request.Path.Value);
         var stopwatch = Stopwatch.StartNew();
         var originalBodyStream = context.Response.Body;
 
@@ -75,6 +76,7 @@ public sealed class RequestLoggingMiddleware
     {
         var request = context.Request;
         var logPath = request.Path.Value ?? "unknown";
+        _logger.LogInformation("LogRequestAsync started for {Method} {Path}", request.Method, logPath);
 
         // Skip logging for excluded paths (health checks, swagger, etc.)
         if (_excludedPaths.Any(p => logPath.StartsWith(p)))
@@ -119,6 +121,7 @@ public sealed class RequestLoggingMiddleware
         var request = context.Request;
         var response = context.Response;
         var logPath = request.Path.Value ?? "unknown";
+        _logger.LogInformation("LogResponseAsync started for {Method} {Path} after {ElapsedMilliseconds} ms", request.Method, logPath, elapsedMilliseconds);
 
         // Skip logging for excluded paths
         if (_excludedPaths.Any(p => logPath.StartsWith(p)))
