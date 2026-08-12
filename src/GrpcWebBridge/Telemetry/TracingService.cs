@@ -51,11 +51,15 @@ public sealed class TracingService
     /// </returns>
     public Activity? StartGrpcCallActivity(string serviceName, string methodName, bool isStreaming = false)
     {
+        _logger.LogInformation("Starting gRPC call activity for {Service}/{Method} (Streaming: {IsStreaming})", serviceName, methodName, isStreaming);
         var activityName = isStreaming ? BridgeActivitySource.GrpcStream : BridgeActivitySource.GrpcCall;
         var activity = BridgeActivitySource.Source.StartActivity(activityName, ActivityKind.Client);
 
         if (activity is null)
+        {
+            _logger.LogWarning("Unable to start tracing activity for {Service}/{Method} (Streaming: {IsStreaming}) - no tracing listener registered", serviceName, methodName, isStreaming);
             return null;
+        }
 
         activity
             .SetTag(BridgeActivitySource.TagRpcSystem, "grpc")
