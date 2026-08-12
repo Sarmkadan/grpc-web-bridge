@@ -60,6 +60,7 @@ public class CacheManager : IDisposable
         _cache.AddOrUpdate(key, entry, (_, _) => entry);
 
         _logger.LogDebug("Cache entry set: Key={Key}, TTL={Ttl}ms", key, ttl.TotalMilliseconds);
+        _logger.LogInformation("Set cache entry: {Key}", key);
     }
 
     /// <summary>
@@ -75,6 +76,7 @@ public class CacheManager : IDisposable
         if (!_cache.TryGetValue(key, out var entry))
         {
             _logger.LogDebug("Cache miss: Key={Key}", key);
+            _logger.LogWarning("Cache miss triggered fallback: {Key}", key);
             return false;
         }
 
