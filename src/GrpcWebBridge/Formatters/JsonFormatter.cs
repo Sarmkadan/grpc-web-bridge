@@ -23,6 +23,8 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
         _options = options ?? new JsonFormatterOptions();
     }
 
+    public override string ToString() => $"JsonFormatter {{ PrettyPrint = {_options.PrettyPrint}, SortKeys = {_options.SortKeys}, MaxDepth = {_options.MaxDepth}, IncludeNullValues = {_options.IncludeNullValues} }}";
+
     public bool Equals(JsonFormatter? other)
     {
         ArgumentNullException.ThrowIfNull(other);
