@@ -32,6 +32,16 @@ namespace GrpcWebBridge.Examples
         private readonly AsyncRetryPolicy _retryPolicy;
         private readonly JsonSerializerOptions _jsonOptions;
 
+        // -----------------------------------------------------------------
+        // Added properties for ToString representation
+        // -----------------------------------------------------------------
+        public int SuccessfulCount { get; set; }
+        public int FailedCount { get; set; }
+        public int TotalItemsProcessed { get; set; }
+        public List<string> Errors { get; set; } = new();
+        public double SuccessRate { get; set; }
+        public int TotalRequests { get; set; }
+
         /// <summary>
         /// Initialize the advanced client with configuration options
         /// </summary>
@@ -90,6 +100,12 @@ namespace GrpcWebBridge.Examples
             });
             _logger = loggerFactory.CreateLogger<AdvancedUsageExample>();
         }
+
+        /// <summary>
+        /// Override ToString to provide a concise representation of the example's state.
+        /// </summary>
+        public override string ToString() =>
+            $"AdvancedUsageExample {{ SuccessfulCount = {SuccessfulCount}, FailedCount = {FailedCount}, TotalItemsProcessed = {TotalItemsProcessed}, Errors = [{string.Join(\", \", Errors)}], SuccessRate = {SuccessRate}, TotalRequests = {TotalRequests} }}";
 
         /// <summary>
         /// Configure HTTP client with default headers and settings
