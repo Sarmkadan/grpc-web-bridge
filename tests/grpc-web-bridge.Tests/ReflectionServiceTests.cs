@@ -73,6 +73,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task ListServiceNamesAsync_WhenServicesExist_ReturnsOrderedNames()
 	{
+		_mockReflectionLogger.LogInformation("ListServiceNamesAsync_WhenServicesExist_ReturnsOrderedNames called");
 		// Arrange
 		var service1 = CreateTestService("ServiceA", "package.a", "host.a", 1111);
 		var service2 = CreateTestService("ServiceB", "package.b", "host.b", 2222);
@@ -85,6 +86,7 @@ public sealed class ReflectionServiceTests
 		// Assert
 		result.Success.Should().BeTrue();
 		result.Data.Should().BeEquivalentTo(new List<string> { "package.a.ServiceA", "package.b.ServiceB" }, options => options.WithStrictOrdering());
+		_mockReflectionLogger.LogInformation("ListServiceNamesAsync_WhenServicesExist_ReturnsOrderedNames finished");
 	}
 
 	[Fact]
@@ -93,6 +95,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task ListServiceNamesAsync_WhenNoServicesExist_ReturnsEmptyList()
 	{
+		_mockReflectionLogger.LogInformation("ListServiceNamesAsync_WhenNoServicesExist_ReturnsEmptyList called");
 		// Arrange - No services registered in _serviceRegistry
 
 		// Act
@@ -101,8 +104,8 @@ public sealed class ReflectionServiceTests
 		// Assert
 		result.Success.Should().BeTrue();
 		result.Data.Should().BeEmpty();
+		_mockReflectionLogger.LogInformation("ListServiceNamesAsync_WhenNoServicesExist_ReturnsEmptyList finished");
 	}
-
 
 	[Fact]
 	/// <summary>
@@ -110,6 +113,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetServiceDescriptorAsync_ForExistingService_ReturnsDescriptor()
 	{
+		_mockReflectionLogger.LogInformation("GetServiceDescriptorAsync_ForExistingService_ReturnsDescriptor called");
 		// Arrange
 		var service = CreateTestService("ServiceA", "package.a", "host.a", 1111);
 		var method1 = new GrpcMethod("Method1", "package.a.ServiceA.Method1", MethodType.Unary, "InputA", "OutputA");
@@ -124,6 +128,7 @@ public sealed class ReflectionServiceTests
 		result.Data.Should().NotBeNull();
 		result.Data!.FullName.Should().Be("package.a.ServiceA");
 		result.Data!.Methods.Should().ContainSingle(m => m.Name == "Method1");
+		_mockReflectionLogger.LogInformation("GetServiceDescriptorAsync_ForExistingService_ReturnsDescriptor finished");
 	}
 
 	[Fact]
@@ -132,6 +137,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetServiceDescriptorAsync_ForNonExistingService_ReturnsFailure()
 	{
+		_mockReflectionLogger.LogInformation("GetServiceDescriptorAsync_ForNonExistingService_ReturnsFailure called");
 		// Arrange - No service registered
 
 		// Act
@@ -140,6 +146,7 @@ public sealed class ReflectionServiceTests
 		// Assert
 		result.Success.Should().BeFalse();
 		result.ErrorMessage.Should().Contain("not registered");
+		_mockReflectionLogger.LogInformation("GetServiceDescriptorAsync_ForNonExistingService_ReturnsFailure finished");
 	}
 
 	[Fact]
@@ -148,6 +155,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetServiceDescriptorAsync_WithNullOrEmptyFullName_ThrowsArgumentException()
 	{
+		_mockReflectionLogger.LogInformation("GetServiceDescriptorAsync_WithNullOrEmptyFullName_ThrowsArgumentException called");
 		// Arrange
 		// No setup needed
 
@@ -157,6 +165,7 @@ public sealed class ReflectionServiceTests
 		// Assert
 		await act.Should().ThrowAsync<ArgumentException>()
 			.WithParameterName("fullName");
+		_mockReflectionLogger.LogInformation("GetServiceDescriptorAsync_WithNullOrEmptyFullName_ThrowsArgumentException finished");
 	}
 
 	[Fact]
@@ -165,6 +174,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetMethodDescriptorAsync_ForExistingMethod_ReturnsDescriptor()
 	{
+		_mockReflectionLogger.LogInformation("GetMethodDescriptorAsync_ForExistingMethod_ReturnsDescriptor called");
 		// Arrange
 		var service = CreateTestService("ServiceA", "package.a", "host.a", 1111);
 		var method1 = new GrpcMethod("Method1", "package.a.ServiceA.Method1", MethodType.Unary, "InputA", "OutputA");
@@ -179,6 +189,7 @@ public sealed class ReflectionServiceTests
 		result.Data.Should().NotBeNull();
 		result.Data!.Name.Should().Be("Method1");
 		result.Data.FullName.Should().Be("package.a.ServiceA.Method1");
+		_mockReflectionLogger.LogInformation("GetMethodDescriptorAsync_ForExistingMethod_ReturnsDescriptor finished");
 	}
 
 	[Fact]
@@ -187,6 +198,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetMethodDescriptorAsync_ForNonExistingMethod_ReturnsFailure()
 	{
+		_mockReflectionLogger.LogInformation("GetMethodDescriptorAsync_ForNonExistingMethod_ReturnsFailure called");
 		// Arrange
 		var service = CreateTestService("ServiceA", "package.a", "host.a", 1111);
 		_serviceRegistry.RegisterService(service);
@@ -197,6 +209,7 @@ public sealed class ReflectionServiceTests
 		// Assert
 		result.Success.Should().BeFalse();
 		result.ErrorMessage.Should().Contain("Method 'NonExistentMethod' not found");
+		_mockReflectionLogger.LogInformation("GetMethodDescriptorAsync_ForNonExistingMethod_ReturnsFailure finished");
 	}
 
 	[Fact]
@@ -205,6 +218,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetMethodDescriptorAsync_WithNullOrEmptyServiceFullName_ThrowsArgumentException()
 	{
+		_mockReflectionLogger.LogInformation("GetMethodDescriptorAsync_WithNullOrEmptyServiceFullName_ThrowsArgumentException called");
 		// Arrange
 		// No setup needed
 
@@ -214,6 +228,7 @@ public sealed class ReflectionServiceTests
 		// Assert
 		await act.Should().ThrowAsync<ArgumentException>()
 			.WithParameterName("serviceFullName");
+		_mockReflectionLogger.LogInformation("GetMethodDescriptorAsync_WithNullOrEmptyServiceFullName_ThrowsArgumentException finished");
 	}
 
 	[Fact]
@@ -222,6 +237,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetMethodDescriptorAsync_WithNullOrEmptyMethodName_ThrowsArgumentException()
 	{
+		_mockReflectionLogger.LogInformation("GetMethodDescriptorAsync_WithNullOrEmptyMethodName_ThrowsArgumentException called");
 		// Arrange
 		// No setup needed
 
@@ -231,6 +247,7 @@ public sealed class ReflectionServiceTests
 		// Assert
 		await act.Should().ThrowAsync<ArgumentException>()
 			.WithParameterName("methodName");
+		_mockReflectionLogger.LogInformation("GetMethodDescriptorAsync_WithNullOrEmptyMethodName_ThrowsArgumentException finished");
 	}
 
 	[Fact]
@@ -239,6 +256,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetAllDescriptorsAsync_WhenServicesExist_ReturnsAllDescriptors()
 	{
+		_mockReflectionLogger.LogInformation("GetAllDescriptorsAsync_WhenServicesExist_ReturnsAllDescriptors called");
 		// Arrange
 		var serviceA = CreateTestService("ServiceA", "package.a", "host.a", 1111);
 		var methodA1 = new GrpcMethod("MethodA1", "package.a.ServiceA.MethodA1", MethodType.Unary, "InputA1", "OutputA1");
@@ -259,6 +277,7 @@ public sealed class ReflectionServiceTests
 		result.Data.Should().HaveCount(2);
 		result.Data.Should().Contain(d => d.FullName == "package.a.ServiceA");
 		result.Data.Should().Contain(d => d.FullName == "package.b.ServiceB");
+		_mockReflectionLogger.LogInformation("GetAllDescriptorsAsync_WhenServicesExist_ReturnsAllDescriptors finished");
 	}
 
 	[Fact]
@@ -267,6 +286,7 @@ public sealed class ReflectionServiceTests
 	/// </summary>
 	public async Task GetAllDescriptorsAsync_WhenNoServicesExist_ReturnsEmptyList()
 	{
+		_mockReflectionLogger.LogInformation("GetAllDescriptorsAsync_WhenNoServicesExist_ReturnsEmptyList called");
 		// Arrange - No services registered in _serviceRegistry
 
 		// Act
@@ -275,5 +295,6 @@ public sealed class ReflectionServiceTests
 		// Assert
 		result.Success.Should().BeTrue();
 		result.Data.Should().BeEmpty();
+		_mockReflectionLogger.LogInformation("GetAllDescriptorsAsync_WhenNoServicesExist_ReturnsEmptyList finished");
 	}
 }
