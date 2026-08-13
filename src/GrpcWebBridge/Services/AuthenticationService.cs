@@ -96,12 +96,12 @@ public sealed class AuthenticationService
         if (string.IsNullOrWhiteSpace(userId))
             throw new GrpcWebBridgeException("User ID cannot be empty", "INVALID_USER_ID");
 
-        _logger.LogInformation("Authenticating API key for user: {UserId}", userId);
+        _logger.LogInformation("AuthenticateApiKey called with {ApiKey} and {UserId}", apiKey, userId);
 
         var context = new AuthenticationContext(userId, AuthenticationScheme.ApiKey, apiKey);
         context.SetExpiration(Constants.Authentication.JwtExpirationMinutes);
 
-        _logger.LogInformation("API key authentication successful: {UserId}", userId);
+        _logger.LogInformation("AuthenticateApiKey completed with result {Result}", context);
 
         CacheContext(context);
         return context;
