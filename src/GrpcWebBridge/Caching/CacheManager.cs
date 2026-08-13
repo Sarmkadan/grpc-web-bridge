@@ -287,6 +287,8 @@ public class CacheManager : IDisposable
         _cleanupTimer?.Dispose();
         _cache?.Clear();
     }
+
+    public override string ToString() => $"CacheManager {{ EntryCount = {_cache.Count} }}";
 }
 
 /// <summary>
@@ -299,6 +301,8 @@ public sealed class CacheEntry
     public DateTime CreatedAt { get; set; }
     public DateTime? LastAccessedAt { get; set; }
     public long HitCount { get; set; }
+
+    public override string ToString() => $"CacheEntry {{ Value = {Value}, ExpiresAt = {ExpiresAt}, CreatedAt = {CreatedAt}, LastAccessedAt = {LastAccessedAt}, HitCount = {HitCount} }}";
 }
 
 /// <summary>
