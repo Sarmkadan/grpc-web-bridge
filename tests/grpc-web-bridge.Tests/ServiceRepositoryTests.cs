@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace GrpcWebBridge.Tests;
@@ -55,6 +56,7 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task AddAsync_WithNewService_ReturnsTrueAndStoresService()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(AddAsync_WithNewService_ReturnsTrueAndStoresService));
         // Arrange
         var service = CreateValidGrpcService("TestService", "test.package", "localhost", 5000);
 
@@ -67,6 +69,8 @@ public sealed class ServiceRepositoryTests
         retrieved.Should().NotBeNull();
         retrieved!.FullName.Should().Be("test.package.TestService");
         retrieved.Name.Should().Be("TestService");
+
+        _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(AddAsync_WithNewService_ReturnsTrueAndStoresService), result);
     }
 
     /// <summary>
@@ -76,6 +80,7 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task AddAsync_WithDuplicateServiceId_ReturnsFalse()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(AddAsync_WithDuplicateServiceId_ReturnsFalse));
         // Arrange
         var service1 = CreateValidGrpcService("ServiceOne", "package.one", "host.one", 1000);
         await _repository.AddAsync(service1);
@@ -88,6 +93,8 @@ public sealed class ServiceRepositoryTests
 
         // Assert
         result.Should().BeFalse();
+
+        _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(AddAsync_WithDuplicateServiceId_ReturnsFalse), result);
     }
 
     /// <summary>
@@ -97,6 +104,7 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task GetByFullNameAsync_WithExistingService_ReturnsService()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(GetByFullNameAsync_WithExistingService_ReturnsService));
         // Arrange
         var service = CreateValidGrpcService("TestService", "test.package", "localhost", 5000);
         await _repository.AddAsync(service);
@@ -107,6 +115,8 @@ public sealed class ServiceRepositoryTests
         // Assert
         result.Should().NotBeNull();
         result!.Id.Should().Be(service.Id);
+
+        _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(GetByFullNameAsync_WithExistingService_ReturnsService), result != null);
     }
 
     /// <summary>
@@ -116,6 +126,7 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task DeleteAsync_WithExistingService_ReturnsTrueAndRemoves()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(DeleteAsync_WithExistingService_ReturnsTrueAndRemoves));
         // Arrange
         var service = CreateValidGrpcService("ServiceToRemove", "remove.package", "localhost", 5000);
         await _repository.AddAsync(service);
@@ -127,6 +138,8 @@ public sealed class ServiceRepositoryTests
         // Assert
         deleteResult.Should().BeTrue();
         getResult.Should().BeNull();
+        
+        _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(DeleteAsync_WithExistingService_ReturnsTrueAndRemoves), deleteResult);
     }
 
     /// <summary>
@@ -136,6 +149,7 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task CountAsync_ReturnsCorrectCount()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(CountAsync_ReturnsCorrectCount));
         // Arrange
         await _repository.AddAsync(CreateValidGrpcService("Service1", "package.one", "localhost", 5001));
         await _repository.AddAsync(CreateValidGrpcService("Service2", "package.two", "localhost", 5002));
@@ -145,6 +159,8 @@ public sealed class ServiceRepositoryTests
 
         // Assert
         count.Should().Be(2);
+
+        _logger.LogInformation("Completed test {TestName} with result: {Count}", nameof(CountAsync_ReturnsCorrectCount), count);
     }
 
     /// <summary>
@@ -154,6 +170,7 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task UpdateAsync_WithExistingService_UpdatesAndReturnsTrue()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(UpdateAsync_WithExistingService_UpdatesAndReturnsTrue));
         // Arrange
         var service = CreateValidGrpcService("ServiceToUpdate", "update.package", "localhost", 5000);
         await _repository.AddAsync(service);
@@ -171,6 +188,8 @@ public sealed class ServiceRepositoryTests
         updated!.PackageName.Should().Be("UpdatedPackage");
         updated.Description.Should().Be("Updated description");
         updated.UpdatedAt.Should().NotBeNull();
+
+        _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(UpdateAsync_WithExistingService_UpdatesAndReturnsTrue), result);
     }
 
     /// <summary>
@@ -180,11 +199,14 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task ExistsAsync_WithNonExistentFullName_ReturnsFalse()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(ExistsAsync_WithNonExistentFullName_ReturnsFalse));
         // Act
         var exists = await _repository.ExistsAsync("non.existent.Service");
 
         // Assert
         exists.Should().BeFalse();
+
+        _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(ExistsAsync_WithNonExistentFullName_ReturnsFalse), exists);
     }
 
     /// <summary>
@@ -194,6 +216,7 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task AddRequestAsync_WithValidRequest_ReturnsTrue()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(AddRequestAsync_WithValidRequest_ReturnsTrue));
         // Arrange
         var request = new GrpcRequest("TestService", "TestMethod", []);
 
@@ -205,6 +228,8 @@ public sealed class ServiceRepositoryTests
         result.Should().BeTrue();
         stored.Should().NotBeNull();
         stored!.ServiceName.Should().Be("TestService");
+
+        _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(AddRequestAsync_WithValidRequest_ReturnsTrue), result);
     }
 
     /// <summary>
@@ -214,11 +239,14 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task GetByIdAsync_WithNonExistentId_ReturnsNull()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(GetByIdAsync_WithNonExistentId_ReturnsNull));
         // Act
         var result = await _repository.GetByIdAsync("nonexistent-id");
 
         // Assert
         result.Should().BeNull();
+
+        _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(GetByIdAsync_WithNonExistentId_ReturnsNull), result == null);
     }
 
     /// <summary>
@@ -228,6 +256,7 @@ public sealed class ServiceRepositoryTests
     [Fact]
     public async Task GetByPackageAsync_ReturnsServicesForPackage()
     {
+        _logger.LogInformation("Starting test {TestName}", nameof(GetByPackageAsync_ReturnsServicesForPackage));
         // Arrange
         var service1 = CreateValidGrpcService("Service1", "package.filter", "host.one", 1000);
         var service2 = CreateValidGrpcService("Service2", "package.filter", "host.two", 2000);
@@ -244,5 +273,7 @@ public sealed class ServiceRepositoryTests
         servicesInPackage.Should().Contain(service1);
         servicesInPackage.Should().Contain(service2);
         servicesInPackage.Should().NotContain(service3);
+
+        _logger.LogInformation("Completed test {TestName} with count: {Count}", nameof(GetByPackageAsync_ReturnsServicesForPackage), servicesInPackage.Count());
     }
 }
