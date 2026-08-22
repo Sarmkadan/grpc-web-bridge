@@ -51,6 +51,7 @@ public sealed class RequestContextManagerJsonExtensionsTests
         json.Should().NotBeNullOrEmpty();
         json.Should().Contain("test-request-123");
         json.Should().Contain("user-456");
+        _logger.LogInformation("Finished test ToJson_WithValidContext_ReturnsNonEmptyString with Result {Json}", json);
     }
 
     /// <summary>
