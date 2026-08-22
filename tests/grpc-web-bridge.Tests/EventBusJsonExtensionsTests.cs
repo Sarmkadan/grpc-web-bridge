@@ -26,6 +26,8 @@ public sealed class EventBusJsonExtensionsTests
     [Fact]
     public void ToJson_WithValidEventBus_ReturnsNonEmptyJsonString()
     {
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(ToJson_WithValidEventBus_ReturnsNonEmptyJsonString));
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(ToJson_WithValidEventBus_ReturnsNonEmptyJsonString));
         // Arrange
         var eventBus = new EventBus(_mockLogger);
 
