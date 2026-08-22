@@ -24,6 +24,7 @@ public sealed class EventBusTests : IDisposable
     {
         _mockLogger = Substitute.For<ILogger<EventBus>>();
         _eventBus = new EventBus(_mockLogger, maxHistorySize: 100);
+        _mockLogger.LogInformation("EventBus test initialized");
     }
 
     public void Dispose()
@@ -38,6 +39,7 @@ public sealed class EventBusTests : IDisposable
     [Fact]
     public void Subscribe_WithNullSyncHandler_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_WithNullSyncHandler_ThrowsArgumentNullException));
         // Arrange
         Action<ServiceRegisteredEvent>? nullHandler = null;
 
@@ -46,11 +48,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         act.Should().Throw<ArgumentNullException>("because null handlers are not allowed");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_WithNullSyncHandler_ThrowsArgumentNullException));
     }
 
     [Fact]
     public void Subscribe_WithNullAsyncHandler_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_WithNullAsyncHandler_ThrowsArgumentNullException));
         // Arrange
         Func<ServiceRegisteredEvent, Task>? nullHandler = null;
 
@@ -59,11 +63,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         act.Should().Throw<ArgumentNullException>("because null handlers are not allowed");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_WithNullAsyncHandler_ThrowsArgumentNullException));
     }
 
     [Fact]
     public void Subscribe_WithValidSyncHandler_AddsHandlerToSubscribers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_WithValidSyncHandler_AddsHandlerToSubscribers));
         // Arrange
         var handlerCalled = false;
         void Handler(ServiceRegisteredEvent @event) => handlerCalled = true;
@@ -74,11 +80,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(1);
         handlerCalled.Should().BeFalse("because handler hasn't been called yet");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_WithValidSyncHandler_AddsHandlerToSubscribers));
     }
 
     [Fact]
     public void Subscribe_WithValidAsyncHandler_AddsHandlerToSubscribers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_WithValidAsyncHandler_AddsHandlerToSubscribers));
         // Arrange
         var handlerCalled = false;
         Task Handler(ServiceRegisteredEvent @event)
@@ -93,11 +101,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(1);
         handlerCalled.Should().BeFalse("because handler hasn't been called yet");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_WithValidAsyncHandler_AddsHandlerToSubscribers));
     }
 
     [Fact]
     public void Subscribe_MultipleHandlersForSameEvent_AddsAllHandlers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_MultipleHandlersForSameEvent_AddsAllHandlers));
         // Arrange
         var handler1Called = false;
         var handler2Called = false;
@@ -110,11 +120,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(2);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_MultipleHandlersForSameEvent_AddsAllHandlers));
     }
 
     [Fact]
     public void Subscribe_DifferentEventTypes_AddsSeparateHandlers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_DifferentEventTypes_AddsSeparateHandlers));
         // Arrange
         var serviceHandlerCalled = false;
         var methodHandlerCalled = false;
@@ -128,11 +140,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(1);
         _eventBus.GetSubscriberCount<MethodInvokedEvent>().Should().Be(1);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_DifferentEventTypes_AddsSeparateHandlers));
     }
 
     [Fact]
     public void Unsubscribe_WithNullHandler_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_WithNullHandler_ThrowsArgumentNullException));
         // Arrange
         Delegate? nullHandler = null;
 
@@ -141,11 +155,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         act.Should().Throw<ArgumentNullException>("because null handlers are not allowed");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_WithNullHandler_ThrowsArgumentNullException));
     }
 
     [Fact]
     public void Unsubscribe_WithNonExistentHandler_ReturnsFalse()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_WithNonExistentHandler_ReturnsFalse));
         // Arrange
         void Handler(ServiceRegisteredEvent @event) { }
 
@@ -154,11 +170,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         result.Should().BeFalse("because handler was never subscribed");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_WithNonExistentHandler_ReturnsFalse));
     }
 
     [Fact]
     public void Unsubscribe_WithExistingSyncHandler_RemovesHandler()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_WithExistingSyncHandler_RemovesHandler));
         // Arrange
         var handlerCalled = false;
         void Handler(ServiceRegisteredEvent @event) => handlerCalled = true;
@@ -170,11 +188,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         result.Should().BeTrue("because handler was successfully removed");
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(0);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_WithExistingSyncHandler_RemovesHandler));
     }
 
     [Fact]
     public void Unsubscribe_WithExistingAsyncHandler_RemovesHandler()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_WithExistingAsyncHandler_RemovesHandler));
         // Arrange
         var handlerCalled = false;
         Task Handler(ServiceRegisteredEvent @event)
@@ -190,11 +210,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         result.Should().BeTrue("because handler was successfully removed");
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(0);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_WithExistingAsyncHandler_RemovesHandler));
     }
 
     [Fact]
     public void Unsubscribe_MultipleHandlers_RemovesOnlySpecifiedHandler()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_MultipleHandlers_RemovesOnlySpecifiedHandler));
         // Arrange
         var handler1Called = false;
         var handler2Called = false;
@@ -210,11 +232,13 @@ public sealed class EventBusTests : IDisposable
         result.Should().BeTrue("because handler was successfully removed");
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(1);
         _eventBus.Unsubscribe<ServiceRegisteredEvent>(Handler2).Should().BeTrue();
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_MultipleHandlers_RemovesOnlySpecifiedHandler));
     }
 
     [Fact]
     public async Task PublishAsync_WithNullEvent_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithNullEvent_ThrowsArgumentNullException));
         // Arrange
         ServiceRegisteredEvent? nullEvent = null;
 
@@ -223,11 +247,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>("because null events are not allowed");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithNullEvent_ThrowsArgumentNullException));
     }
 
     [Fact]
     public async Task PublishAsync_WithNoSubscribers_DoesNotThrow()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithNoSubscribers_DoesNotThrow));
         // Arrange
         var @event = new ServiceRegisteredEvent
         {
@@ -242,11 +268,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         await act.Should().NotThrowAsync("because publishing without subscribers should be safe");
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(0);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithNoSubscribers_DoesNotThrow));
     }
 
     [Fact]
     public async Task PublishAsync_WithSyncHandler_CallsHandler()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithSyncHandler_CallsHandler));
         // Arrange
         var handlerCalled = false;
         var receivedEvent = (ServiceRegisteredEvent?)null;
@@ -273,11 +301,13 @@ public sealed class EventBusTests : IDisposable
         receivedEvent!.ServiceId.Should().Be("test-service-id");
         receivedEvent.ServiceName.Should().Be("TestService");
         receivedEvent.Endpoint.Should().Be("http://localhost:5000");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithSyncHandler_CallsHandler));
     }
 
     [Fact]
     public async Task PublishAsync_WithAsyncHandler_CallsHandler()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithAsyncHandler_CallsHandler));
         // Arrange
         var handlerCalled = false;
         var receivedEvent = (ServiceRegisteredEvent?)null;
@@ -303,11 +333,13 @@ public sealed class EventBusTests : IDisposable
         handlerCalled.Should().BeTrue("because async handler should be called");
         receivedEvent.Should().NotBeNull();
         receivedEvent!.ServiceId.Should().Be("test-service-id");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithAsyncHandler_CallsHandler));
     }
 
     [Fact]
     public async Task PublishAsync_WithMultipleHandlers_CallsAllHandlers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithMultipleHandlers_CallsAllHandlers));
         // Arrange
         var handler1Called = false;
         var handler2Called = false;
@@ -333,11 +365,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         handler1Called.Should().BeTrue("because first handler should be called");
         handler2Called.Should().BeTrue("because second handler should be called");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithMultipleHandlers_CallsAllHandlers));
     }
 
     [Fact]
     public async Task PublishAsync_WithExceptionInHandler_AggregatesAndThrowsEventBusException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithExceptionInHandler_AggregatesAndThrowsEventBusException));
         // Arrange
         void ThrowingHandler(ServiceRegisteredEvent @event) => throw new InvalidOperationException("Test exception");
         void NormalHandler(ServiceRegisteredEvent @event) { }
@@ -360,21 +394,25 @@ public sealed class EventBusTests : IDisposable
 
         // Normal handler should still be called despite exception in another handler
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(2);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithExceptionInHandler_AggregatesAndThrowsEventBusException));
     }
 
     [Fact]
     public void GetSubscriberCount_WithNoSubscribers_ReturnsZero()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetSubscriberCount_WithNoSubscribers_ReturnsZero));
         // Arrange & Act
         var count = _eventBus.GetSubscriberCount<ServiceRegisteredEvent>();
 
         // Assert
         count.Should().Be(0);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetSubscriberCount_WithNoSubscribers_ReturnsZero));
     }
 
     [Fact]
     public void GetSubscriberCount_WithSubscribers_ReturnsCorrectCount()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetSubscriberCount_WithSubscribers_ReturnsCorrectCount));
         // Arrange
         void Handler1(ServiceRegisteredEvent @event) { }
         void Handler2(ServiceRegisteredEvent @event) { }
@@ -390,21 +428,25 @@ public sealed class EventBusTests : IDisposable
         // Assert
         serviceEventCount.Should().Be(2);
         methodEventCount.Should().Be(1);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetSubscriberCount_WithSubscribers_ReturnsCorrectCount));
     }
 
     [Fact]
     public void GetEventHistory_WithEmptyHistory_ReturnsEmptyList()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetEventHistory_WithEmptyHistory_ReturnsEmptyList));
         // Arrange & Act
         var history = _eventBus.GetEventHistory();
 
         // Assert
         history.Should().BeEmpty();
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithEmptyHistory_ReturnsEmptyList));
     }
 
     [Fact]
     public async Task GetEventHistory_WithFilteredEventType_ReturnsOnlyMatchingEvents()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetEventHistory_WithFilteredEventType_ReturnsOnlyMatchingEvents));
         // Arrange
         void ServiceHandler(ServiceRegisteredEvent @event) { }
         void MethodHandler(MethodInvokedEvent @event) { }
@@ -441,11 +483,13 @@ public sealed class EventBusTests : IDisposable
         methodHistory.Should().HaveCount(1);
         methodHistory[0].EventType.Should().Be("MethodInvokedEvent");
         unknownHistory.Should().BeEmpty();
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithFilteredEventType_ReturnsOnlyMatchingEvents));
     }
 
     [Fact]
     public async Task GetEventHistory_WithMaxHistorySize_TrimsOldestEvents()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetEventHistory_WithMaxHistorySize_TrimsOldestEvents));
         // Arrange
         var eventBus = new EventBus(_mockLogger, maxHistorySize: 5);
 
@@ -466,11 +510,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         history.Should().HaveCount(5, "because history should be trimmed to max size");
         history.Should().BeInDescendingOrder(h => h.PublishedAt, "because events should be ordered by published date descending");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithMaxHistorySize_TrimsOldestEvents));
     }
 
     [Fact]
     public async Task GetEventHistory_WithEventData_IncludesEventData()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetEventHistory_WithEventData_IncludesEventData));
         // Arrange
         var receivedEvent = (ServiceRegisteredEvent?)null;
         void Handler(ServiceRegisteredEvent @event)
@@ -498,11 +544,13 @@ public sealed class EventBusTests : IDisposable
         history[0].EventId.Should().Be(@event.EventId);
         history[0].Data.Should().BeSameAs(@event);
         history[0].Data.Should().BeOfType<ServiceRegisteredEvent>();
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithEventData_IncludesEventData));
     }
 
     [Fact]
     public void EventId_IsGeneratedForEachEvent()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(EventId_IsGeneratedForEachEvent));
         // Arrange
         var event1 = new ServiceRegisteredEvent();
         var event2 = new ServiceRegisteredEvent();
@@ -511,11 +559,13 @@ public sealed class EventBusTests : IDisposable
         event1.EventId.Should().NotBeNullOrEmpty();
         event2.EventId.Should().NotBeNullOrEmpty();
         event1.EventId.Should().NotBe(event2.EventId, "because each event should have a unique ID");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(EventId_IsGeneratedForEachEvent));
     }
 
     [Fact]
     public void ClearSubscribers_RemovesAllSubscribers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(ClearSubscribers_RemovesAllSubscribers));
         // Arrange
         void Handler1(ServiceRegisteredEvent @event) { }
         void Handler2(ServiceRegisteredEvent @event) { }
@@ -534,11 +584,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         _eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(0);
         _eventBus.GetSubscriberCount<MethodInvokedEvent>().Should().Be(0);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(ClearSubscribers_RemovesAllSubscribers));
     }
 
     [Fact]
     public void Dispose_SetsIsDisposedFlag()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Dispose_SetsIsDisposedFlag));
         // Arrange
         void Handler(ServiceRegisteredEvent @event) { }
         _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
@@ -549,11 +601,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         _eventBus.IsDisposed.Should().BeTrue("because Dispose should set the IsDisposed flag");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Dispose_SetsIsDisposedFlag));
     }
 
     [Fact]
     public void Dispose_CanOnlyBeCalledOnce()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Dispose_CanOnlyBeCalledOnce));
         // Arrange
         var initialCount = _eventBus.GetSubscriberCount<ServiceRegisteredEvent>();
 
@@ -563,11 +617,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert - Should not throw on multiple Dispose calls
         _eventBus.IsDisposed.Should().BeTrue();
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Dispose_CanOnlyBeCalledOnce));
     }
 
     [Fact]
     public async Task PublishAsync_WithMultipleEventTypes_DoesNotMixHandlers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithMultipleEventTypes_DoesNotMixHandlers));
         // Arrange
         var serviceHandlerCalled = false;
         var methodHandlerCalled = false;
@@ -598,11 +654,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         serviceHandlerCalled.Should().BeTrue("because service event handler should be called");
         methodHandlerCalled.Should().BeTrue("because method event handler should be called");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithMultipleEventTypes_DoesNotMixHandlers));
     }
 
     [Fact]
     public async Task PublishAsync_WithAsyncHandlers_RunsHandlersConcurrently()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithAsyncHandlers_RunsHandlersConcurrently));
         // Arrange
         var handler1Completed = false;
         var handler2Completed = false;
@@ -644,11 +702,13 @@ public sealed class EventBusTests : IDisposable
         handler1Completed.Should().BeTrue("because all async handlers should complete");
         handler2Completed.Should().BeTrue();
         handler3Completed.Should().BeTrue();
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithAsyncHandlers_RunsHandlersConcurrently));
     }
 
     [Fact]
     public async Task GetEventHistory_WithNullEventType_ReturnsAllEvents()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetEventHistory_WithNullEventType_ReturnsAllEvents));
         // Arrange
         void ServiceHandler(ServiceRegisteredEvent @event) { }
         void MethodHandler(MethodInvokedEvent @event) { }
@@ -677,11 +737,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         history.Should().HaveCount(2);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithNullEventType_ReturnsAllEvents));
     }
 
     [Fact]
     public async Task GetEventHistory_WithEmptyStringEventType_ReturnsAllEvents()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetEventHistory_WithEmptyStringEventType_ReturnsAllEvents));
         // Arrange
         void ServiceHandler(ServiceRegisteredEvent @event) { }
         void MethodHandler(MethodInvokedEvent @event) { }
@@ -710,12 +772,14 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         history.Should().HaveCount(2);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithEmptyStringEventType_ReturnsAllEvents));
     }
 
 
     [Fact]
     public void Subscribe_AfterDispose_ThrowsObjectDisposedException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_AfterDispose_ThrowsObjectDisposedException));
         // Arrange
         void Handler(ServiceRegisteredEvent @event) { }
         _eventBus.Dispose();
@@ -725,11 +789,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         act.Should().Throw<ObjectDisposedException>("because subscribing after dispose should throw");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_AfterDispose_ThrowsObjectDisposedException));
     }
 
     [Fact]
     public void Unsubscribe_AfterDispose_ThrowsObjectDisposedException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_AfterDispose_ThrowsObjectDisposedException));
         // Arrange
         void Handler(ServiceRegisteredEvent @event) { }
         _eventBus.Dispose();
@@ -739,11 +805,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         act.Should().Throw<ObjectDisposedException>("because unsubscribing after dispose should throw");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_AfterDispose_ThrowsObjectDisposedException));
     }
 
     [Fact]
     public void GetSubscriberCount_AfterDispose_ThrowsObjectDisposedException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetSubscriberCount_AfterDispose_ThrowsObjectDisposedException));
         // Arrange
         _eventBus.Dispose();
 
@@ -752,11 +820,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         act.Should().Throw<ObjectDisposedException>("because getting subscriber count after dispose should throw");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetSubscriberCount_AfterDispose_ThrowsObjectDisposedException));
     }
 
     [Fact]
     public void GetEventHistory_AfterDispose_ThrowsObjectDisposedException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(GetEventHistory_AfterDispose_ThrowsObjectDisposedException));
         // Arrange
         _eventBus.Dispose();
 
@@ -765,11 +835,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         act.Should().Throw<ObjectDisposedException>("because getting event history after dispose should throw");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_AfterDispose_ThrowsObjectDisposedException));
     }
 
     [Fact]
     public void ClearSubscribers_AfterDispose_ThrowsObjectDisposedException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(ClearSubscribers_AfterDispose_ThrowsObjectDisposedException));
         // Arrange
         _eventBus.Dispose();
 
@@ -778,11 +850,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         act.Should().Throw<ObjectDisposedException>("because clearing subscribers after dispose should throw");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(ClearSubscribers_AfterDispose_ThrowsObjectDisposedException));
     }
 
     [Fact]
     public async Task PublishAsync_WithMultipleExceptions_AggregatesAllExceptions()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithMultipleExceptions_AggregatesAllExceptions));
         // Arrange
         void ThrowingHandler1(ServiceRegisteredEvent @event) => throw new InvalidOperationException("Exception 1");
         void ThrowingHandler2(ServiceRegisteredEvent @event) => throw new ArgumentException("Exception 2");
@@ -807,11 +881,13 @@ public sealed class EventBusTests : IDisposable
         exception.And.InnerException.Should().BeOfType<AggregateException>();
         var aggregateException = (AggregateException)exception.And.InnerException;
         aggregateException.InnerExceptions.Should().HaveCount(2);
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithMultipleExceptions_AggregatesAllExceptions));
     }
 
     [Fact]
     public async Task PublishAsync_WithExceptionInAsyncHandler_AggregatesException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithExceptionInAsyncHandler_AggregatesException));
         // Arrange
         Task ThrowingAsyncHandler(ServiceRegisteredEvent @event) => throw new InvalidOperationException("Async exception");
         void NormalHandler(ServiceRegisteredEvent @event) { }
@@ -831,13 +907,16 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         await act.Should().ThrowAsync<EventBusException>();
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithExceptionInAsyncHandler_AggregatesException));
     }
 
     [Fact]
     public void IsDisposed_ReturnsFalse_WhenNotDisposed()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(IsDisposed_ReturnsFalse_WhenNotDisposed));
         // Arrange & Act & Assert
         _eventBus.IsDisposed.Should().BeFalse("because the bus should not be disposed initially");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(IsDisposed_ReturnsFalse_WhenNotDisposed));
     }
 
     #region Edge Case Tests for EventBus Behavior
@@ -845,6 +924,7 @@ public sealed class EventBusTests : IDisposable
     [Fact]
     public async Task PublishAsync_WithSubscriberException_ContinuesToOtherSubscribers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithSubscriberException_ContinuesToOtherSubscribers));
         // Arrange
         var firstHandlerCalled = false;
         var secondHandlerCalled = false;
@@ -875,11 +955,13 @@ public sealed class EventBusTests : IDisposable
         firstHandlerCalled.Should().BeTrue("because first handler should be called");
         secondHandlerCalled.Should().BeFalse("because second handler throws exception before setting flag");
         thirdHandlerCalled.Should().BeTrue("because third handler should still be called after exception");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithSubscriberException_ContinuesToOtherSubscribers));
     }
 
     [Fact]
     public async Task PublishAsync_WithSubscriberException_InAsyncHandler_ContinuesToOtherSubscribers()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithSubscriberException_InAsyncHandler_ContinuesToOtherSubscribers));
         // Arrange
         var firstHandlerCalled = false;
         var secondHandlerCalled = false;
@@ -923,11 +1005,13 @@ public sealed class EventBusTests : IDisposable
         firstHandlerCalled.Should().BeTrue("because first async handler should be called");
         secondHandlerCalled.Should().BeFalse("because second async handler throws exception before setting flag");
         thirdHandlerCalled.Should().BeTrue("because third async handler should still be called after exception");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithSubscriberException_InAsyncHandler_ContinuesToOtherSubscribers));
     }
 
     [Fact]
     public async Task PublishAsync_AfterDispose_ThrowsObjectDisposedException()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_AfterDispose_ThrowsObjectDisposedException));
         // Arrange
         void Handler(ServiceRegisteredEvent @event) { }
         _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
@@ -945,11 +1029,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         await act.Should().ThrowAsync<ObjectDisposedException>("because publishing after dispose should throw");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_AfterDispose_ThrowsObjectDisposedException));
     }
 
     [Fact]
     public async Task PublishAsync_WithConcurrentPublishes_HandlesRaceConditions()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithConcurrentPublishes_HandlesRaceConditions));
         // Arrange
         var callCount = 0;
         var lockObj = new object();
@@ -980,11 +1066,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         callCount.Should().Be(10, "because each publish should have called the handler exactly once");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithConcurrentPublishes_HandlesRaceConditions));
     }
 
     [Fact]
     public async Task PublishAsync_WithConcurrentPublishes_HandlesMultipleEvents()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithConcurrentPublishes_HandlesMultipleEvents));
         // Arrange
         var callCount = 0;
         void Handler(ServiceRegisteredEvent @event)
@@ -1011,11 +1099,13 @@ public sealed class EventBusTests : IDisposable
 
         // Assert
         callCount.Should().Be(10, "because each publish should have called the handler exactly once");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithConcurrentPublishes_HandlesMultipleEvents));
     }
 
     [Fact]
     public async Task PublishAsync_LateSubscriber_OnlyReceivesEventsPublishedAfterSubscription()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_LateSubscriber_OnlyReceivesEventsPublishedAfterSubscription));
         // Arrange
         var eventsReceived = new ConcurrentBag<ServiceRegisteredEvent>();
         var earlyEvent = new ServiceRegisteredEvent
@@ -1045,11 +1135,13 @@ public sealed class EventBusTests : IDisposable
         // Assert
         eventsReceived.Should().HaveCount(1, "because only the event published after subscription should be received");
         eventsReceived.Single().ServiceId.Should().Be("late-service");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_LateSubscriber_OnlyReceivesEventsPublishedAfterSubscription));
     }
 
     [Fact]
     public async Task PublishAsync_WithUnsubscribeDuringHandler_DoesNotThrow()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithUnsubscribeDuringHandler_DoesNotThrow));
         // Arrange
         var handler1Called = false;
         var handler3Called = false;
@@ -1082,11 +1174,13 @@ public sealed class EventBusTests : IDisposable
         await act.Should().NotThrowAsync("because EventBus should handle concurrent modifications gracefully");
         handler1Called.Should().BeTrue("because handler1 should execute");
         handler3Called.Should().BeTrue("because handler3 should execute");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithUnsubscribeDuringHandler_DoesNotThrow));
     }
 
     [Fact]
     public async Task PublishAsync_WithUnsubscribeDuringAsyncHandler_DoesNotThrow()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithUnsubscribeDuringAsyncHandler_DoesNotThrow));
         // Arrange
         var handler1Called = false;
         var handler3Called = false;
@@ -1124,11 +1218,13 @@ public sealed class EventBusTests : IDisposable
         await act.Should().NotThrowAsync("because EventBus should handle concurrent modifications gracefully");
         handler1Called.Should().BeTrue("because handler1 should execute");
         handler3Called.Should().BeTrue("because handler3 should execute");
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithUnsubscribeDuringAsyncHandler_DoesNotThrow));
     }
 
     [Fact]
     public async Task PublishAsync_WithMultipleExceptions_InAsyncDispatchMode_AreLoggedButNotPropagated()
     {
+        _mockLogger.LogInformation("Starting test {TestName}", nameof(PublishAsync_WithMultipleExceptions_InAsyncDispatchMode_AreLoggedButNotPropagated));
         // Arrange
         var eventBusWithAsyncDispatch = new EventBus(
             _mockLogger,
@@ -1170,6 +1266,7 @@ public sealed class EventBusTests : IDisposable
 
         // Cleanup
         await eventBusWithAsyncDispatch.DisposeAsync();
+        _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithMultipleExceptions_InAsyncDispatchMode_AreLoggedButNotPropagated));
     }
 
     #endregion
