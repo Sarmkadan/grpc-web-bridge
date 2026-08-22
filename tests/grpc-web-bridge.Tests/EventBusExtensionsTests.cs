@@ -22,6 +22,7 @@ public sealed class EventBusExtensionsTests : IDisposable
     {
         _mockLogger = Substitute.For<ILogger<EventBus>>();
         _eventBus = new EventBus(_mockLogger, maxHistorySize: 100);
+        _mockLogger.LogInformation("EventBusExtensionsTests constructor invoked.");
     }
 
     public void Dispose()
@@ -29,23 +30,28 @@ public sealed class EventBusExtensionsTests : IDisposable
         if (_disposed)
             return;
 
+        _mockLogger.LogInformation("Disposing EventBusExtensionsTests.");
         _eventBus.Dispose();
+        _mockLogger.LogInformation("Disposed EventBusExtensionsTests.");
         _disposed = true;
     }
 
     [Fact]
     public void HasSubscribers_WithNoSubscribers_ReturnsFalse()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(HasSubscribers_WithNoSubscribers_ReturnsFalse));
         // Act
         var result = _eventBus.HasSubscribers<ServiceRegisteredEvent>();
 
         // Assert
         result.Should().BeFalse("because no subscribers have been registered");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithNoSubscribers_ReturnsFalse));
     }
 
     [Fact]
     public void HasSubscribers_WithSingleSubscriber_ReturnsTrue()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(HasSubscribers_WithSingleSubscriber_ReturnsTrue));
         // Arrange
         Action<ServiceRegisteredEvent> handler = _ => {};
         _eventBus.Subscribe(handler);
@@ -55,11 +61,13 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         result.Should().BeTrue("because a subscriber has been registered");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithSingleSubscriber_ReturnsTrue));
     }
 
     [Fact]
     public void HasSubscribers_WithMultipleSubscribers_ReturnsTrue()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(HasSubscribers_WithMultipleSubscribers_ReturnsTrue));
         // Arrange
         Action<ServiceRegisteredEvent> handler1 = _ => {};
         Action<ServiceRegisteredEvent> handler2 = _ => {};
@@ -71,11 +79,13 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         result.Should().BeTrue("because multiple subscribers have been registered");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithMultipleSubscribers_ReturnsTrue));
     }
 
     [Fact]
     public void HasSubscribers_WithDifferentEventType_ReturnsFalse()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(HasSubscribers_WithDifferentEventType_ReturnsFalse));
         // Arrange
         Action<ServiceRegisteredEvent> handler = _ => {};
         _eventBus.Subscribe(handler);
@@ -85,11 +95,13 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         result.Should().BeFalse("because we only subscribed to ServiceRegisteredEvent");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithDifferentEventType_ReturnsFalse));
     }
 
     [Fact]
     public void HasSubscribers_WithNullBus_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(HasSubscribers_WithNullBus_ThrowsArgumentNullException));
         // Arrange
         EventBus? nullBus = null;
 
@@ -98,11 +110,13 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         act.Should().Throw<ArgumentNullException>("because null buses are not allowed");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithNullBus_ThrowsArgumentNullException));
     }
 
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithNoSubscribers_DoesNotPublish()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNoSubscribers_DoesNotPublish));
         // Arrange
         var testEvent = new ServiceRegisteredEvent
         {
@@ -122,11 +136,13 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         handlerCalled.Should().BeFalse("because there are no subscribers for this event type");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNoSubscribers_DoesNotPublish));
     }
 
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithSingleSubscriber_PublishesEvent()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithSingleSubscriber_PublishesEvent));
         // Arrange
         var testEvent = new ServiceRegisteredEvent
         {
@@ -154,11 +170,13 @@ public sealed class EventBusExtensionsTests : IDisposable
         capturedEvent!.ServiceId.Should().Be(testEvent.ServiceId);
         capturedEvent.ServiceName.Should().Be(testEvent.ServiceName);
         capturedEvent.Endpoint.Should().Be(testEvent.Endpoint);
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithSingleSubscriber_PublishesEvent));
     }
 
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithAsyncSubscriber_PublishesEvent()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithAsyncSubscriber_PublishesEvent));
         // Arrange
         var testEvent = new MethodInvokedEvent
         {
@@ -187,11 +205,13 @@ public sealed class EventBusExtensionsTests : IDisposable
         capturedEvent.Should().NotBeNull();
         capturedEvent!.ServiceId.Should().Be(testEvent.ServiceId);
         capturedEvent.MethodName.Should().Be(testEvent.MethodName);
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithAsyncSubscriber_PublishesEvent));
     }
 
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithNullBus_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNullBus_ThrowsArgumentNullException));
         // Arrange
         EventBus? nullBus = null;
         var testEvent = new ServiceRegisteredEvent();
@@ -201,11 +221,13 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>("because null buses are not allowed");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNullBus_ThrowsArgumentNullException));
     }
 
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithNullEvent_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNullEvent_ThrowsArgumentNullException));
         // Arrange
         ServiceRegisteredEvent? nullEvent = null;
 
@@ -214,21 +236,25 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>("because null events are not allowed");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNullEvent_ThrowsArgumentNullException));
     }
 
     [Fact]
     public void GetEventHistoryJson_WithEmptyHistory_ReturnsEmptyArray()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(GetEventHistoryJson_WithEmptyHistory_ReturnsEmptyArray));
         // Act
         var result = _eventBus.GetEventHistoryJson();
 
         // Assert
         result.Should().Be("[]", "because the event history is initially empty");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(GetEventHistoryJson_WithEmptyHistory_ReturnsEmptyArray));
     }
 
     [Fact]
     public void GetEventHistoryJson_WithSingleEvent_ReturnsValidJson()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(GetEventHistoryJson_WithSingleEvent_ReturnsValidJson));
         // Arrange
         var testEvent = new AuthenticationFailedEvent
         {
@@ -258,11 +284,13 @@ public sealed class EventBusExtensionsTests : IDisposable
         result.Should().NotBeNullOrEmpty();
         result.Should().Contain(nameof(AuthenticationFailedEvent));
         result.Should().Contain(testEvent.EventId);
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(GetEventHistoryJson_WithSingleEvent_ReturnsValidJson));
     }
 
     [Fact]
     public void GetEventHistoryJson_WithNullBus_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(GetEventHistoryJson_WithNullBus_ThrowsArgumentNullException));
         // Arrange
         EventBus? nullBus = null;
 
@@ -271,11 +299,13 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         act.Should().Throw<ArgumentNullException>("because null buses are not allowed");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(GetEventHistoryJson_WithNullBus_ThrowsArgumentNullException));
     }
 
     [Fact]
     public void Reset_WithSubscribers_ClearsSubscribers()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(Reset_WithSubscribers_ClearsSubscribers));
         // Arrange
         Action<ServiceRegisteredEvent> handler = _ => {};
         _eventBus.Subscribe(handler);
@@ -288,11 +318,13 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         _eventBus.HasSubscribers<ServiceRegisteredEvent>().Should().BeFalse("because Reset should clear all subscribers");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(Reset_WithSubscribers_ClearsSubscribers));
     }
 
     [Fact]
     public void Reset_WithMultipleEventTypes_ClearsAllSubscribers()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(Reset_WithMultipleEventTypes_ClearsAllSubscribers));
         // Arrange
         Action<ServiceRegisteredEvent> handler1 = _ => {};
         Action<ServiceUnregisteredEvent> handler2 = _ => {};
@@ -313,11 +345,13 @@ public sealed class EventBusExtensionsTests : IDisposable
         _eventBus.HasSubscribers<ServiceRegisteredEvent>().Should().BeFalse();
         _eventBus.HasSubscribers<ServiceUnregisteredEvent>().Should().BeFalse();
         _eventBus.HasSubscribers<MethodInvokedEvent>().Should().BeFalse();
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(Reset_WithMultipleEventTypes_ClearsAllSubscribers));
     }
 
     [Fact]
     public void Reset_WithNullBus_ThrowsArgumentNullException()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(Reset_WithNullBus_ThrowsArgumentNullException));
         // Arrange
         EventBus? nullBus = null;
 
@@ -326,15 +360,18 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Assert
         act.Should().Throw<ArgumentNullException>("because null buses are not allowed");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(Reset_WithNullBus_ThrowsArgumentNullException));
     }
 
     [Fact]
     public void Reset_WithNoSubscribers_DoesNotThrow()
     {
+        _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(Reset_WithNoSubscribers_DoesNotThrow));
         // Act
         Action act = () => _eventBus.Reset();
 
         // Assert
         act.Should().NotThrow("because Reset should handle empty subscriber collections gracefully");
+        _mockLogger.LogInformation("Completed test {TestMethod}", nameof(Reset_WithNoSubscribers_DoesNotThrow));
     }
 }
