@@ -38,6 +38,9 @@ public sealed class CorrelationIdManagerTests
         var id2 = _manager.GetOrCreateCorrelationId();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Generated correlation ID: {CorrelationId}"),
+            Arg.Is<string>(id1));
         id1.Should().NotBeNullOrEmpty();
         id2.Should().NotBeNullOrEmpty();
         // Both calls should return the same ID since it's stored in AsyncLocal
@@ -60,6 +63,9 @@ public sealed class CorrelationIdManagerTests
         var actualId = _manager.GetOrCreateCorrelationId();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Using existing correlation ID: {CorrelationId}"),
+            Arg.Is<string>(expectedId));
         actualId.Should().Be(expectedId);
     }
 
@@ -76,6 +82,10 @@ public sealed class CorrelationIdManagerTests
         // Act & Assert
         Assert.Throws<ArgumentException>(() => _manager.SetCorrelationId(nullId!));
         Assert.Throws<ArgumentException>(() => _manager.SetCorrelationId(emptyId));
+
+        _mockLogger.Received(2).LogWarning(
+            Arg.Is<string>("Attempted to set invalid correlation ID: {CorrelationId}"),
+            Arg.Any<object>());
     }
 
     [Fact]
@@ -92,6 +102,9 @@ public sealed class CorrelationIdManagerTests
         var actualId = _manager.GetCorrelationId();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Set correlation ID: {CorrelationId}"),
+            Arg.Is<string>(expectedId));
         actualId.Should().Be(expectedId);
     }
 
@@ -105,6 +118,8 @@ public sealed class CorrelationIdManagerTests
         var id = _manager.GetCorrelationId();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("No correlation ID found, returning null"));
         id.Should().BeNull();
     }
 
@@ -122,6 +137,9 @@ public sealed class CorrelationIdManagerTests
         var actualId = _manager.GetCorrelationId();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Retrieved correlation ID: {CorrelationId}"),
+            Arg.Is<string>(expectedId));
         actualId.Should().Be(expectedId);
     }
 
@@ -140,6 +158,9 @@ public sealed class CorrelationIdManagerTests
         _manager.ClearCorrelationId();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Cleared correlation ID: {CorrelationId}"),
+            Arg.Is<string>(expectedId));
         _manager.GetCorrelationId().Should().BeNull();
     }
 
@@ -158,6 +179,9 @@ public sealed class CorrelationIdManagerTests
         var actualId = _manager.GetCorrelationId();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Accessed correlation ID across await boundary: {CorrelationId}"),
+            Arg.Is<string>(expectedId));
         actualId.Should().Be(expectedId);
     }
 
@@ -175,6 +199,11 @@ public sealed class CorrelationIdManagerTests
         var trace = _manager.StartTrace(operationName, metadata: metadata);
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Started trace {TraceId} for operation {OperationName} with correlation ID {CorrelationId}"),
+            Arg.Is<string>(trace.TraceId),
+            Arg.Is<string>(operationName),
+            Arg.Is<string>(trace.CorrelationId));
         trace.Should().NotBeNull();
         trace.TraceId.Should().NotBeNullOrEmpty();
         trace.CorrelationId.Should().NotBeNullOrEmpty();
@@ -201,6 +230,11 @@ public sealed class CorrelationIdManagerTests
         var trace = _manager.StartTrace(operationName);
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Started trace {TraceId} for operation {OperationName} using existing correlation ID {CorrelationId}"),
+            Arg.Is<string>(trace.TraceId),
+            Arg.Is<string>(operationName),
+            Arg.Is<string>(expectedCorrelationId));
         trace.CorrelationId.Should().Be(expectedCorrelationId);
     }
 
@@ -222,6 +256,11 @@ public sealed class CorrelationIdManagerTests
         _manager.CompleteTrace(traceId, success: false, errorMessage: "Test error");
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Completed trace {TraceId} with success: {Success} and error: {ErrorMessage}"),
+            Arg.Is<string>(traceId),
+            Arg.Is<bool>(false),
+            Arg.Is<string>("Test error"));
         var updatedTrace = _manager.GetTrace(traceId);
         updatedTrace.Should().NotBeNull();
         updatedTrace!.EndTime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
@@ -245,6 +284,9 @@ public sealed class CorrelationIdManagerTests
         _manager.CompleteTrace("non-existent-id");
 
         // Assert - trace should remain unchanged
+        _mockLogger.Received(3).LogWarning(
+            Arg.Is<string>("Attempted to complete trace with invalid ID: {TraceId}"),
+            Arg.Any<object>());
         var updatedTrace = _manager.GetTrace(trace.TraceId);
         updatedTrace.Should().NotBeNull();
         updatedTrace!.EndTime.Should().BeNull();
@@ -260,6 +302,9 @@ public sealed class CorrelationIdManagerTests
         var trace = _manager.GetTrace("non-existent-id");
 
         // Assert
+        _mockLogger.Received(1).LogWarning(
+            Arg.Is<string>("Attempted to retrieve non-existent trace with ID: {TraceId}"),
+            Arg.Is<string>("non-existent-id"));
         trace.Should().BeNull();
     }
 
@@ -285,6 +330,10 @@ public sealed class CorrelationIdManagerTests
         var traces = _manager.GetTracesForCorrelation(correlationId);
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Retrieved {Count} traces for correlation ID {CorrelationId}"),
+            Arg.Is<int>(3),
+            Arg.Is<string>(correlationId));
         traces.Should().HaveCount(3);
         traces.Should().AllSatisfy(t => t.CorrelationId.Should().Be(correlationId));
         traces.Should().BeInAscendingOrder(t => t.StartTime);
@@ -301,6 +350,9 @@ public sealed class CorrelationIdManagerTests
         var traces2 = _manager.GetTracesForCorrelation(string.Empty);
 
         // Assert
+        _mockLogger.Received(2).LogWarning(
+            Arg.Is<string>("Attempted to get traces for invalid correlation ID: {CorrelationId}"),
+            Arg.Any<object>());
         traces1.Should().BeEmpty();
         traces2.Should().BeEmpty();
     }
@@ -308,7 +360,7 @@ public sealed class CorrelationIdManagerTests
     [Fact]
     /// <summary>
     /// Validates that AddTraceMetadata adds metadata to existing trace.
-    /// </summary>
+    /// </>
     public void AddTraceMetadata_AddsMetadataToExistingTrace()
     {
         // Arrange
@@ -321,6 +373,11 @@ public sealed class CorrelationIdManagerTests
         _manager.AddTraceMetadata(traceId, key, value);
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Added metadata {Key}={Value} to trace {TraceId}"),
+            Arg.Is<string>(key),
+            Arg.Is<string>(value),
+            Arg.Is<string>(traceId));
         var updatedTrace = _manager.GetTrace(traceId);
         updatedTrace.Should().NotBeNull();
         updatedTrace!.Metadata.Should().ContainKey(key).WhoseValue.Should().Be(value);
@@ -342,6 +399,11 @@ public sealed class CorrelationIdManagerTests
         _manager.AddTraceMetadata(trace.TraceId, string.Empty, "value");
 
         // Assert - trace should remain unchanged
+        _mockLogger.Received(4).LogWarning(
+            Arg.Is<string>("Attempted to add trace metadata with invalid parameters: TraceId={TraceId}, Key={Key}, Value={Value}"),
+            Arg.Any<object>(),
+            Arg.Any<object>(),
+            Arg.Any<object>());
         var updatedTrace = _manager.GetTrace(trace.TraceId);
         updatedTrace.Should().NotBeNull();
         updatedTrace!.Metadata.Should().BeEmpty();
@@ -370,6 +432,15 @@ public sealed class CorrelationIdManagerTests
         var stats = _manager.GetStatistics();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Retrieved trace statistics: Total={Total}, Completed={Completed}, Active={Active}, Successful={Successful}, Failed={Failed}, AvgDurationMs={AverageDurationMs}, UniqueCorrelations={UniqueCorrelations}"),
+            Arg.Is<int>(3),
+            Arg.Is<int>(2),
+            Arg.Is<int>(1),
+            Arg.Is<int>(1),
+            Arg.Is<int>(1),
+            Arg.Is<double>(Arg.Any<double>()),
+            Arg.Is<int>(1));
         stats.Should().NotBeNull();
 
         // Use reflection to access anonymous type properties
@@ -410,6 +481,10 @@ public sealed class CorrelationIdManagerTests
         var removedCount = _manager.CleanupOldTraces(TimeSpan.FromMilliseconds(1));
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Cleaned up {Count} old traces older than {Duration}"),
+            Arg.Is<int>(2),
+            Arg.Is<TimeSpan>(TimeSpan.FromMilliseconds(1)));
         removedCount.Should().Be(2);
         _manager.GetTrace(trace1.TraceId).Should().BeNull();
         _manager.GetTrace(trace2.TraceId).Should().BeNull();
@@ -432,6 +507,10 @@ public sealed class CorrelationIdManagerTests
         var removedCount = _manager.CleanupOldTraces(TimeSpan.FromHours(1));
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Cleaned up {Count} old traces older than {Duration}"),
+            Arg.Is<int>(0),
+            Arg.Is<TimeSpan>(TimeSpan.FromHours(1)));
         removedCount.Should().Be(0);
         _manager.GetTrace(trace1.TraceId).Should().NotBeNull();
         _manager.GetTrace(trace2.TraceId).Should().NotBeNull();
@@ -455,6 +534,9 @@ public sealed class CorrelationIdManagerTests
         _manager.ClearAllTraces();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Cleared all traces. Removed {Count} traces."),
+            Arg.Is<int>(3));
         _manager.GetTrace(trace1.TraceId).Should().BeNull();
         _manager.GetTrace(trace2.TraceId).Should().BeNull();
         _manager.GetTrace(trace3.TraceId).Should().BeNull();
@@ -477,6 +559,10 @@ public sealed class CorrelationIdManagerTests
         var duration = updatedTrace?.GetDuration();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Calculated duration for trace {TraceId}: {Duration}"),
+            Arg.Is<string>(traceId),
+            Arg.Is<TimeSpan>(Arg.Any<TimeSpan>()));
         duration.Should().NotBeNull();
         duration.Should().BeGreaterThan(TimeSpan.Zero);
         duration.Should().BeCloseTo(TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(20));
@@ -493,6 +579,9 @@ public sealed class CorrelationIdManagerTests
         var duration = trace.GetDuration();
 
         // Assert
+        _mockLogger.Received(1).LogInformation(
+            Arg.Is<string>("Attempted to get duration for incomplete trace {TraceId}"),
+            Arg.Is<string>(trace.TraceId));
         duration.Should().BeNull();
     }
 }
