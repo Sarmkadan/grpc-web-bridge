@@ -84,6 +84,10 @@ public sealed class HttpClientFactory : IDisposable
         ConfigureDefaultHandler();
     }
 
+    /// <inheritdoc />
+    public override string ToString() =>
+        $"HttpClientFactory {{ RequestTimeoutMs = {_options.RequestTimeoutMs}, MaxConnectionsPerServer = {_options.MaxConnectionsPerServer}, UseCookies = {_options.UseCookies}, AllowAutoRedirect = {_options.AllowAutoRedirect}, AllowInsecureHttps = {_options.AllowInsecureHttps} }}";
+
     /// <summary>
     /// Gets or creates an HTTP client for a specific endpoint.
     /// </summary>
