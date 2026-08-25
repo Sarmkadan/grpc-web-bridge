@@ -12,12 +12,19 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Unit tests for the <see cref="EventBus"/> extension methods.
+/// </summary>
 public sealed class EventBusExtensionsTests : IDisposable
 {
     private readonly ILogger<EventBus> _mockLogger;
     private readonly EventBus _eventBus;
     private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventBusExtensionsTests"/> class.
+    /// Sets up a mock logger and an <see cref="EventBus"/> instance with a history size of 100.
+    /// </summary>
     public EventBusExtensionsTests()
     {
         _mockLogger = Substitute.For<ILogger<EventBus>>();
@@ -25,6 +32,10 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("EventBusExtensionsTests constructor invoked.");
     }
 
+    /// <summary>
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    /// Disposes the <see cref="EventBus"/> instance if it has not already been disposed.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -36,6 +47,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _disposed = true;
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.HasSubscribers{TEvent}"/> returns false when no subscribers are registered for the specified event type.
+    /// </summary>
     [Fact]
     public void HasSubscribers_WithNoSubscribers_ReturnsFalse()
     {
@@ -48,6 +62,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithNoSubscribers_ReturnsFalse));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.HasSubscribers{TEvent}"/> returns true when a single subscriber is registered for the specified event type.
+    /// </summary>
     [Fact]
     public void HasSubscribers_WithSingleSubscriber_ReturnsTrue()
     {
@@ -64,6 +81,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithSingleSubscriber_ReturnsTrue));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.HasSubscribers{TEvent}"/> returns true when multiple subscribers are registered for the specified event type.
+    /// </summary>
     [Fact]
     public void HasSubscribers_WithMultipleSubscribers_ReturnsTrue()
     {
@@ -82,6 +102,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithMultipleSubscribers_ReturnsTrue));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.HasSubscribers{TEvent}"/> returns false when subscribers are registered for a different event type than queried.
+    /// </summary>
     [Fact]
     public void HasSubscribers_WithDifferentEventType_ReturnsFalse()
     {
@@ -98,6 +121,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithDifferentEventType_ReturnsFalse));
     }
 
+    /// <summary>
+    /// Verifies that calling <see cref="EventBusExtensions.HasSubscribers{TEvent}"/> on a null <see cref="EventBus"/> instance throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public void HasSubscribers_WithNullBus_ThrowsArgumentNullException()
     {
@@ -113,6 +139,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(HasSubscribers_WithNullBus_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.PublishIfHasSubscribersAsync{TEvent}"/> does not invoke handlers when no subscribers are registered for the event type.
+    /// </summary>
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithNoSubscribers_DoesNotPublish()
     {
@@ -139,6 +168,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNoSubscribers_DoesNotPublish));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.PublishIfHasSubscribersAsync{TEvent}"/> invokes the handler and passes the correct event data when a subscriber is registered.
+    /// </summary>
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithSingleSubscriber_PublishesEvent()
     {
@@ -173,6 +205,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithSingleSubscriber_PublishesEvent));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.PublishIfHasSubscribersAsync{TEvent}"/> correctly handles and awaits asynchronous handlers.
+    /// </summary>
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithAsyncSubscriber_PublishesEvent()
     {
@@ -208,6 +243,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithAsyncSubscriber_PublishesEvent));
     }
 
+    /// <summary>
+    /// Verifies that calling <see cref="EventBusExtensions.PublishIfHasSubscribersAsync{TEvent}"/> on a null <see cref="EventBus"/> instance throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithNullBus_ThrowsArgumentNullException()
     {
@@ -224,6 +262,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNullBus_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that calling <see cref="EventBusExtensions.PublishIfHasSubscribersAsync{TEvent}"/> with a null event throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public async Task PublishIfHasSubscribersAsync_WithNullEvent_ThrowsArgumentNullException()
     {
@@ -239,6 +280,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(PublishIfHasSubscribersAsync_WithNullEvent_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.GetEventHistoryJson"/> returns an empty JSON array when the event history is empty.
+    /// </summary>
     [Fact]
     public void GetEventHistoryJson_WithEmptyHistory_ReturnsEmptyArray()
     {
@@ -251,6 +295,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(GetEventHistoryJson_WithEmptyHistory_ReturnsEmptyArray));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBusExtensions.GetEventHistoryJson"/> returns a valid JSON string containing the event type and ID when the history contains a single event.
+    /// </summary>
     [Fact]
     public void GetEventHistoryJson_WithSingleEvent_ReturnsValidJson()
     {
@@ -287,6 +334,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(GetEventHistoryJson_WithSingleEvent_ReturnsValidJson));
     }
 
+    /// <summary>
+    /// Verifies that calling <see cref="EventBusExtensions.GetEventHistoryJson"/> on a null <see cref="EventBus"/> instance throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public void GetEventHistoryJson_WithNullBus_ThrowsArgumentNullException()
     {
@@ -302,6 +352,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(GetEventHistoryJson_WithNullBus_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBus.Reset"/> clears all registered subscribers for a specific event type.
+    /// </summary>
     [Fact]
     public void Reset_WithSubscribers_ClearsSubscribers()
     {
@@ -321,6 +374,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(Reset_WithSubscribers_ClearsSubscribers));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBus.Reset"/> clears all registered subscribers across multiple event types.
+    /// </summary>
     [Fact]
     public void Reset_WithMultipleEventTypes_ClearsAllSubscribers()
     {
@@ -348,6 +404,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(Reset_WithMultipleEventTypes_ClearsAllSubscribers));
     }
 
+    /// <summary>
+    /// Verifies that calling <see cref="EventBus.Reset"/> on a null <see cref="EventBus"/> instance throws an <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public void Reset_WithNullBus_ThrowsArgumentNullException()
     {
@@ -363,6 +422,9 @@ public sealed class EventBusExtensionsTests : IDisposable
         _mockLogger.LogInformation("Completed test {TestMethod}", nameof(Reset_WithNullBus_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventBus.Reset"/> executes successfully without throwing when no subscribers are registered.
+    /// </summary>
     [Fact]
     public void Reset_WithNoSubscribers_DoesNotThrow()
     {
