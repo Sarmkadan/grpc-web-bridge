@@ -246,6 +246,8 @@ public sealed class Stream
         LastActivityTime = DateTime.UtcNow;
         _messageQueue.Clear();
     }
+
+    public override string ToString() => $"Stream {{ StreamId = {StreamId}, MethodType = {MethodType}, State = {State}, MessageCount = {MessageCount}, CreatedAt = {CreatedAt}, LastActivityTime = {LastActivityTime} }}";
 }
 
 /// <summary>
