@@ -24,6 +24,8 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
     private readonly object _lock = new();
     private bool _disposed;
 
+    public override string ToString() => $"GrpcConnectionManager {{ ServiceName = {{?}}, Address = {{?}}, CreatedAt = {{?}}, LastUsedAt = {{?}}, RequestCount = {{?}}, BytesSent = {{?}} }}";
+
     public int ActiveConnectionCount
     {
         get
