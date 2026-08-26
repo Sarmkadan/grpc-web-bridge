@@ -26,6 +26,12 @@ public sealed class StartupConfiguration
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    public override string ToString()
+    {
+        var info = GetSystemInfo();
+        return $"StartupConfiguration {{ InstanceId = {info.InstanceId}, InstanceName = {info.InstanceName}, Environment = {info.Environment}, Version = {info.Version}, StartTime = {info.StartTime}, MaxStreamCount = {info.MaxStreamCount} }}";
+    }
+
     /// <summary>
     /// Initializes the bridge with default services
     /// </summary>
