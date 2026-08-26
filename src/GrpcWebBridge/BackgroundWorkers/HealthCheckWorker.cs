@@ -37,7 +37,32 @@ public sealed class HealthCheckWorker : BackgroundService
         _options = options ?? new HealthCheckOptions();
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public override string ToString()
+{
+    string serviceId = "N/A";
+    string serviceName = "N/A";
+    bool isHealthy = false;
+
+    try
+    {
+        var services = _serviceRegistry.ListServices().ToList();
+        if (services.Any())
+        {
+            var firstService = services.First();
+            serviceId = firstService.Id ?? "N/A";
+            serviceName = firstService.Name ?? "N/A";
+            isHealthy = firstService.Status == ServiceStatus.Serving;
+        }
+    }
+    catch
+    {
+        // If we can't get services, keep defaults
+    }
+
+    return $"HealthCheckWorker {{ CheckIntervalSeconds = {_options.CheckIntervalSeconds}, CheckTimeoutMs = {_options.CheckTimeoutMs}, InitialDelaySeconds = {_options.InitialDelaySeconds}, ServiceId = {serviceId}, ServiceName = {serviceName}, IsHealthy = {isHealthy} }}";
+}
+
+protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Health check worker started with interval {IntervalSeconds}s", _options.CheckIntervalSeconds);
 
