@@ -153,6 +153,8 @@ public sealed class StreamCleanupWorker : BackgroundService
             staleStreamTimeout = _options.StaleStreamDuration.TotalSeconds
         };
     }
+
+    public override string ToString() => $"StreamCleanupWorker {{ CleanupIntervalSeconds = {_options.CleanupIntervalSeconds}, IdleTimeoutDuration = {_options.IdleTimeoutDuration}, StaleStreamDuration = {_options.StaleStreamDuration}, GcTriggerThreshold = {_options.GcTriggerThreshold} }}";
 }
 
 /// <summary>
