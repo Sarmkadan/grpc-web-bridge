@@ -20,5 +20,10 @@ namespace GrpcWebBridge.Services
                 WriteIndented = true
             });
         }
+
+        public override string ToString()
+        {
+            return $"RegistrySnapshot {{ TotalServiceCount = {TotalServiceCount}, ServiceRegistrationTimestamps = {ServiceRegistrationTimestamps} }}";
+        }
     }
 }
