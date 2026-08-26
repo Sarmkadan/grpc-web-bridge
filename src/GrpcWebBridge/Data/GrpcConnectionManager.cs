@@ -24,7 +24,14 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
     private readonly object _lock = new();
     private bool _disposed;
 
-    public override string ToString() => $"GrpcConnectionManager {{ ServiceName = {{?}}, Address = {{?}}, CreatedAt = {{?}}, LastUsedAt = {{?}}, RequestCount = {{?}}, BytesSent = {{?}} }}";
+    public override string ToString()
+    {
+        lock (_lock)
+        {
+            var latest = _metrics.Values.MaxBy(m => m.LastUsedAt);
+            return $"GrpcConnectionManager {{ ServiceName = {latest?.ServiceName ?? "n/a"}, Address = {latest?.Address ?? "n/a"}, CreatedAt = {latest?.CreatedAt}, LastUsedAt = {latest?.LastUsedAt}, RequestCount = {latest?.RequestCount ?? 0}, BytesSent = {latest?.BytesSent ?? 0} }}";
+        }
+    }
 
     public int ActiveConnectionCount
     {
