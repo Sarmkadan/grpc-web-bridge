@@ -161,6 +161,11 @@ public sealed class ErrorResponse
             Timestamp = Timestamp
         };
     }
+
+    public override string ToString()
+    {
+        return $"ErrorResponse {{ Success = {Success}, Error = {Title}, Message = {Detail}, Details = {Details}, Path = {Path}, TraceId = {TraceId} }}";
+    }
 }
 
 /// <summary>
