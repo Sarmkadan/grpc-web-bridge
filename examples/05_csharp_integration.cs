@@ -24,6 +24,14 @@ namespace GrpcWebBridge.Examples
         private readonly string _bridgeUrl;
         private readonly string? _jwtToken;
 
+        // Properties for ToString representation
+        public string ServiceName { get; set; } = "";
+        public string Address { get; set; } = "";
+        public string Status { get; set; } = "";
+        public Dictionary<string, string> Metadata { get; set; } = new();
+        public int TotalRequests { get; set; }
+        public int SuccessfulRequests { get; set; }
+
         public GrpcWebBridgeClientExample(
             string bridgeUrl,
             HttpClient httpClient,
@@ -40,6 +48,8 @@ namespace GrpcWebBridge.Examples
 
             ConfigureHttpClient();
         }
+
+        public override string ToString() => $"GrpcWebBridgeClientExample {{ ServiceName = {ServiceName}, Address = {Address}, Status = {Status}, Metadata = {Metadata}, TotalRequests = {TotalRequests}, SuccessfulRequests = {SuccessfulRequests} }}";
 
         /// Configure the HTTP client with default headers
         private void ConfigureHttpClient()
