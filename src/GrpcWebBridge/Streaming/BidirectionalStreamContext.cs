@@ -79,6 +79,10 @@ public sealed class BidirectionalStreamContext : IAsyncDisposable
         InboundChannel.Writer.TryComplete();
         OutboundChannel.Writer.TryComplete();
     }
+    public override string ToString()
+    {
+        return $"BidirectionalStreamContext {{ State = {State}, FinalStatus = {FinalStatus}, CloseReason = {CloseReason} }}";
+    }
 }
 
 /// <summary>
