@@ -23,6 +23,8 @@ public sealed class MetricsCollectionWorker : BackgroundService
     private readonly Queue<MetricsSnapshot> _snapshotHistory;
     private readonly object _lockObject = new object();
 
+    public override string ToString() => $"MetricsCollectionWorker {{ Timestamp = {_currentSnapshot.Timestamp}, CpuUsagePercent = {_currentSnapshot.CpuUsagePercent}, MemoryUsageMb = {_currentSnapshot.MemoryUsageMb}, ThreadCount = {_currentSnapshot.ThreadCount}, GcCollections = {_currentSnapshot.GcCollections}, RequestMetrics = {_currentSnapshot.RequestMetrics} }}";
+
     public MetricsCollectionWorker(
         ILogger<MetricsCollectionWorker> logger,
         MetricsCollectionOptions? options = null)
