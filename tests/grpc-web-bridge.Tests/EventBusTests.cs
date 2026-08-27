@@ -1,4 +1,5 @@
 #nullable enable
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,12 +15,19 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Contains unit tests for the EventBus class, verifying its publish-subscribe functionality,
+/// event history management, disposal behavior, and thread safety.
+/// </summary>
 public sealed class EventBusTests : IDisposable
 {
     private readonly ILogger<EventBus> _mockLogger;
     private readonly EventBus _eventBus;
     private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the EventBusTests class with a mock logger and event bus.
+    /// </summary>
     public EventBusTests()
     {
         _mockLogger = Substitute.For<ILogger<EventBus>>();
@@ -27,6 +35,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("EventBus test initialized");
     }
 
+    /// <summary>
+    /// Releases resources used by the EventBusTests instance.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -36,6 +47,9 @@ public sealed class EventBusTests : IDisposable
         _disposed = true;
     }
 
+    /// <summary>
+    /// Verifies that subscribing with a null synchronous handler throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public void Subscribe_WithNullSyncHandler_ThrowsArgumentNullException()
     {
@@ -51,6 +65,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_WithNullSyncHandler_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that subscribing with a null asynchronous handler throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public void Subscribe_WithNullAsyncHandler_ThrowsArgumentNullException()
     {
@@ -66,6 +83,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_WithNullAsyncHandler_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that subscribing with a valid synchronous handler correctly adds the handler to subscribers.
+    /// </summary>
     [Fact]
     public void Subscribe_WithValidSyncHandler_AddsHandlerToSubscribers()
     {
@@ -83,6 +103,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_WithValidSyncHandler_AddsHandlerToSubscribers));
     }
 
+    /// <summary>
+    /// Verifies that subscribing with a valid asynchronous handler correctly adds the handler to subscribers.
+    /// </summary>
     [Fact]
     public void Subscribe_WithValidAsyncHandler_AddsHandlerToSubscribers()
     {
@@ -104,6 +127,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_WithValidAsyncHandler_AddsHandlerToSubscribers));
     }
 
+    /// <summary>
+    /// Verifies that subscribing multiple handlers for the same event type adds all handlers to the subscriber list.
+    /// </summary>
     [Fact]
     public void Subscribe_MultipleHandlersForSameEvent_AddsAllHandlers()
     {
@@ -123,6 +149,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_MultipleHandlersForSameEvent_AddsAllHandlers));
     }
 
+    /// <summary>
+    /// Verifies that subscribing to different event types creates separate handler lists for each type.
+    /// </summary>
     [Fact]
     public void Subscribe_DifferentEventTypes_AddsSeparateHandlers()
     {
@@ -143,6 +172,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_DifferentEventTypes_AddsSeparateHandlers));
     }
 
+    /// <summary>
+    /// Verifies that unsubscribing with a null handler throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public void Unsubscribe_WithNullHandler_ThrowsArgumentNullException()
     {
@@ -158,6 +190,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_WithNullHandler_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that unsubscribing with a non-existent handler returns false.
+    /// </summary>
     [Fact]
     public void Unsubscribe_WithNonExistentHandler_ReturnsFalse()
     {
@@ -173,6 +208,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_WithNonExistentHandler_ReturnsFalse));
     }
 
+    /// <summary>
+    /// Verifies that unsubscribing with an existing synchronous handler successfully removes it and returns true.
+    /// </summary>
     [Fact]
     public void Unsubscribe_WithExistingSyncHandler_RemovesHandler()
     {
@@ -191,6 +229,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_WithExistingSyncHandler_RemovesHandler));
     }
 
+    /// <summary>
+    /// Verifies that unsubscribing with an existing asynchronous handler successfully removes it and returns true.
+    /// </summary>
     [Fact]
     public void Unsubscribe_WithExistingAsyncHandler_RemovesHandler()
     {
@@ -213,6 +254,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_WithExistingAsyncHandler_RemovesHandler));
     }
 
+    /// <summary>
+    /// Verifies that unsubscribing one handler from multiple handlers for the same event type removes only the specified handler.
+    /// </summary>
     [Fact]
     public void Unsubscribe_MultipleHandlers_RemovesOnlySpecifiedHandler()
     {
@@ -235,6 +279,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_MultipleHandlers_RemovesOnlySpecifiedHandler));
     }
 
+    /// <summary>
+    /// Verifies that publishing a null event throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithNullEvent_ThrowsArgumentNullException()
     {
@@ -250,6 +297,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithNullEvent_ThrowsArgumentNullException));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event with no subscribers does not throw an exception.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithNoSubscribers_DoesNotThrow()
     {
@@ -271,6 +321,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithNoSubscribers_DoesNotThrow));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event with a synchronous handler calls the handler with the correct event data.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithSyncHandler_CallsHandler()
     {
@@ -304,6 +357,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithSyncHandler_CallsHandler));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event with an asynchronous handler calls the handler with the correct event data.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithAsyncHandler_CallsHandler()
     {
@@ -336,6 +392,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithAsyncHandler_CallsHandler));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event calls all subscribed handlers for that event type.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithMultipleHandlers_CallsAllHandlers()
     {
@@ -368,6 +427,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithMultipleHandlers_CallsAllHandlers));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event with an exception in a handler aggregates the exception and throws an EventBusException.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithExceptionInHandler_AggregatesAndThrowsEventBusException()
     {
@@ -397,6 +459,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithExceptionInHandler_AggregatesAndThrowsEventBusException));
     }
 
+    /// <summary>
+    /// Verifies that getting the subscriber count for an event type with no subscribers returns zero.
+    /// </summary>
     [Fact]
     public void GetSubscriberCount_WithNoSubscribers_ReturnsZero()
     {
@@ -409,6 +474,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetSubscriberCount_WithNoSubscribers_ReturnsZero));
     }
 
+    /// <summary>
+    /// Verifies that getting the subscriber count returns the correct number of subscribers for each event type.
+    /// </summary>
     [Fact]
     public void GetSubscriberCount_WithSubscribers_ReturnsCorrectCount()
     {
@@ -431,6 +499,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetSubscriberCount_WithSubscribers_ReturnsCorrectCount));
     }
 
+    /// <summary>
+    /// Verifies that getting event history when no events have been published returns an empty list.
+    /// </summary>
     [Fact]
     public void GetEventHistory_WithEmptyHistory_ReturnsEmptyList()
     {
@@ -443,6 +514,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithEmptyHistory_ReturnsEmptyList));
     }
 
+    /// <summary>
+    /// Verifies that getting event history with a specific event type filter returns only matching events.
+    /// </summary>
     [Fact]
     public async Task GetEventHistory_WithFilteredEventType_ReturnsOnlyMatchingEvents()
     {
@@ -486,6 +560,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithFilteredEventType_ReturnsOnlyMatchingEvents));
     }
 
+    /// <summary>
+    /// Verifies that getting event history respects the maximum history size by trimming oldest events.
+    /// </summary>
     [Fact]
     public async Task GetEventHistory_WithMaxHistorySize_TrimsOldestEvents()
     {
@@ -513,6 +590,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithMaxHistorySize_TrimsOldestEvents));
     }
 
+    /// <summary>
+    /// Verifies that getting event history includes the complete event data for each published event.
+    /// </summary>
     [Fact]
     public async Task GetEventHistory_WithEventData_IncludesEventData()
     {
@@ -547,6 +627,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithEventData_IncludesEventData));
     }
 
+    /// <summary>
+    /// Verifies that each event instance gets a unique EventId generated automatically.
+    /// </summary>
     [Fact]
     public void EventId_IsGeneratedForEachEvent()
     {
@@ -562,6 +645,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(EventId_IsGeneratedForEachEvent));
     }
 
+    /// <summary>
+    /// Verifies that clearing all subscribers removes all handlers from all event types.
+    /// </summary>
     [Fact]
     public void ClearSubscribers_RemovesAllSubscribers()
     {
@@ -587,6 +673,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(ClearSubscribers_RemovesAllSubscribers));
     }
 
+    /// <summary>
+    /// Verifies that calling Dispose sets the IsDisposed flag to true.
+    /// </summary>
     [Fact]
     public void Dispose_SetsIsDisposedFlag()
     {
@@ -604,6 +693,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Dispose_SetsIsDisposedFlag));
     }
 
+    /// <summary>
+    /// Verifies that calling Dispose multiple times does not throw an exception.
+    /// </summary>
     [Fact]
     public void Dispose_CanOnlyBeCalledOnce()
     {
@@ -620,6 +712,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Dispose_CanOnlyBeCalledOnce));
     }
 
+    /// <summary>
+    /// Verifies that publishing different event types only calls handlers subscribed to those specific event types.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithMultipleEventTypes_DoesNotMixHandlers()
     {
@@ -657,6 +752,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithMultipleEventTypes_DoesNotMixHandlers));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event runs all asynchronous handlers concurrently.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithAsyncHandlers_RunsHandlersConcurrently()
     {
@@ -705,6 +803,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithAsyncHandlers_RunsHandlersConcurrently));
     }
 
+    /// <summary>
+    /// Verifies that getting event history with a null event type filter returns all events.
+    /// </summary>
     [Fact]
     public async Task GetEventHistory_WithNullEventType_ReturnsAllEvents()
     {
@@ -740,6 +841,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_WithNullEventType_ReturnsAllEvents));
     }
 
+    /// <summary>
+    /// Verifies that getting event history with an empty string event type filter returns all events.
+    /// </summary>
     [Fact]
     public async Task GetEventHistory_WithEmptyStringEventType_ReturnsAllEvents()
     {
