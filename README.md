@@ -319,3 +319,23 @@ var allServices = ReflectionServiceTestsExtensions.GetAllServices();
 // Get the reflection service
 var reflectionService = ReflectionServiceTestsExtensions.GetReflectionService();
 ```
+
+## HealthEndpoints
+
+The `HealthEndpoints` class provides static methods for setting up health check endpoints in an ASP.NET Core application. It includes endpoints for liveness, readiness, and detailed health checks, exposing service and system status information.
+
+Example usage:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+// ... configure services, including registering health checks and services ...
+var app = builder.Build();
+
+// Get the application startup time
+DateTime startupTime = HealthEndpoints.GetStartupTime();
+
+// Map health endpoints
+app.MapHealthEndpoints();
+
+app.Run();
+```
