@@ -14,15 +14,24 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Contains unit tests for the <see cref="EventBusJsonExtensions"/> class, verifying JSON serialization and deserialization behavior of EventBus objects.
+/// </summary>
 public sealed class EventBusJsonExtensionsTests
 {
     private readonly ILogger<EventBus> _mockLogger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventBusJsonExtensionsTests"/> class with a mock logger.
+    /// </summary>
     public EventBusJsonExtensionsTests()
     {
         _mockLogger = Substitute.For<ILogger<EventBus>>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.ToJson(EventBus)"/> returns a non-empty JSON string when called with a valid EventBus instance.
+    /// </summary>
     [Fact]
     public void ToJson_WithValidEventBus_ReturnsNonEmptyJsonString()
     {
@@ -39,6 +48,9 @@ public sealed class EventBusJsonExtensionsTests
         json.Should().Be("{}");
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.ToJson(EventBus,bool)"/> returns formatted JSON when the indented parameter is true.
+    /// </summary>
     [Fact]
     public void ToJson_WithIndentedTrue_ReturnsFormattedJson()
     {
@@ -54,6 +66,9 @@ public sealed class EventBusJsonExtensionsTests
         json.Should().Contain("}");
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.ToJson(EventBus)"/> throws an <see cref="ArgumentNullException"/> when called with a null EventBus instance.
+    /// </summary>
     [Fact]
     public void ToJson_WithNullEventBus_ThrowsArgumentNullException()
     {
@@ -67,6 +82,9 @@ public sealed class EventBusJsonExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.FromJson(string)"/> throws an <see cref="InvalidOperationException"/> when given valid JSON but the EventBus type lacks a parameterless constructor.
+    /// </summary>
     [Fact]
     public void FromJson_WithValidJson_ThrowsExceptionDueToConstructorRequirements()
     {
@@ -80,6 +98,9 @@ public sealed class EventBusJsonExtensionsTests
         act.Should().Throw<System.InvalidOperationException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.FromJson(string)"/> returns null when given an empty or whitespace-only JSON string.
+    /// </summary>
     [Fact]
     public void FromJson_WithEmptyJsonString_ReturnsNull()
     {
@@ -93,6 +114,9 @@ public sealed class EventBusJsonExtensionsTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.FromJson(string)"/> returns null when given a JSON string containing only whitespace characters.
+    /// </summary>
     [Fact]
     public void FromJson_WithWhitespaceJsonString_ReturnsNull()
     {
@@ -106,6 +130,9 @@ public sealed class EventBusJsonExtensionsTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.FromJson(string)"/> throws an <see cref="ArgumentNullException"/> when called with a null JSON string.
+    /// </summary>
     [Fact]
     public void FromJson_WithNullJson_ThrowsArgumentNullException()
     {
@@ -119,6 +146,9 @@ public sealed class EventBusJsonExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.FromJson(string)"/> throws an <see cref="InvalidOperationException"/> when given invalid JSON.
+    /// </summary>
     [Fact]
     public void FromJson_WithInvalidJson_ThrowsInvalidOperationException()
     {
@@ -132,6 +162,9 @@ public sealed class EventBusJsonExtensionsTests
         act.Should().Throw<System.InvalidOperationException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.TryFromJson(string,out EventBus?)"/> returns false and null when given valid JSON but deserialization fails due to missing constructor.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithValidJson_ReturnsFalseAndNull()
     {
@@ -146,6 +179,9 @@ public sealed class EventBusJsonExtensionsTests
         deserializedEventBus.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.TryFromJson(string,out EventBus?)"/> returns false and null when given an empty or whitespace-only JSON string.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithEmptyJsonString_ReturnsFalseAndNull()
     {
@@ -160,6 +196,9 @@ public sealed class EventBusJsonExtensionsTests
         deserializedEventBus.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.TryFromJson(string,out EventBus?)"/> throws an <see cref="ArgumentNullException"/> when called with a null JSON string.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithNullJson_ThrowsArgumentNullException()
     {
@@ -173,6 +212,9 @@ public sealed class EventBusJsonExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.TryFromJson(string,out EventBus?)"/> throws an exception when given invalid JSON.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithInvalidJson_ThrowsException()
     {
@@ -186,6 +228,9 @@ public sealed class EventBusJsonExtensionsTests
         act.Should().Throw<System.InvalidOperationException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.ToJson(EventBus)"/> produces valid JSON structure representing an empty object.
+    /// </summary>
     [Fact]
     public void ToJson_ProducesValidJsonStructure()
     {
@@ -199,6 +244,9 @@ public sealed class EventBusJsonExtensionsTests
         json.Should().Be("{}");
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.TryFromJson(string,out EventBus?)"/> returns false when given a valid empty JSON object string.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithValidEmptyObject_ReturnsFalse()
     {
@@ -212,6 +260,9 @@ public sealed class EventBusJsonExtensionsTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.ToJson(EventBus,bool)"/> returns compact JSON when the indented parameter is false.
+    /// </summary>
     [Fact]
     public void ToJson_WithIndentedFalse_ReturnsCompactJson()
     {
@@ -225,6 +276,9 @@ public sealed class EventBusJsonExtensionsTests
         json.Should().Be("{}");
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventBusJsonExtensions.FromJson(string)"/> throws an <see cref="InvalidOperationException"/> when given an empty JSON object string.
+    /// </summary>
     [Fact]
     public void FromJson_WithEmptyObjectString_ThrowsInvalidOperationException()
     {
