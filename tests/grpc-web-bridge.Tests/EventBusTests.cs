@@ -880,6 +880,9 @@ public sealed class EventBusTests : IDisposable
     }
 
 
+    /// <summary>
+    /// Verifies that subscribing after the event bus is disposed throws an ObjectDisposedException.
+    /// </summary>
     [Fact]
     public void Subscribe_AfterDispose_ThrowsObjectDisposedException()
     {
@@ -896,6 +899,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Subscribe_AfterDispose_ThrowsObjectDisposedException));
     }
 
+    /// <summary>
+    /// Verifies that unsubscribing after the event bus is disposed throws an ObjectDisposedException.
+    /// </summary>
     [Fact]
     public void Unsubscribe_AfterDispose_ThrowsObjectDisposedException()
     {
@@ -912,6 +918,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(Unsubscribe_AfterDispose_ThrowsObjectDisposedException));
     }
 
+    /// <summary>
+    /// Verifies that getting the subscriber count after the event bus is disposed throws an ObjectDisposedException.
+    /// </summary>
     [Fact]
     public void GetSubscriberCount_AfterDispose_ThrowsObjectDisposedException()
     {
@@ -927,6 +936,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetSubscriberCount_AfterDispose_ThrowsObjectDisposedException));
     }
 
+    /// <summary>
+    /// Verifies that getting event history after the event bus is disposed throws an ObjectDisposedException.
+    /// </summary>
     [Fact]
     public void GetEventHistory_AfterDispose_ThrowsObjectDisposedException()
     {
@@ -942,6 +954,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(GetEventHistory_AfterDispose_ThrowsObjectDisposedException));
     }
 
+    /// <summary>
+    /// Verifies that clearing subscribers after the event bus is disposed throws an ObjectDisposedException.
+    /// </summary>
     [Fact]
     public void ClearSubscribers_AfterDispose_ThrowsObjectDisposedException()
     {
@@ -957,6 +972,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(ClearSubscribers_AfterDispose_ThrowsObjectDisposedException));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event with multiple handlers throwing exceptions aggregates all exceptions into a single EventBusException.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithMultipleExceptions_AggregatesAllExceptions()
     {
@@ -988,6 +1006,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithMultipleExceptions_AggregatesAllExceptions));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event with an exception in an asynchronous handler aggregates the exception and throws an EventBusException.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithExceptionInAsyncHandler_AggregatesException()
     {
@@ -1014,6 +1035,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithExceptionInAsyncHandler_AggregatesException));
     }
 
+    /// <summary>
+    /// Verifies that the IsDisposed property returns false when the event bus has not been disposed.
+    /// </summary>
     [Fact]
     public void IsDisposed_ReturnsFalse_WhenNotDisposed()
     {
@@ -1025,6 +1049,9 @@ public sealed class EventBusTests : IDisposable
 
     #region Edge Case Tests for EventBus Behavior
 
+    /// <summary>
+    /// Verifies that publishing an event with an exception in one synchronous handler continues execution to other subscribers and aggregates the exception.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithSubscriberException_ContinuesToOtherSubscribers()
     {
@@ -1062,6 +1089,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithSubscriberException_ContinuesToOtherSubscribers));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event with an exception in one asynchronous handler continues execution to other subscribers and aggregates the exception.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithSubscriberException_InAsyncHandler_ContinuesToOtherSubscribers()
     {
@@ -1112,6 +1142,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithSubscriberException_InAsyncHandler_ContinuesToOtherSubscribers));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event after the event bus is disposed throws an ObjectDisposedException.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_AfterDispose_ThrowsObjectDisposedException()
     {
@@ -1136,6 +1169,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_AfterDispose_ThrowsObjectDisposedException));
     }
 
+    /// <summary>
+    /// Verifies that publishing multiple events concurrently handles race conditions correctly and calls the handler exactly once per event.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithConcurrentPublishes_HandlesRaceConditions()
     {
@@ -1173,6 +1209,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithConcurrentPublishes_HandlesRaceConditions));
     }
 
+    /// <summary>
+    /// Verifies that publishing multiple events concurrently processes all events correctly using atomic operations.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithConcurrentPublishes_HandlesMultipleEvents()
     {
@@ -1206,6 +1245,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithConcurrentPublishes_HandlesMultipleEvents));
     }
 
+    /// <summary>
+    /// Verifies that a subscriber added after an event is published only receives events published after its subscription.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_LateSubscriber_OnlyReceivesEventsPublishedAfterSubscription()
     {
@@ -1242,6 +1284,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_LateSubscriber_OnlyReceivesEventsPublishedAfterSubscription));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event while a handler accesses subscriber count does not throw due to proper locking.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithUnsubscribeDuringHandler_DoesNotThrow()
     {
@@ -1281,6 +1326,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithUnsubscribeDuringHandler_DoesNotThrow));
     }
 
+    /// <summary>
+    /// Verifies that publishing an event while an async handler accesses subscriber count does not throw due to proper locking.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithUnsubscribeDuringAsyncHandler_DoesNotThrow()
     {
@@ -1325,6 +1373,9 @@ public sealed class EventBusTests : IDisposable
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithUnsubscribeDuringAsyncHandler_DoesNotThrow));
     }
 
+    /// <summary>
+    /// Verifies that in async dispatch mode, exceptions thrown by handlers are logged but not propagated, allowing normal handlers to complete.
+    /// </summary>
     [Fact]
     public async Task PublishAsync_WithMultipleExceptions_InAsyncDispatchMode_AreLoggedButNotPropagated()
     {
