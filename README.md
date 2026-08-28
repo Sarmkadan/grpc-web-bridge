@@ -492,4 +492,41 @@ if (!instance.IsValid())
 // Or throw directly with the collected problems when invalid
 instance.EnsureValid();
 ```
+
+## EventBusTests
+
+The `EventBusTests` class provides comprehensive unit tests for the `EventBus` class, verifying its publish-subscribe functionality, event history management, disposal behavior, and thread safety. It tests subscribing with synchronous and asynchronous handlers, unsubscribing, publishing events, handling exceptions in handlers, and proper disposal of resources.
+
+Example usage of `EventBus` (which is tested by `EventBusTests`):
+
+```csharp
+// Create a logger and event bus
+var logger = Substitute.For<ILogger<EventBus>>();
+var eventBus = new EventBus(logger, maxHistorySize: 100);
+
+// Subscribe to events with synchronous and asynchronous handlers
+var serviceHandlerCalled = false;
+void ServiceHandler(ServiceRegisteredEvent @event) => serviceHandlerCalled = true;
+eventBus.Subscribe<ServiceRegisteredEvent>(ServiceHandler);
+
+// Publish an event
+var @event = new ServiceRegisteredEvent
+{
+    ServiceId = "test-service-id",
+    ServiceName = "TestService",
+    Endpoint = "http://localhost:5000"
+};
+await eventBus.PublishAsync(@event);
+
+// Verify handler was called
+serviceHandlerCalled.Should().BeTrue();
+
+// Check subscriber count
+eventBus.GetSubscriberCount<ServiceRegisteredEvent>().Should().Be(1);
+
+// Unsubscribe
+eventBus.Unsubscribe<ServiceRegisteredEvent>(ServiceHandler).Should().BeTrue();
+
+// Dispose when finished
+eventBus.Dispose();
 ```
