@@ -370,3 +370,27 @@ if (RequestContextManagerJsonExtensions.TryFromJson(json, out var safeContext))
     // Process deserialized context
 }
 ```
+
+## EventBusExtensionsTests
+
+The `EventBusExtensionsTests` class provides comprehensive unit tests for the `EventBusExtensions` class, covering subscriber management, conditional publishing, event history serialization, and subscriber reset functionality. It ensures robust behavior of event bus extension methods including null checking and proper event handling.
+
+Example usage of `EventBusExtensions` (which is tested by `EventBusExtensionsTests`):
+
+```csharp
+// Create an event bus with a logger
+var logger = Substitute.For<ILogger<EventBus>>();
+var eventBus = new EventBus(logger, maxHistorySize: 100);
+
+// Check if subscribers exist for an event type
+bool hasSubscribers = eventBus.HasSubscribers<MyEvent>();
+
+// Publish event only if subscribers exist
+await eventBus.PublishIfHasSubscribersAsync(myEvent);
+
+// Get event history as JSON
+string historyJson = eventBus.GetEventHistoryJson();
+
+// Reset/clear all subscribers
+eventBus.Reset();
+```
