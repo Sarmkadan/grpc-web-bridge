@@ -428,3 +428,32 @@ List<CorrelationTrace> traces = correlationManager.GetTracesForCorrelation(corre
 // Get tracing statistics
 object stats = correlationManager.GetStatistics();
 ```
+
+## AdaptiveFlowControllerTests
+
+The `AdaptiveFlowControllerTests` class provides comprehensive unit tests for the `AdaptiveFlowController` background service, which periodically adjusts credit windows for streams operating in `FlowControlMode.Adaptive`. It verifies the three window-adjustment strategies (widen below the low-utilization threshold, hold above the high-utilization threshold, and neutral in between), the handling of throttled and missing streams, and the configuration presets and thresholds used by the controller.
+
+Example usage of `AdaptiveFlowController` (which is tested by `AdaptiveFlowControllerTests`):
+
+```csharp
+// Create a bidirectional streaming engine
+var engine = Substitute.For<IBidirectionalStreamingEngine>();
+
+// Configure adaptive flow control
+var options = new FlowControlOptions
+{
+    Mode = FlowControlMode.Adaptive,
+    InitialWindowSize = 64,
+    MaxWindowSize = 256,
+    CreditReplenishmentBatch = 16,
+    AdaptiveAdjustmentInterval = TimeSpan.FromSeconds(1),
+    BackpressureThreshold = 0.85
+};
+
+// Create the controller and start it as a hosted background service
+var logger = Substitute.For<ILogger<AdaptiveFlowController>>();
+var controller = new AdaptiveFlowController(engine, options, logger);
+
+// Register it with the host so ExecuteAsync runs on each adjustment interval
+builder.Services.AddHostedService(_ => controller);
+```
