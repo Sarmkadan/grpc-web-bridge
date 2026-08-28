@@ -339,3 +339,34 @@ app.MapHealthEndpoints();
 
 app.Run();
 ```
+
+## RequestContextManagerJsonExtensionsTests
+
+The `RequestContextManagerJsonExtensionsTests` class provides unit tests for the `RequestContextManagerJsonExtensions` class, covering JSON serialization and deserialization of `RequestContextManager` instances. It tests various scenarios including handling of null values, formatting options, and round-trip consistency.
+
+Example usage of `RequestContextManagerJsonExtensions` (which is tested by `RequestContextManagerJsonExtensionsTests`):
+
+```csharp
+// Create a RequestContextManager instance
+var context = new RequestContextManager
+{
+    UserId = 123,
+    SessionId = Guid.NewGuid(),
+    // Initialize other properties as needed
+};
+
+// Serialize to JSON (compact)
+string json = context.ToJson();
+
+// Serialize to JSON (indented)
+string indentedJson = context.ToJson(indented: true);
+
+// Deserialize from JSON
+RequestContextManager? restored = RequestContextManagerJsonExtensions.FromJson(json);
+
+// Safe deserialization
+if (RequestContextManagerJsonExtensions.TryFromJson(json, out var safeContext))
+{
+    // Process deserialized context
+}
+```
