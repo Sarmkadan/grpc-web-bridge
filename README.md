@@ -530,3 +530,58 @@ eventBus.Unsubscribe<ServiceRegisteredEvent>(ServiceHandler).Should().BeTrue();
 // Dispose when finished
 eventBus.Dispose();
 ```
+
+## HealthEndpointsTests
+
+The `HealthEndpointsTests` class provides comprehensive unit tests for the `HealthEndpoints` class, covering health check endpoints, startup time tracking, service health aggregation, and response model validation. It tests mapping health endpoints to web applications, validating detailed health responses, and verifying service health summary calculations.
+
+Example usage of `HealthEndpoints` (which is tested by `HealthEndpointsTests`):
+
+```csharp
+// Get application startup time (returns consistent UTC DateTime)
+var startupTime = HealthEndpoints.GetStartupTime();
+startupTime.Should().NotBe(default);
+startupTime.Kind.Should().Be(DateTimeKind.Utc);
+
+// Map health endpoints to a web application
+var builder = WebApplication.CreateBuilder();
+var app = builder.Build();
+HealthEndpoints.MapHealthEndpoints(app); // Should not throw
+
+// Create sample health response objects
+var detailedResponse = new HealthEndpoints.DetailedHealthResponse
+{
+    status = "healthy",
+    timestamp = DateTime.UtcNow,
+    uptime = "00:30:00",
+    uptime_seconds = 1800,
+    services = new HealthEndpoints.ServiceHealthSummary
+    {
+        registered_count = 3,
+        health_status = "healthy",
+        services = new List<HealthEndpoints.ServiceHealthItem>()
+    },
+    workers = new HealthEndpoints.WorkerStatusSummary
+    {
+        streaming_service = new HealthEndpoints.StreamingWorkerStatus
+        {
+            active_stream_count = 5,
+            max_stream_count = 100,
+            stream_capacity = "5/100",
+            status = "active"
+        }
+    },
+    system = new HealthEndpoints.SystemStatus
+    {
+        environment = "Development",
+        application_name = "GrpcWebBridge",
+        version = "1.0.0",
+        timestamp = DateTime.UtcNow
+    }
+};
+
+// Validate response properties
+detailedResponse.status.Should().Be("healthy");
+detailedResponse.services.registered_count.Should().Be(3);
+detailedResponse.workers.streaming_service.active_stream_count.Should().Be(5);
+```
