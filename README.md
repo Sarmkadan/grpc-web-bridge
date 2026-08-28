@@ -456,4 +456,40 @@ var controller = new AdaptiveFlowController(engine, options, logger);
 
 // Register it with the host so ExecuteAsync runs on each adjustment interval
 builder.Services.AddHostedService(_ => controller);
+
+## ServiceDiscoveryClientValidationTests
+
+The `ServiceDiscoveryClientValidationTests` class provides unit tests for the `ServiceDiscoveryClientValidation` extension methods that validate a `ServiceInstance` before it is registered with the discovery client. It verifies that `Validate` returns a list of human-readable problems for invalid instances (empty identifiers, out-of-range ports, invalid statuses, future or default heartbeats, and malformed metadata), that `IsValid` returns a boolean summary, and that `EnsureValid` throws an `ArgumentException` carrying the collected problems when the instance is invalid.
+
+Example usage of `ServiceDiscoveryClientValidation` (which is tested by `ServiceDiscoveryClientValidationTests`):
+
+```csharp
+// Build a service instance to register with the discovery client
+var instance = new ServiceInstance
+{
+    Id = "service-1",
+    Name = "TestService",
+    Host = "localhost",
+    Port = 5000,
+    Status = "UP",
+    RegisteredAt = DateTime.UtcNow.AddMinutes(-1),
+    LastHeartbeat = DateTime.UtcNow.AddSeconds(-30)
+};
+
+// Validate the instance before registration
+var problems = instance.Validate();
+if (problems.Any())
+{
+    throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+}
+
+// Or use the boolean convenience check
+if (!instance.IsValid())
+{
+    throw new InvalidOperationException("Service instance is not valid.");
+}
+
+// Or throw directly with the collected problems when invalid
+instance.EnsureValid();
+```
 ```
