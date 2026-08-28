@@ -457,6 +457,43 @@ var controller = new AdaptiveFlowController(engine, options, logger);
 // Register it with the host so ExecuteAsync runs on each adjustment interval
 builder.Services.AddHostedService(_ => controller);
 
+## BackpressureControllerTests
+
+The `BackpressureControllerTests` class provides comprehensive unit tests for the `BackpressureController` class, covering credit-based flow control mechanisms, backpressure signaling, boundary conditions, and thread safety. It tests credit acquisition and release, pressure calculation under load, throttling behavior, disabled mode operation, and concurrent access patterns.
+
+Example usage of `BackpressureController` (which is tested by `BackpressureControllerTests`):
+
+```csharp
+// Create a backpressure controller with default options
+var controller = new BackpressureController(
+    "test-stream",
+    new FlowControlOptions
+    {
+        Mode = FlowControlMode.CreditWindow,
+        InitialWindowSize = 10,
+        MaxWindowSize = 20,
+        BackpressureThreshold = 0.8
+    },
+    NullLogger<BackpressureController>.Instance);
+
+// Try to consume credits
+bool success = controller.TryConsumeCredit(3);
+if (success)
+{
+    // Credits consumed successfully
+    int available = controller.AvailableCredits; // Should be 7
+}
+
+// Release credits back to the pool
+controller.ReleaseCredit(2);
+
+// Check current pressure/utilization level
+double utilization = controller.WindowUtilization; // Value between 0.0 and 1.0
+bool isThrottled = controller.IsThrottled;
+
+// Reset to initial state
+controller.ResetWindow();
+
 ## ServiceDiscoveryClientValidationTests
 
 The `ServiceDiscoveryClientValidationTests` class provides unit tests for the `ServiceDiscoveryClientValidation` extension methods that validate a `ServiceInstance` before it is registered with the discovery client. It verifies that `Validate` returns a list of human-readable problems for invalid instances (empty identifiers, out-of-range ports, invalid statuses, future or default heartbeats, and malformed metadata), that `IsValid` returns a boolean summary, and that `EnsureValid` throws an `ArgumentException` carrying the collected problems when the instance is invalid.
