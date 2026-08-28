@@ -394,3 +394,37 @@ string historyJson = eventBus.GetEventHistoryJson();
 // Reset/clear all subscribers
 eventBus.Reset();
 ```
+
+## CorrelationIdManagerTests
+
+The `CorrelationIdManagerTests` class provides comprehensive unit tests for the `CorrelationIdManager` class, validating correlation ID generation, preservation, async-local flow, and distributed tracing capabilities. It ensures proper handling of correlation IDs across asynchronous operations and trace management.
+
+Example usage of `CorrelationIdManager` (which is tested by `CorrelationIdManagerTests`):
+
+```csharp
+// Create a logger and correlation ID manager
+var logger = Substitute.For<ILogger<CorrelationIdManager>>();
+var correlationManager = new CorrelationIdManager(logger);
+
+// Generate or get correlation ID (creates new if none exists)
+string correlationId = correlationManager.GetOrCreateCorrelationId();
+
+// Set a custom correlation ID
+correlationManager.SetCorrelationId("custom-correlation-id-123");
+
+// Get current correlation ID
+string currentId = correlationManager.GetCorrelationId();
+
+// Start a new trace operation
+var trace = correlationManager.StartTrace("database-query", 
+    new Dictionary<string, string> { { "query", "SELECT * FROM Users" } });
+
+// Complete the trace with success status
+correlationManager.CompleteTrace(trace.TraceId, success: true);
+
+// Get all traces for a correlation ID
+List<CorrelationTrace> traces = correlationManager.GetTracesForCorrelation(correlationId);
+
+// Get tracing statistics
+object stats = correlationManager.GetStatistics();
+```
