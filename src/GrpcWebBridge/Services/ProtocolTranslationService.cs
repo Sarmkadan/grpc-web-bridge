@@ -19,6 +19,14 @@ namespace GrpcWebBridge.Services;
 /// </summary>
 public sealed class ProtocolTranslationService
 {
+    private const string ProtobufFormatName = "Protobuf";
+    private const string JsonFormatName = "JSON";
+    private const string DataPropertyName = "data";
+    private const string EmptyJsonObject = "{}";
+    private const string GrpcTimeoutMetadataKey = "grpc-timeout";
+    private const string BridgeUserMetadataKey = "x-bridge-user";
+    private const string OkStatusMessage = "OK";
+
     private static readonly JsonSerializerOptions _jsonWriteOptions = new() { WriteIndented = false };
 
     private readonly ILogger<ProtocolTranslationService> _logger;
@@ -104,7 +112,7 @@ public sealed class ProtocolTranslationService
             _logger.LogDebug("Converting Protobuf to JSON: {DataSize} bytes", protobufData.Length);
 
             if (protobufData.Length == 0)
-                return "{}".AsBytes();
+                return EmptyJsonObject.AsBytes();
 
             var json = JsonSerializer.Serialize(
                 new { data = Convert.ToBase64String(protobufData) },
@@ -115,7 +123,7 @@ public sealed class ProtocolTranslationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Protobuf to JSON conversion failed");
-            throw new ProtocolException("Protobuf", "JSON", ex.Message);
+            throw new ProtocolException(ProtobufFormatName, JsonFormatName, ex.Message);
         }
     }
 
@@ -133,7 +141,7 @@ public sealed class ProtocolTranslationService
 
             using var document = JsonDocument.Parse(jsonData.AsMemory());
 
-            if (document.RootElement.TryGetProperty("data", out var element) && element.ValueKind == JsonValueKind.String)
+            if (document.RootElement.TryGetProperty(DataPropertyName, out var element) && element.ValueKind == JsonValueKind.String)
             {
                 var base64Data = element.GetString();
                 if (!string.IsNullOrEmpty(base64Data))
@@ -145,7 +153,7 @@ public sealed class ProtocolTranslationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "JSON to Protobuf conversion failed");
-            throw new ProtocolException("JSON", "Protobuf", ex.Message);
+            throw new ProtocolException(JsonFormatName, ProtobufFormatName, ex.Message);
         }
     }
 
@@ -160,7 +168,7 @@ public sealed class ProtocolTranslationService
         {
             var message = $"Request payload exceeds maximum size: {request.Payload.Length} > {Constants.Grpc.MaxMessageSize}";
             _logger.LogWarning(message);
-            throw new ProtocolException(request.Id, "Protobuf", message);
+            throw new ProtocolException(request.Id, ProtobufFormatName, message);
         }
     }
 
@@ -182,10 +190,10 @@ public sealed class ProtocolTranslationService
                 key.AsSpan().ToLowerInvariant(span));
 
             // Hotfix: Fix deadline propagation in nested gRPC calls causing premature timeouts
-            if (lowered == "grpc-timeout")
+            if (lowered == GrpcTimeoutMetadataKey)
                 continue;
 
-            translated[lowered] = kvp.Value ?? "";
+            translated[lowered] = kvp.Value ?? string.Empty;
         }
 
         return translated;
@@ -212,14 +220,14 @@ public sealed class ProtocolTranslationService
 
             var outboundMetadata = TranslateMetadata(request.Metadata);
             if (authContext?.IsAuthenticated == true)
-                outboundMetadata["x-bridge-user"] = authContext.UserId;
+                outboundMetadata[BridgeUserMetadataKey] = authContext.UserId;
 
             await Task.Yield();
 
             var response = new GrpcResponse(request.Id, request.Payload)
             {
                 Status = GrpcStatusCode.Ok,
-                StatusMessage = "OK"
+                StatusMessage = OkStatusMessage
             };
 
             _logger.LogInformation("Bridge invocation succeeded: {RequestId}", request.Id);
