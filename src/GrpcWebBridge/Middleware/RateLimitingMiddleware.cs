@@ -14,7 +14,7 @@ namespace GrpcWebBridge.Middleware;
 /// Enforces per-IP and global rate limits to protect against abuse.
 /// Uses sliding window approach for accurate rate calculation.
 /// </summary>
-public sealed class RateLimitingMiddleware
+public sealed partial class RateLimitingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitingMiddleware> _logger;
@@ -39,14 +39,14 @@ public sealed class RateLimitingMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        _logger.LogInformation("Processing request: {Path}", context.Request.Path);
+        LogProcessingRequest(_logger, context.Request.Path);
 
         // Skip rate limiting for health checks
         if (context.Request.Path.StartsWithSegments("/health") ||
             context.Request.Path.StartsWithSegments("/swagger"))
         {
             await _next(context);
-            _logger.LogInformation("Request processed: {Path}", context.Request.Path);
+            LogRequestProcessed(_logger, context.Request.Path);
             return;
         }
 
@@ -58,8 +58,7 @@ public sealed class RateLimitingMiddleware
         // Check if client has exceeded rate limit
         if (!clientLimit.AllowRequest(_options.RequestsPerSecond, _options.WindowSizeSeconds))
         {
-            _logger.LogWarning("Rate limit exceeded for client: {ClientIp}, Path: {Path}",
-                clientIp, context.Request.Path);
+            LogRateLimitExceeded(_logger, clientIp, context.Request.Path);
 
             context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
             context.Response.ContentType = "application/json";
@@ -80,7 +79,7 @@ public sealed class RateLimitingMiddleware
         // Check global rate limit
         if (_options.EnableGlobalLimit && !CheckGlobalRateLimit(clientLimit))
         {
-            _logger.LogWarning("Global rate limit exceeded");
+            LogGlobalRateLimitExceeded(_logger);
 
             context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
             context.Response.ContentType = "application/json";
@@ -98,7 +97,7 @@ public sealed class RateLimitingMiddleware
         }
 
         await _next(context);
-        _logger.LogInformation("Request processed: {Path}", context.Request.Path);
+        LogRequestProcessed(_logger, context.Request.Path);
     }
 
     /// <summary>
@@ -143,9 +142,24 @@ public sealed class RateLimitingMiddleware
 
         if (staleKeys.Count > 0)
         {
-            _logger.LogDebug("Cleaned up {Count} stale rate limit entries", staleKeys.Count);
+            LogCleanedUpStaleEntries(_logger, staleKeys.Count);
         }
     }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Debug, Message = "Processing request: {Path}")]
+    private static partial void LogProcessingRequest(ILogger logger, PathString path);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Debug, Message = "Request processed: {Path}")]
+    private static partial void LogRequestProcessed(ILogger logger, PathString path);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Warning, Message = "Rate limit exceeded for client: {ClientIp}, Path: {Path}")]
+    private static partial void LogRateLimitExceeded(ILogger logger, string clientIp, PathString path);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Warning, Message = "Global rate limit exceeded")]
+    private static partial void LogGlobalRateLimitExceeded(ILogger logger);
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Debug, Message = "Cleaned up {Count} stale rate limit entries")]
+    private static partial void LogCleanedUpStaleEntries(ILogger logger, int count);
 }
 
 /// <summary>
