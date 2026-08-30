@@ -42,6 +42,10 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public GrpcRequest TranslateHttpToGrpc(string serviceName, string methodName, byte[] httpBody, SerializationFormat format)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
+        ArgumentNullException.ThrowIfNull(httpBody);
+
         try
         {
             _logger.LogInformation(
@@ -69,6 +73,8 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public byte[] TranslateGrpcToHttp(GrpcResponse response, SerializationFormat targetFormat)
     {
+        ArgumentNullException.ThrowIfNull(response);
+
         try
         {
             _logger.LogInformation(
@@ -107,6 +113,8 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public byte[] ConvertProtobufToJson(byte[] protobufData)
     {
+        ArgumentNullException.ThrowIfNull(protobufData);
+
         try
         {
             _logger.LogDebug("Converting Protobuf to JSON: {DataSize} bytes", protobufData.Length);
@@ -132,6 +140,8 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public byte[] ConvertJsonToProtobuf(byte[] jsonData)
     {
+        ArgumentNullException.ThrowIfNull(jsonData);
+
         try
         {
             _logger.LogDebug("Converting JSON to Protobuf: {DataSize} bytes", jsonData.Length);
@@ -162,6 +172,8 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public void ValidateRequest(GrpcRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         request.Validate();
 
         if (request.Payload.Length > Constants.Grpc.MaxMessageSize)
@@ -177,10 +189,11 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public Dictionary<string, string> TranslateMetadata(Dictionary<string, string> sourceMetadata)
     {
-        var source = sourceMetadata ?? [];
-        var translated = new Dictionary<string, string>(source.Count, StringComparer.Ordinal);
+        ArgumentNullException.ThrowIfNull(sourceMetadata);
 
-        foreach (var kvp in source)
+        var translated = new Dictionary<string, string>(sourceMetadata.Count, StringComparer.Ordinal);
+
+        foreach (var kvp in sourceMetadata)
         {
             if (string.IsNullOrWhiteSpace(kvp.Key))
                 continue;
@@ -207,8 +220,7 @@ public sealed class ProtocolTranslationService
         AuthenticationContext? authContext,
         CancellationToken cancellationToken = default)
     {
-        if (request is null)
-            throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         try
         {
@@ -251,6 +263,9 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public GrpcResponse CreateErrorResponse(string requestId, GrpcStatusCode statusCode, string message)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+
         var response = new GrpcResponse { RequestId = requestId };
         response.SetError(statusCode, message);
 
