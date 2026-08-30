@@ -15,38 +15,34 @@ namespace GrpcWebBridge.Utilities;
 /// </summary>
 public static class CryptographyUtility
 {
-    private const int HashIterations = 10000;
+    private const int HashIterations = 100000;
+    private const int LegacyHashIterations = 10000;
     private const int SaltSize = 16; // 128 bits
     private const int KeySize = 32; // 256 bits
 
     /// <summary>
-    /// Generates a secure hash of the input string using PBKDF2.
-    /// Includes salt and iteration count for strong protection against rainbow table attacks.
+    /// Generates a secure hash of the input string using PBKDF2-SHA256.
+    /// The encoded value includes the iteration count, salt, and hash, separated by periods.
     /// </summary>
     public static string HashPassword(string password)
     {
         ArgumentException.ThrowIfNullOrEmpty(password);
 
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            var salt = new byte[SaltSize];
-            rng.GetBytes(salt);
+        var salt = RandomNumberGenerator.GetBytes(SaltSize);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt,
+            HashIterations,
+            HashAlgorithmName.SHA256,
+            KeySize);
 
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, HashIterations, HashAlgorithmName.SHA256))
-            {
-                var hash = pbkdf2.GetBytes(KeySize);
-                var hashWithSalt = new byte[SaltSize + hash.Length];
-                Array.Copy(salt, 0, hashWithSalt, 0, SaltSize);
-                Array.Copy(hash, 0, hashWithSalt, SaltSize, hash.Length);
-
-                return Convert.ToBase64String(hashWithSalt);
-            }
-        }
+        return $"{HashIterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
     }
 
     /// <summary>
-    /// Verifies a password against a previously generated hash.
-    /// Uses constant-time comparison to prevent timing attacks.
+    /// Verifies a password against a PBKDF2-SHA256 hash using a fixed-time comparison.
+    /// Supports both the current iteration-prefixed format and the legacy Base64 format,
+    /// which uses 10,000 iterations.
     /// </summary>
     public static bool VerifyPassword(string password, string hash)
     {
@@ -55,22 +51,45 @@ public static class CryptographyUtility
 
         try
         {
-            var hashBytes = Convert.FromBase64String(hash);
-            if (hashBytes.Length != SaltSize + KeySize)
+            byte[] salt;
+            byte[] storedHash;
+            int iterations;
+            var components = hash.Split('.');
+
+            if (components.Length == 3)
+            {
+                if (!int.TryParse(components[0], out iterations) || iterations <= 0)
+                    return false;
+
+                salt = Convert.FromBase64String(components[1]);
+                storedHash = Convert.FromBase64String(components[2]);
+            }
+            else if (components.Length == 1)
+            {
+                var hashBytes = Convert.FromBase64String(hash);
+                if (hashBytes.Length != SaltSize + KeySize)
+                    return false;
+
+                iterations = LegacyHashIterations;
+                salt = hashBytes[..SaltSize];
+                storedHash = hashBytes[SaltSize..];
+            }
+            else
+            {
+                return false;
+            }
+
+            if (salt.Length != SaltSize || storedHash.Length != KeySize)
                 return false;
 
-            var salt = new byte[SaltSize];
-            Array.Copy(hashBytes, 0, salt, 0, SaltSize);
+            var computedHash = Rfc2898DeriveBytes.Pbkdf2(
+                password,
+                salt,
+                iterations,
+                HashAlgorithmName.SHA256,
+                KeySize);
 
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, HashIterations, HashAlgorithmName.SHA256))
-            {
-                var computedHash = pbkdf2.GetBytes(KeySize);
-                var storedHash = new byte[KeySize];
-                Array.Copy(hashBytes, SaltSize, storedHash, 0, KeySize);
-
-                // Constant-time comparison to prevent timing attacks
-                return ConstantTimeComparison(computedHash, storedHash);
-            }
+            return CryptographicOperations.FixedTimeEquals(computedHash, storedHash);
         }
         catch
         {
@@ -239,25 +258,4 @@ public static class CryptographyUtility
         }
     }
 
-    /// <summary>
-    /// Constant-time byte array comparison to prevent timing attacks.
-    /// </summary>
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    private static bool ConstantTimeComparison(byte[] a, byte[] b)
-    {
-        // Fix: handle null array edge cases
-        if (a is null || b is null)
-            return false;
-
-        if (a.Length != b.Length)
-            return false;
-
-        int result = 0;
-        for (int i = 0; i < a.Length; i++)
-        {
-            result |= a[i] ^ b[i];
-        }
-
-        return result == 0;
-    }
 }
