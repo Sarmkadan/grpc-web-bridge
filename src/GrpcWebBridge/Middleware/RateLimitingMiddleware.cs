@@ -27,6 +27,7 @@ public sealed partial class RateLimitingMiddleware
         ArgumentNullException.ThrowIfNull(next);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(options);
+        options.Validate();
         _next = next;
         _logger = logger;
         _options = options;
@@ -41,13 +42,15 @@ public sealed partial class RateLimitingMiddleware
         ArgumentNullException.ThrowIfNull(context);
         LogProcessingRequest(_logger, context.Request.Path);
 
-        // Skip rate limiting for health checks
-        if (context.Request.Path.StartsWithSegments("/health") ||
-            context.Request.Path.StartsWithSegments("/swagger"))
+        // Skip rate limiting for exempt paths
+        foreach (var exemptPath in _options.ExemptPaths)
         {
-            await _next(context);
-            LogRequestProcessed(_logger, context.Request.Path);
-            return;
+            if (context.Request.Path.StartsWithSegments(exemptPath))
+            {
+                await _next(context);
+                LogRequestProcessed(_logger, context.Request.Path);
+                return;
+            }
         }
 
         var clientIp = GetClientIpAddress(context);
@@ -231,6 +234,25 @@ public sealed class RateLimitingOptions
     public int RetryAfterSeconds { get; set; } = 60;
     public bool EnableGlobalLimit { get; set; } = true;
     public int GlobalRequestsPerSecond { get; set; } = 10000;
+    public IReadOnlyList<string> ExemptPaths { get; set; } = new[] { "/health", "/swagger" };
+
+    public void Validate()
+    {
+        if (RequestsPerSecond <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(RequestsPerSecond));
+        }
+
+        if (WindowSizeSeconds <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(WindowSizeSeconds));
+        }
+
+        if (RetryAfterSeconds < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(RetryAfterSeconds));
+        }
+    }
 }
 
 /// <summary>
