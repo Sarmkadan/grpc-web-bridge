@@ -14,7 +14,7 @@ namespace GrpcWebBridge.Middleware;
 /// Enforces per-IP and global rate limits to protect against abuse.
 /// Uses sliding window approach for accurate rate calculation.
 /// </summary>
-public sealed partial class RateLimitingMiddleware
+public sealed partial class RateLimitingMiddleware : IDisposable
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitingMiddleware> _logger;
@@ -54,7 +54,7 @@ public sealed partial class RateLimitingMiddleware
         }
 
         var clientIp = GetClientIpAddress(context);
-        var clientKey = $"{clientIp}_{context.Request.Path}";
+        var clientKey = clientIp;
 
         var clientLimit = _clientLimits.GetOrAdd(clientKey, _ => new ClientRateLimit());
 
@@ -65,7 +65,7 @@ public sealed partial class RateLimitingMiddleware
 
             context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
             context.Response.ContentType = "application/json";
-            context.Response.Headers.Add("Retry-After", _options.RetryAfterSeconds.ToString());
+            context.Response.Headers["Retry-After"] = _options.RetryAfterSeconds.ToString();
 
             var response = new
             {
@@ -101,6 +101,11 @@ public sealed partial class RateLimitingMiddleware
 
         await _next(context);
         LogRequestProcessed(_logger, context.Request.Path);
+    }
+
+    public void Dispose()
+    {
+        _cleanupTimer.Dispose();
     }
 
     /// <summary>
