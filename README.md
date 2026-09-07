@@ -735,3 +735,41 @@ var sameClient = factory.GetClient("backend");
 Debug.Assert(ReferenceEquals(client, sameClient));
 Debug.Assert(client.Timeout == TimeSpan.FromMilliseconds(5_000));
 ```
+
+## EventBus
+
+`GrpcWebBridge.Events.EventBus` provides typed publish/subscribe handling for events derived from `EventBase`. Its four public publish/subscribe methods are:
+
+- `Subscribe<TEvent>(Action<TEvent> handler)` registers a synchronous handler.
+- `Subscribe<TEvent>(Func<TEvent, Task> handler)` registers an asynchronous handler.
+- `Unsubscribe<TEvent>(Delegate handler)` removes a handler and returns whether it was registered.
+- `PublishAsync<TEvent>(TEvent event)` records and dispatches an event to the handlers registered for its type.
+
+Pass `EventBus.DispatchOptions` to the constructor to configure dispatch and backpressure. `UseAsyncDispatch` defaults to `false`, so handlers run inline and `PublishAsync` waits for them. When enabled, events use a bounded queue whose size is controlled by `MaxQueueSize` (default `1024`). `FullQueuePolicy` is either `DropOldest` (the default) or `Block`; `MaxWaitTime` (default five seconds) limits how long a blocked publisher waits for queue capacity.
+
+The built-in event types are `ServiceRegisteredEvent`, `ServiceUnregisteredEvent`, `MethodInvokedEvent`, `StreamStartedEvent`, `StreamEndedEvent`, and `AuthenticationFailedEvent`. Each inherits the common `EventId`, `CreatedAt`, `Source`, and `Metadata` members from `EventBase`.
+
+This synchronous-handler example follows the subscribe/publish pattern exercised by `EventBusTests`:
+
+```csharp
+using GrpcWebBridge.Events;
+using Microsoft.Extensions.Logging.Abstractions;
+
+using var eventBus = new EventBus(NullLogger<EventBus>.Instance);
+
+void OnServiceRegistered(ServiceRegisteredEvent @event)
+{
+    Console.WriteLine($"Registered {@event.ServiceName} at {@event.Endpoint}");
+}
+
+eventBus.Subscribe<ServiceRegisteredEvent>(OnServiceRegistered);
+
+await eventBus.PublishAsync(new ServiceRegisteredEvent
+{
+    ServiceId = "catalog-service",
+    ServiceName = "Catalog",
+    Endpoint = "https://localhost:5001"
+});
+
+eventBus.Unsubscribe<ServiceRegisteredEvent>(OnServiceRegistered);
+```
