@@ -773,3 +773,51 @@ await eventBus.PublishAsync(new ServiceRegisteredEvent
 
 eventBus.Unsubscribe<ServiceRegisteredEvent>(OnServiceRegistered);
 ```
+
+## CacheManager
+
+`GrpcWebBridge.Caching.CacheManager` is an in-memory, string-keyed cache with per-entry expiration and basic hit statistics. It is disposable; disposing it stops the periodic expired-entry cleanup and clears the cache.
+
+Its cache operations are:
+
+- `Set<T>(string key, T value)` stores a value using the configured default TTL.
+- `Set<T>(string key, T value, TimeSpan ttl)` stores a value with a custom TTL, replacing an existing entry with the same key.
+- `TryGet<T>(string key, out T? value)` retrieves a non-expired value and returns whether it was found. There is no separate `Get` method.
+- `GetOrSet<T>(string key, Func<T> factory, TimeSpan? ttl = null)` returns a cached value or synchronously creates and caches one.
+- `GetOrSetAsync<T>(string key, Func<Task<T>> factory, TimeSpan? ttl = null)` is the asynchronous factory variant.
+- `Remove(string key)` removes one entry and returns whether it existed.
+- `RemovePattern(string pattern)` removes entries whose keys match a case-insensitive pattern, where `*` is a wildcard, and returns the number removed.
+- `Clear()` removes every entry.
+- `GetStatistics()` returns a `CacheStatistics` snapshot containing entry and hit counts, average hits and estimated size, and the oldest and most-accessed entries.
+- `Contains(string key)` reports whether a non-expired entry exists.
+- `SetExpiration(string key, TimeSpan expiresIn)` resets an existing entry's expiration relative to the current time and returns whether the entry exists.
+- `GetTimeToLive(string key)` returns the remaining TTL, zero for an expired entry still awaiting cleanup, or `null` when the key does not exist.
+
+`CacheManagerOptions` exposes `DefaultTtl` (five minutes by default), `MaxEntries` (`10000`), and `EnableStatistics` (`true`). `DefaultTtl` controls the overloads that do not receive a TTL. `MaxEntries` and `EnableStatistics` are configuration properties but are not currently enforced or consulted by `CacheManager`.
+
+This example follows the set, retrieval, TTL, and statistics patterns covered by `CacheManagerTests`:
+
+```csharp
+using GrpcWebBridge.Caching;
+using Microsoft.Extensions.Logging.Abstractions;
+
+var options = new CacheManagerOptions
+{
+    DefaultTtl = TimeSpan.FromMinutes(5)
+};
+
+using var cache = new CacheManager(
+    NullLogger<CacheManager>.Instance,
+    options);
+
+cache.Set("user:42", "Ada");
+
+if (cache.TryGet<string>("user:42", out var userName))
+{
+    Console.WriteLine(userName);
+}
+
+cache.SetExpiration("user:42", TimeSpan.FromMinutes(1));
+var remaining = cache.GetTimeToLive("user:42");
+var statistics = cache.GetStatistics();
+```
