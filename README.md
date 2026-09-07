@@ -622,3 +622,60 @@ detailedResponse.status.Should().Be("healthy");
 detailedResponse.services.registered_count.Should().Be(3);
 detailedResponse.workers.streaming_service.active_stream_count.Should().Be(5);
 ```
+
+## Service Registration (DependencyInjection)
+
+`GrpcWebBridge.Configuration.DependencyInjection` provides seven extension methods for registering bridge services and optional integrations with an `IServiceCollection`:
+
+```csharp
+public static IServiceCollection AddGrpcWebBridge(
+    this IServiceCollection services,
+    GrpcWebBridgeOptions? options = null);
+
+public static IServiceCollection AddGrpcWebBridge(
+    this IServiceCollection services,
+    Action<GrpcWebBridgeOptions> configureOptions);
+
+public static IServiceCollection AddGrpcWebBridgeSwagger(
+    this IServiceCollection services,
+    string title = "gRPC-Web Bridge API",
+    string version = "1.0.0");
+
+public static IServiceCollection AddGrpcWebBridgeCors(
+    this IServiceCollection services,
+    GrpcWebBridgeOptions? options = null);
+
+public static IServiceCollection AddGrpcWebBridgeAuthentication(
+    this IServiceCollection services,
+    Action<JwtBearerOptions>? configureJwtBearer = null);
+
+public static IServiceCollection AddGrpcWebBridgePrometheus(
+    this IServiceCollection services);
+
+public static IServiceCollection AddGrpcWebBridgeTracing(
+    this IServiceCollection services,
+    string serviceName = "grpc-web-bridge",
+    string? instanceName = null,
+    Action<TracerProviderBuilder>? configureBuilder = null);
+```
+
+A minimal `Program.cs` can register the bridge and each optional integration as follows:
+
+```csharp
+using GrpcWebBridge.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddGrpcWebBridge(options =>
+{
+    // Configure GrpcWebBridgeOptions here.
+});
+builder.Services.AddGrpcWebBridgeSwagger();
+builder.Services.AddGrpcWebBridgeCors();
+builder.Services.AddGrpcWebBridgeAuthentication();
+builder.Services.AddGrpcWebBridgePrometheus();
+builder.Services.AddGrpcWebBridgeTracing();
+
+var app = builder.Build();
+app.Run();
+```
