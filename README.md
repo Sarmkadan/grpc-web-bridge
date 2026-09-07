@@ -679,3 +679,59 @@ builder.Services.AddGrpcWebBridgeTracing();
 var app = builder.Build();
 app.Run();
 ```
+
+## HttpClientFactory
+
+`GrpcWebBridge.Integration.HttpClientFactory` creates and caches named `HttpClient` instances. Configure it with `HttpClientFactoryOptions`, whose properties and defaults are:
+
+| Property | Default | Purpose |
+| --- | ---: | --- |
+| `RequestTimeoutMs` | `30000` | Request timeout in milliseconds. Non-positive values fall back to 30 seconds. |
+| `MaxConnectionsPerServer` | `10` | Maximum concurrent connections allowed per server. |
+| `UseCookies` | `false` | Enables cookie handling on the underlying handler. |
+| `AllowAutoRedirect` | `true` | Enables automatic HTTP redirects. |
+| `AllowInsecureHttps` | `false` | Accepts any server certificate when enabled; use only in controlled environments. |
+| `PooledConnectionLifetimeMs` | `120000` | Lifetime and idle timeout of pooled connections, in milliseconds. |
+
+Factory-created clients are cached by name: repeated calls to `GetClient` with the same name return the same instance, while different names return distinct clients. All factory-created clients share one `SocketsHttpHandler` and therefore its connection pool. When `PooledConnectionLifetimeMs` has elapsed, the next `GetClient` call rotates the shared handler, disposes the cached clients that used it, and clears the cache. Set the lifetime to zero or a negative value to disable factory-level handler rotation.
+
+The public methods are:
+
+- `ToString()` returns a summary of the active client options.
+- `GetClient(string name = "default")` gets or creates a cached named client.
+- `RegisterClient(string name, HttpClient client)` registers a client, replacing and disposing any client already stored under that name.
+- `GetClientForUri(string baseUri)` gets a client keyed by the URI and initializes its base address.
+- `GetAsync(string uri, string? clientName = null)` sends a GET request and returns its content as a string.
+- `PostJsonAsync(string uri, object payload, string? clientName = null)` serializes a payload as JSON, sends it with POST, and returns the response content.
+- `SendAsync(string uri, HttpMethod method, HttpContent? content = null, Dictionary<string, string>? headers = null, string? clientName = null)` sends a custom request and returns the response.
+- `RemoveClient(string name)` removes and disposes a named client, returning whether it existed.
+- `GetRegisteredClientNames()` returns a snapshot of the currently cached names.
+- `Dispose()` disposes the shared handler and all cached clients.
+
+This example mirrors the named-client and timeout setup exercised by `HttpClientFactoryTests`:
+
+```csharp
+using System.Diagnostics;
+using GrpcWebBridge.Integration;
+using Microsoft.Extensions.Logging.Abstractions;
+
+var options = new HttpClientFactoryOptions
+{
+    RequestTimeoutMs = 5_000,
+    MaxConnectionsPerServer = 5,
+    UseCookies = false,
+    AllowAutoRedirect = true,
+    AllowInsecureHttps = false
+};
+
+using var factory = new HttpClientFactory(
+    NullLogger<HttpClientFactory>.Instance,
+    options);
+
+var client = factory.GetClient("backend");
+client.BaseAddress = new Uri("https://example.com");
+
+var sameClient = factory.GetClient("backend");
+Debug.Assert(ReferenceEquals(client, sameClient));
+Debug.Assert(client.Timeout == TimeSpan.FromMilliseconds(5_000));
+```
