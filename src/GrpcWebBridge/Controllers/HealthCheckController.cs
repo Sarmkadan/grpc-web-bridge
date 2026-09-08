@@ -22,11 +22,20 @@ namespace GrpcWebBridge.Controllers;
 [Produces("application/json")]
 public sealed class HealthCheckController : ControllerBase
 {
+    private const int MaxStreamsForUtilization = 10000;
+    private const double BytesPerMegabyte = 1024.0 * 1024.0;
+
     private readonly ServiceRegistry _serviceRegistry;
     private readonly StreamingService _streamingService;
     private readonly ILogger<HealthCheckController> _logger;
     private static DateTime _startupTime = DateTime.UtcNow;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HealthCheckController"/> class.
+    /// </summary>
+    /// <param name="serviceRegistry">The registry used to retrieve service health information.</param>
+    /// <param name="streamingService">The service used to retrieve streaming metrics.</param>
+    /// <param name="logger">The logger used to record health check errors.</param>
     public HealthCheckController(
         ServiceRegistry serviceRegistry,
         StreamingService streamingService,
@@ -111,7 +120,7 @@ public sealed class HealthCheckController : ControllerBase
                     osVersion = Environment.OSVersion.VersionString,
                     processorArchitecture = RuntimeInformation.ProcessArchitecture,
                     totalMemoryBytes = GC.GetTotalMemory(false),
-                    workingSetMb = Math.Round(process.WorkingSet64 / (1024.0 * 1024.0), 2)
+                    workingSetMb = Math.Round(process.WorkingSet64 / BytesPerMegabyte, 2)
                 },
                 services = new
                 {
@@ -133,8 +142,8 @@ public sealed class HealthCheckController : ControllerBase
                 streaming = new
                 {
                     activeStreams = _streamingService.ActiveStreamCount,
-                    maxStreams = 10000,
-                    utilizationPercent = Math.Round((_streamingService.ActiveStreamCount / 10000.0) * 100, 2)
+                    maxStreams = MaxStreamsForUtilization,
+                    utilizationPercent = Math.Round((_streamingService.ActiveStreamCount / (double)MaxStreamsForUtilization) * 100, 2)
                 },
                 gcMetrics = new
                 {
@@ -210,10 +219,10 @@ public sealed class HealthCheckController : ControllerBase
             {
                 memory = new
                 {
-                    totalMb = Math.Round(totalMemory / (1024.0 * 1024.0), 2),
-                    workingSetMb = Math.Round(process.WorkingSet64 / (1024.0 * 1024.0), 2),
-                    virtualMemoryMb = Math.Round(process.VirtualMemorySize64 / (1024.0 * 1024.0), 2),
-                    managedHeapMb = Math.Round(totalMemory / (1024.0 * 1024.0), 2)
+                    totalMb = Math.Round(totalMemory / BytesPerMegabyte, 2),
+                    workingSetMb = Math.Round(process.WorkingSet64 / BytesPerMegabyte, 2),
+                    virtualMemoryMb = Math.Round(process.VirtualMemorySize64 / BytesPerMegabyte, 2),
+                    managedHeapMb = Math.Round(totalMemory / BytesPerMegabyte, 2)
                 },
                 processor = new
                 {
