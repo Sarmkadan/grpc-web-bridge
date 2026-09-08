@@ -31,6 +31,10 @@ public sealed class ProtocolTranslationService
 
     private readonly ILogger<ProtocolTranslationService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProtocolTranslationService"/> class.
+    /// </summary>
+    /// <param name="logger">The logger used to record protocol translation activity.</param>
     public ProtocolTranslationService(ILogger<ProtocolTranslationService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -280,5 +284,16 @@ public sealed class ProtocolTranslationService
 /// </summary>
 public static class ProtocolTranslationExtensions
 {
-    public static byte[] AsBytes(this string value) => System.Text.Encoding.UTF8.GetBytes(value);
+    /// <summary>
+    /// Encodes a string as a UTF-8 byte array.
+    /// </summary>
+    /// <param name="value">The string to encode.</param>
+    /// <returns>A byte array containing the UTF-8 encoded string.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
+    public static byte[] AsBytes(this string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        return System.Text.Encoding.UTF8.GetBytes(value);
+    }
 }
