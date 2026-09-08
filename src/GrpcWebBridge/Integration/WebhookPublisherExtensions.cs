@@ -17,6 +17,9 @@ public static class WebhookPublisherExtensions
 {
     private const int DefaultTimeoutMilliseconds = 30000;
     private const int DefaultMaxRetries = 3;
+    private const int DefaultCount = 0;
+    private const double DefaultFailureRate = 0.0;
+
     /// <summary>
     /// Subscribes to specific event types with a callback for matching events.
     /// </summary>
@@ -168,21 +171,21 @@ public static class WebhookPublisherExtensions
 
             return new WebhookStatistics
             {
-                TotalSubscriptions = totalSubscriptionsProp?.GetValue(stats) is int ts ? ts : 0,
-                ActiveSubscriptions = activeSubscriptionsProp?.GetValue(stats) is int asub ? asub : 0,
-                TotalEventsSent = totalEventsSentProp?.GetValue(stats) is long tes ? tes : 0,
-                TotalEventsFailed = totalEventsFailedProp?.GetValue(stats) is long tef ? tef : 0,
-                AverageFailureRate = averageFailureRateProp?.GetValue(stats) is double afr ? afr : 0.0
+                TotalSubscriptions = totalSubscriptionsProp?.GetValue(stats) is int ts ? ts : DefaultCount,
+                ActiveSubscriptions = activeSubscriptionsProp?.GetValue(stats) is int asub ? asub : DefaultCount,
+                TotalEventsSent = totalEventsSentProp?.GetValue(stats) is long tes ? tes : DefaultCount,
+                TotalEventsFailed = totalEventsFailedProp?.GetValue(stats) is long tef ? tef : DefaultCount,
+                AverageFailureRate = averageFailureRateProp?.GetValue(stats) is double afr ? afr : DefaultFailureRate
             };
         }
 
         return new WebhookStatistics
         {
-            TotalSubscriptions = 0,
-            ActiveSubscriptions = 0,
-            TotalEventsSent = 0,
-            TotalEventsFailed = 0,
-            AverageFailureRate = 0
+            TotalSubscriptions = DefaultCount,
+            ActiveSubscriptions = DefaultCount,
+            TotalEventsSent = DefaultCount,
+            TotalEventsFailed = DefaultCount,
+            AverageFailureRate = DefaultFailureRate
         };
     }
 
