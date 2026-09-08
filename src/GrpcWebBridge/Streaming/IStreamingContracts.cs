@@ -15,19 +15,29 @@ namespace GrpcWebBridge.Streaming;
 /// </summary>
 public interface IFlowControlledStream : IAsyncDisposable
 {
-    /// <summary>Gets the unique identifier of this stream.</summary>
+    /// <summary>
+    /// Gets the unique identifier of this stream.
+    /// </summary>
     string StreamId { get; }
 
-    /// <summary>Gets the gRPC method type associated with this stream.</summary>
+    /// <summary>
+    /// Gets the gRPC method type associated with this stream.
+    /// </summary>
     MethodType MethodType { get; }
 
-    /// <summary>Gets the current lifecycle state of the stream.</summary>
+    /// <summary>
+    /// Gets the current lifecycle state of the stream.
+    /// </summary>
     StreamState State { get; }
 
-    /// <summary>Gets a live snapshot of throughput and backpressure metrics.</summary>
+    /// <summary>
+    /// Gets a live snapshot of throughput and backpressure metrics.
+    /// </summary>
     StreamThroughputMetrics Metrics { get; }
 
-    /// <summary>Gets the backpressure controller governing outbound flow for this stream.</summary>
+    /// <summary>
+    /// Gets the backpressure controller governing outbound flow for this stream.
+    /// </summary>
     IBackpressureController BackpressureController { get; }
 
     /// <summary>
@@ -67,16 +77,24 @@ public interface IFlowControlledStream : IAsyncDisposable
 /// </summary>
 public interface IBackpressureController
 {
-    /// <summary>Gets the identifier of the stream this controller is bound to.</summary>
+    /// <summary>
+    /// Gets the identifier of the stream this controller is bound to.
+    /// </summary>
     string StreamId { get; }
 
-    /// <summary>Gets the number of credits currently available to the producer.</summary>
+    /// <summary>
+    /// Gets the number of credits currently available to the producer.
+    /// </summary>
     int AvailableCredits { get; }
 
-    /// <summary>Gets the current window utilisation as a fraction between 0 and 1.</summary>
+    /// <summary>
+    /// Gets the current window utilisation as a fraction between 0 and 1.
+    /// </summary>
     double WindowUtilization { get; }
 
-    /// <summary>Gets whether backpressure is currently active on this stream.</summary>
+    /// <summary>
+    /// Gets a value indicating whether backpressure is currently active on this stream.
+    /// </summary>
     bool IsThrottled { get; }
 
     /// <summary>
@@ -98,7 +116,9 @@ public interface IBackpressureController
     /// </summary>
     void ReleaseCredit(int count = 1);
 
-    /// <summary>Resets the credit window to its initial configured size.</summary>
+    /// <summary>
+    /// Resets the credit window to its initial configured size.
+    /// </summary>
     void ResetWindow();
 }
 
@@ -108,7 +128,9 @@ public interface IBackpressureController
 /// </summary>
 public interface IBidirectionalStreamingEngine
 {
-    /// <summary>Gets the total number of currently open bidirectional streams.</summary>
+    /// <summary>
+    /// Gets the total number of currently open bidirectional streams.
+    /// </summary>
     int ActiveStreamCount { get; }
 
     /// <summary>
