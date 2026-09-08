@@ -90,8 +90,7 @@ public static class RequestContextManagerJsonExtensions
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static string ToJson(this RequestContextManager value, bool indented = false)
     {
-        if (value is null)
-            return "{}";
+        ArgumentNullException.ThrowIfNull(value);
 
         var context = value.GetContext();
         if (context is null)
@@ -111,10 +110,7 @@ public static class RequestContextManagerJsonExtensions
     /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized.</exception>
     public static RequestContext? FromJson(string json)
     {
-        if (json is null)
-        {
-            return null;
-        }
+        ArgumentNullException.ThrowIfNull(json);
 
         if (string.IsNullOrWhiteSpace(json))
         {
