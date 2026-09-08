@@ -80,8 +80,11 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
     }
 
     /// <inheritdoc/>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="streamId"/> is <c>null</c>.
+    /// </exception>
     /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="streamId"/> is <c>null</c> or whitespace.
+    /// Thrown when <paramref name="streamId"/> is empty or whitespace.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the global stream ceiling is reached or the stream ID is already registered.
@@ -92,6 +95,7 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed == 1, this);
+        ArgumentNullException.ThrowIfNull(streamId);
 
         if (string.IsNullOrWhiteSpace(streamId))
             throw new ArgumentException("Stream ID must be a non-empty string.", nameof(streamId));
@@ -168,11 +172,16 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
         _streams.TryGetValue(streamId, out var entry) ? entry.Stream : null;
 
     /// <inheritdoc/>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="streamId"/> is <c>null</c> or empty.
+    /// </exception>
     public async Task CloseStreamAsync(
         string streamId,
         GrpcStatusCode? finalStatus = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(streamId);
+
         if (!_streams.TryRemove(streamId, out var entry))
         {
             _logger.LogDebug(
