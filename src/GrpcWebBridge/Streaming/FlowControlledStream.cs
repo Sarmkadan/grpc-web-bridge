@@ -73,6 +73,7 @@ internal sealed class FlowControlledStream : IFlowControlledStream
     /// <inheritdoc/>
     public async ValueTask WriteAsync(StreamMessage message, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
         ObjectDisposedException.ThrowIf(_disposed == 1, this);
         EnsureWritable();
 
