@@ -7,6 +7,10 @@ namespace GrpcWebBridge.Integration
     /// <summary>
     /// Extension methods for <see cref="HttpClientFactory"/>.
     /// </summary>
+    /// <remarks>
+    /// Use these methods to create clients from an <see cref="HttpClientFactory"/> with a configured
+    /// base address or to send GET requests with a specified timeout.
+    /// </remarks>
     public static class HttpClientFactoryExtensions
     {
         /// <summary>
