@@ -20,6 +20,10 @@ namespace GrpcWebBridge.Controllers;
 [Produces("application/json")]
 public sealed class MetricsController : ControllerBase
 {
+    private const int MaximumStreamCount = 10000;
+    private const double BytesPerMegabyte = 1024.0 * 1024.0;
+    private const int MaximumDisplayedStreamCount = 100;
+
     private readonly StreamingService _streamingService;
     private readonly ServiceRegistry _serviceRegistry;
     private readonly ILogger<MetricsController> _logger;
@@ -29,6 +33,12 @@ public sealed class MetricsController : ControllerBase
     private static Dictionary<string, long> _methodErrorCounts = new();
     private static DateTime _startTime = DateTime.UtcNow;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsController"/> class.
+    /// </summary>
+    /// <param name="streamingService">The service that manages active streams.</param>
+    /// <param name="serviceRegistry">The registry containing available gRPC services.</param>
+    /// <param name="logger">The logger used to record metrics-related events.</param>
     public MetricsController(
         StreamingService streamingService,
         ServiceRegistry serviceRegistry,
@@ -80,8 +90,8 @@ public sealed class MetricsController : ControllerBase
                 streamMetrics = new
                 {
                     activeStreams = _streamingService.ActiveStreamCount,
-                    maxStreams = 10000,
-                    streamUtilization = Math.Round((_streamingService.ActiveStreamCount / 10000.0) * 100, 2)
+                    maxStreams = MaximumStreamCount,
+                    streamUtilization = Math.Round((_streamingService.ActiveStreamCount / (double)MaximumStreamCount) * 100, 2)
                 },
                 serviceMetrics = new
                 {
@@ -91,7 +101,7 @@ public sealed class MetricsController : ControllerBase
                 },
                 resourceMetrics = new
                 {
-                    memoryUsageMb = Math.Round(GC.GetTotalMemory(false) / (1024.0 * 1024.0), 2),
+                    memoryUsageMb = Math.Round(GC.GetTotalMemory(false) / BytesPerMegabyte, 2),
                     processorCount = Environment.ProcessorCount,
                     workingSetMb = GetWorkingSetMb()
                 }
@@ -159,7 +169,7 @@ public sealed class MetricsController : ControllerBase
             var streamIds = _streamingService.GetAllStreamIds();
             var streamStats = new List<object>();
 
-            foreach (var streamId in streamIds.Take(100)) // Limit to 100 streams for response size
+            foreach (var streamId in streamIds.Take(MaximumDisplayedStreamCount)) // Limit streams for response size
             {
                 var stats = _streamingService.GetStreamStatistics(streamId);
                 streamStats.Add(stats);
@@ -248,7 +258,7 @@ public sealed class MetricsController : ControllerBase
     {
         using (var process = Process.GetCurrentProcess())
         {
-            return Math.Round(process.WorkingSet64 / (1024.0 * 1024.0), 2);
+            return Math.Round(process.WorkingSet64 / BytesPerMegabyte, 2);
         }
     }
 }
