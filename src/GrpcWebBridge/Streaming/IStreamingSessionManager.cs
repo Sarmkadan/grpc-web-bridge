@@ -33,7 +33,9 @@ namespace GrpcWebBridge.Streaming;
 /// </summary>
 public interface IStreamingSessionManager
 {
-    /// <summary>Total number of sessions currently active.</summary>
+    /// <summary>
+    /// Total number of sessions currently active.
+    /// </summary>
     int ActiveSessionCount { get; }
 
     /// <summary>
