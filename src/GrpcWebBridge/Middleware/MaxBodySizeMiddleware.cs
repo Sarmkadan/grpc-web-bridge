@@ -14,10 +14,15 @@ namespace GrpcWebBridge.Middleware;
 public sealed class MaxBodySizeOptions
 {
     /// <summary>
+    /// Default maximum allowed request body size in bytes (4 MiB).
+    /// </summary>
+    public const long DefaultMaxRequestBodySizeBytes = 4 * 1024 * 1024;
+
+    /// <summary>
     /// Maximum allowed request body size in bytes.
     /// Default is 4 MiB.
     /// </summary>
-    public long MaxRequestBodySizeBytes { get; set; } = 4 * 1024 * 1024;
+    public long MaxRequestBodySizeBytes { get; set; } = DefaultMaxRequestBodySizeBytes;
 }
 
 /// <summary>
