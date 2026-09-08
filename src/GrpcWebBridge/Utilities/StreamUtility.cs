@@ -16,13 +16,17 @@ namespace GrpcWebBridge.Utilities;
 /// </summary>
 public static class StreamUtility
 {
+    public const int DefaultBufferSize = 81920;
+    public const int DefaultMaxReadSizeBytes = 10 * 1024 * 1024;
+    public const int DefaultRetryDelayMs = 100;
+
     /// <summary>
     /// Copies stream data with chunking for large transfers.
     /// </summary>
     public static async Task CopyStreamChunkedAsync(
         Stream source,
         Stream destination,
-        int chunkSize = 81920)
+        int chunkSize = DefaultBufferSize)
     {
         if (source is null)
             throw new ArgumentNullException(nameof(source));
@@ -52,7 +56,7 @@ public static class StreamUtility
     /// Reads an entire stream into a byte array.
     /// Allocates memory as needed, respecting max size limits.
     /// </summary>
-    public static async Task<byte[]> ReadStreamToEndAsync(Stream stream, int maxSizeBytes = 10 * 1024 * 1024)
+    public static async Task<byte[]> ReadStreamToEndAsync(Stream stream, int maxSizeBytes = DefaultMaxReadSizeBytes)
     {
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
@@ -102,7 +106,7 @@ public static class StreamUtility
     /// Creates a pipe reader from a stream.
     /// Enables high-performance streaming with pipelines.
     /// </summary>
-    public static PipeReader CreatePipeReader(Stream stream, int bufferSize = 81920)
+    public static PipeReader CreatePipeReader(Stream stream, int bufferSize = DefaultBufferSize)
     {
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
@@ -113,7 +117,7 @@ public static class StreamUtility
     /// <summary>
     /// Creates a pipe writer from a stream.
     /// </summary>
-    public static PipeWriter CreatePipeWriter(Stream stream, int bufferSize = 81920)
+    public static PipeWriter CreatePipeWriter(Stream stream, int bufferSize = DefaultBufferSize)
     {
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
@@ -163,7 +167,7 @@ public static class StreamUtility
         Stream stream,
         byte[] data,
         int maxRetries = 3,
-        int delayMs = 100)
+        int delayMs = DefaultRetryDelayMs)
     {
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
