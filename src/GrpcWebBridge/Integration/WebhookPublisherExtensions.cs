@@ -15,6 +15,8 @@ namespace GrpcWebBridge.Integration;
 /// </summary>
 public static class WebhookPublisherExtensions
 {
+    private const int DefaultTimeoutMilliseconds = 30000;
+    private const int DefaultMaxRetries = 3;
     /// <summary>
     /// Subscribes to specific event types with a callback for matching events.
     /// </summary>
@@ -78,7 +80,7 @@ public static class WebhookPublisherExtensions
     public static async Task PublishEventAsync(
         this WebhookPublisher publisher,
         EventBase @event,
-        int timeoutMilliseconds = 30000)
+        int timeoutMilliseconds = DefaultTimeoutMilliseconds)
     {
         ArgumentNullException.ThrowIfNull(publisher);
         ArgumentNullException.ThrowIfNull(@event);
@@ -110,7 +112,7 @@ public static class WebhookPublisherExtensions
                         Payload = @event,
                         SubscriptionId = string.Empty, // Will be set by the publisher
                         RetryCount = 0,
-                        MaxRetries = 3 // Default value from WebhookPublisherOptions
+                        MaxRetries = DefaultMaxRetries // Default value from WebhookPublisherOptions
                     };
 
                     await eventQueue.Writer.WriteAsync(webhookEvent).ConfigureAwait(false);
@@ -217,10 +219,29 @@ public static class WebhookPublisherExtensions
     /// </summary>
     public sealed class WebhookStatistics
     {
+        /// <summary>
+        /// Total number of subscriptions registered.
+        /// </summary>
         public int TotalSubscriptions { get; set; }
+
+        /// <summary>
+        /// Number of currently active subscriptions.
+        /// </summary>
         public int ActiveSubscriptions { get; set; }
+
+        /// <summary>
+        /// Total number of events successfully sent.
+        /// </summary>
         public long TotalEventsSent { get; set; }
+
+        /// <summary>
+        /// Total number of events that failed to send.
+        /// </summary>
         public long TotalEventsFailed { get; set; }
+
+        /// <summary>
+        /// Average failure rate as a percentage (0-100).
+        /// </summary>
         public double AverageFailureRate { get; set; }
 
         public override string ToString() =>
