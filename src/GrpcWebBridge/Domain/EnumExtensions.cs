@@ -18,10 +18,11 @@ namespace GrpcWebBridge.Domain
         /// the enum member name is returned.
         /// </summary>
         /// <param name="value">The enum value.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
         /// <returns>A user‑friendly string representation.</returns>
         public static string ToDisplayString(this Enum value)
         {
-            if (value == null) throw new ArgumentNullException(nameof(value));
+            ArgumentNullException.ThrowIfNull(value);
 
             Type enumType = value.GetType();
             string memberName = value.ToString();
