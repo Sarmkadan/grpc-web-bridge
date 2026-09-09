@@ -4,6 +4,9 @@ using System.Globalization;
 
 namespace GrpcWebBridge.Domain.Exceptions;
 
+/// <summary>
+/// Provides validation methods for <see cref="ProtocolException"/> instances.
+/// </summary>
 public static class ProtocolExceptionValidation
 {
 	/// <summary>
