@@ -100,6 +100,7 @@ public static class DateTimeUtility
     /// <summary>
     /// Converts DateTime to specified timezone.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="timeZoneId"/> is null or empty.</exception>
     public static DateTime ConvertToTimeZone(DateTime dateTime, string timeZoneId)
     {
         ArgumentException.ThrowIfNullOrEmpty(timeZoneId);
@@ -230,8 +231,10 @@ public static class DateTimeUtility
     /// <summary>
     /// Formats DateTime with a specified pattern.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="format"/> is null or empty.</exception>
     public static string Format(DateTime dateTime, string format = "G")
     {
+        ArgumentException.ThrowIfNullOrEmpty(format);
         return dateTime.ToString(format, CultureInfo.InvariantCulture);
     }
 
