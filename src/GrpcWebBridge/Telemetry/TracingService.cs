@@ -44,6 +44,10 @@ public sealed class TracingService
     /// <param name="isStreaming">
     ///   <see langword="true"/> if this is a streaming call; <see langword="false"/> for unary.
     /// </param>
+    /// <exception cref="ArgumentException">
+    ///   Thrown when <paramref name="serviceName"/> or <paramref name="methodName"/> is
+    ///   <see langword="null"/> or empty.
+    /// </exception>
     /// <returns>
     ///   An <see cref="Activity"/> scope. The caller is responsible for disposing it.
     ///   May be <see langword="null"/> when no tracing listener is registered — callers should
@@ -51,6 +55,9 @@ public sealed class TracingService
     /// </returns>
     public Activity? StartGrpcCallActivity(string serviceName, string methodName, bool isStreaming = false)
     {
+        ArgumentException.ThrowIfNullOrEmpty(serviceName);
+        ArgumentException.ThrowIfNullOrEmpty(methodName);
+
         _logger.LogInformation("Starting gRPC call activity for {Service}/{Method} (Streaming: {IsStreaming})", serviceName, methodName, isStreaming);
         var activityName = isStreaming ? BridgeActivitySource.GrpcStream : BridgeActivitySource.GrpcCall;
         var activity = BridgeActivitySource.Source.StartActivity(activityName, ActivityKind.Client);
@@ -79,8 +86,15 @@ public sealed class TracingService
     /// </summary>
     /// <param name="sourceProtocol">Protocol being translated from (e.g. "grpc-web").</param>
     /// <param name="targetProtocol">Protocol being translated to (e.g. "grpc").</param>
+    /// <exception cref="ArgumentException">
+    ///   Thrown when <paramref name="sourceProtocol"/> or <paramref name="targetProtocol"/> is
+    ///   <see langword="null"/> or empty.
+    /// </exception>
     public Activity? StartProtocolTranslationActivity(string sourceProtocol, string targetProtocol)
     {
+        ArgumentException.ThrowIfNullOrEmpty(sourceProtocol);
+        ArgumentException.ThrowIfNullOrEmpty(targetProtocol);
+
         var activity = BridgeActivitySource.Source.StartActivity(
             BridgeActivitySource.ProtocolTranslation, ActivityKind.Internal);
 
@@ -99,8 +113,13 @@ public sealed class TracingService
     /// Starts a span representing an authentication check.
     /// </summary>
     /// <param name="scheme">Authentication scheme (e.g. "Bearer", "ApiKey").</param>
+    /// <exception cref="ArgumentException">
+    ///   Thrown when <paramref name="scheme"/> is <see langword="null"/> or empty.
+    /// </exception>
     public Activity? StartAuthenticationActivity(string scheme)
     {
+        ArgumentException.ThrowIfNullOrEmpty(scheme);
+
         var activity = BridgeActivitySource.Source.StartActivity(
             BridgeActivitySource.Authentication, ActivityKind.Internal);
 
@@ -122,8 +141,13 @@ public sealed class TracingService
     /// <param name="grpcStatus">
     ///   Optional gRPC status string (e.g. "UNAVAILABLE") added as a tag.
     /// </param>
+    /// <exception cref="ArgumentNullException">
+    ///   Thrown when <paramref name="exception"/> is <see langword="null"/>.
+    /// </exception>
     public static void RecordException(Activity? activity, Exception exception, string? grpcStatus = null)
     {
+        ArgumentNullException.ThrowIfNull(exception);
+
         if (activity is null)
             return;
 
@@ -139,8 +163,13 @@ public sealed class TracingService
     /// </summary>
     /// <param name="activity">The activity to annotate. Ignored when <see langword="null"/>.</param>
     /// <param name="grpcStatus">gRPC status string, e.g. "OK" or "NOT_FOUND".</param>
+    /// <exception cref="ArgumentException">
+    ///   Thrown when <paramref name="grpcStatus"/> is <see langword="null"/> or empty.
+    /// </exception>
     public static void SetGrpcStatus(Activity? activity, string grpcStatus)
     {
+        ArgumentException.ThrowIfNullOrEmpty(grpcStatus);
+
         if (activity is null)
             return;
 
