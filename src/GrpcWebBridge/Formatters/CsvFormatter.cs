@@ -17,6 +17,10 @@ public sealed class CsvFormatter
 {
     private readonly CsvFormatterOptions _options;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CsvFormatter"/> class.
+    /// </summary>
+    /// <param name="options">The formatter options to use, or <c>null</c> to use defaults.</param>
     public CsvFormatter(CsvFormatterOptions? options = null)
     {
         _options = options ?? new CsvFormatterOptions();
@@ -303,8 +307,23 @@ public sealed class CsvFormatter
 /// </summary>
 public sealed class CsvFormatterOptions
 {
+    /// <summary>
+    /// Gets or sets the delimiter character used to separate fields. Default is ','.
+    /// </summary>
     public string Delimiter { get; set; } = ",";
+
+    /// <summary>
+    /// Gets or sets the encoding used for CSV file operations. Default is UTF8.
+    /// </summary>
     public Encoding Encoding { get; set; } = Encoding.UTF8;
+
+    /// <summary>
+    /// Gets or sets whether to include column headers in the CSV output. Default is true.
+    /// </summary>
     public bool IncludeHeaders { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether to trim whitespace from field values. Default is false.
+    /// </summary>
     public bool TrimWhitespace { get; set; } = false;
 }
