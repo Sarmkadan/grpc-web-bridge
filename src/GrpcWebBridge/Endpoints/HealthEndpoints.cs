@@ -31,7 +31,14 @@ public static class HealthEndpoints
 
     private sealed class CachedHealthResult
     {
+        /// <summary>
+        /// Gets or sets the cached detailed health response.
+        /// </summary>
         public DetailedHealthResponse? Response { get; set; }
+
+        /// <summary>
+        /// Gets or sets the date and time when the response was cached.
+        /// </summary>
         public DateTime CachedAt { get; set; }
     }
 
