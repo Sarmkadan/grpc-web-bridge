@@ -11,6 +11,9 @@ namespace GrpcWebBridge.Domain;
 /// </summary>
 public static class Constants
 {
+    /// <summary>
+    /// Constants related to gRPC protocol and communication.
+    /// </summary>
     public static class Grpc
     {
         public const string ProtocolVersion = "1.0";
