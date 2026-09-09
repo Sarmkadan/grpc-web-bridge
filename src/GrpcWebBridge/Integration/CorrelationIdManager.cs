@@ -223,18 +223,59 @@ public sealed class CorrelationIdManager
 /// </summary>
 public sealed class CorrelationTrace
 {
+    /// <summary>
+    /// Gets or sets the unique identifier for this trace.
+    /// </summary>
     public string TraceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the correlation identifier associated with this trace.
+    /// </summary>
     public string CorrelationId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the name of the traced operation.
+    /// </summary>
     public string OperationName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the identifier of the parent trace, if any.
+    /// </summary>
     public string? ParentTraceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time when the operation started.
+    /// </summary>
     public DateTime StartTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time when the operation ended, if completed.
+    /// </summary>
     public DateTime? EndTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the operation succeeded.
+    /// </summary>
     public bool Success { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the error message associated with a failed operation, if any.
+    /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the metadata associated with this trace.
+    /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new();
 
     public TimeSpan? GetDuration() =>
         EndTime.HasValue ? EndTime.Value - StartTime : null;
+
+    /// <summary>
+    /// Returns a string representation of the correlation trace.
+    /// </summary>
+    /// <returns>A string containing the trace details.</returns>
+    public override string ToString() => $"CorrelationTrace {{ TraceId = {TraceId}, CorrelationId = {CorrelationId}, OperationName = {OperationName}, ParentTraceId = {ParentTraceId}, Success = {Success}, Duration = {GetDuration()} }}";
 }
 
 /// <summary>
