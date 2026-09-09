@@ -25,6 +25,13 @@ public sealed class HealthCheckWorker : BackgroundService
     private int _healthyServicesCount = 0;
     private int _unhealthyServicesCount = 0;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HealthCheckWorker"/> class.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="serviceRegistry">The service registry instance.</param>
+    /// <param name="eventBus">The event bus instance.</param>
+    /// <param name="options">The health check options. If null, default options are used.</param>
     public HealthCheckWorker(
         ILogger<HealthCheckWorker> logger,
         ServiceRegistry serviceRegistry,
@@ -253,8 +260,17 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 /// </summary>
 public sealed class HealthCheckOptions
 {
+    /// <summary>
+    /// The interval in seconds between health check cycles. Default is 30 seconds.
+    /// </summary>
     public int CheckIntervalSeconds { get; set; } = 30;
+    /// <summary>
+    /// The timeout in milliseconds for each health check request. Default is 5000 milliseconds (5 seconds).
+    /// </summary>
     public int CheckTimeoutMs { get; set; } = 5000;
+    /// <summary>
+    /// The initial delay in seconds before the first health check run. Default is 10 seconds.
+    /// </summary>
     public int InitialDelaySeconds { get; set; } = 10;
 }
 
@@ -263,8 +279,20 @@ public sealed class HealthCheckOptions
 /// </summary>
 public class ServiceHealthChangedEvent : EventBase
 {
+    /// <summary>
+    /// The unique identifier of the service. Defaults to an empty string.
+    /// </summary>
     public string ServiceId { get; set; } = string.Empty;
+    /// <summary>
+    /// The name of the service. Defaults to an empty string.
+    /// </summary>
     public string ServiceName { get; set; } = string.Empty;
+    /// <summary>
+    /// Indicates whether the service is healthy.
+    /// </summary>
     public bool IsHealthy { get; set; }
+    /// <summary>
+    /// The timestamp when the health status was recorded. Defaults to DateTime.MinValue but is set to current UTC time when the event is published.
+    /// </summary>
     public DateTime Timestamp { get; set; }
 }
