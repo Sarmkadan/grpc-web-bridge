@@ -17,6 +17,7 @@ public static class ReflectionUtility
     /// <summary>
     /// Gets all public methods of a type with optional filtering.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
     public static List<MethodInfo> GetPublicMethods(
         Type type,
         Func<MethodInfo, bool>? filter = null)
@@ -35,6 +36,7 @@ public static class ReflectionUtility
     /// <summary>
     /// Gets all public properties of a type.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
     public static List<PropertyInfo> GetPublicProperties(Type type)
     {
         if (type is null)
@@ -46,10 +48,11 @@ public static class ReflectionUtility
     /// <summary>
     /// Checks if a type implements a specific interface.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> or <paramref name="interfaceType"/> is <see langword="null"/>.</exception>
     public static bool ImplementsInterface(Type type, Type interfaceType)
     {
-        if (type is null || interfaceType is null)
-            return false;
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(interfaceType);
 
         return interfaceType.IsAssignableFrom(type);
     }
@@ -57,10 +60,10 @@ public static class ReflectionUtility
     /// <summary>
     /// Gets the generic type arguments of a type.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
     public static List<Type> GetGenericArguments(Type type)
     {
-        if (type is null)
-            return new List<Type>();
+        ArgumentNullException.ThrowIfNull(type);
 
         return type.GetGenericArguments().ToList();
     }
@@ -68,6 +71,9 @@ public static class ReflectionUtility
     /// <summary>
     /// Invokes a method on an instance with specified parameters.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="instance"/> or <paramref name="methodName"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="methodName"/> is empty.</exception>
+    /// <exception cref="MethodAccessException">The specified method could not be found.</exception>
     public static object? InvokeMethod(
         object instance,
         string methodName,
@@ -75,6 +81,8 @@ public static class ReflectionUtility
     {
         if (instance is null)
             throw new ArgumentNullException(nameof(instance));
+
+        ArgumentNullException.ThrowIfNull(methodName);
 
         if (string.IsNullOrEmpty(methodName))
             throw new ArgumentException("Method name cannot be null or empty", nameof(methodName));
@@ -91,10 +99,14 @@ public static class ReflectionUtility
     /// <summary>
     /// Gets a property value from an instance.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="instance"/> or <paramref name="propertyName"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="propertyName"/> is empty.</exception>
     public static object? GetPropertyValue(object instance, string propertyName)
     {
         if (instance is null)
             throw new ArgumentNullException(nameof(instance));
+
+        ArgumentNullException.ThrowIfNull(propertyName);
 
         if (string.IsNullOrEmpty(propertyName))
             throw new ArgumentException("Property name cannot be null or empty", nameof(propertyName));
@@ -111,10 +123,15 @@ public static class ReflectionUtility
     /// <summary>
     /// Sets a property value on an instance.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="instance"/> or <paramref name="propertyName"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="propertyName"/> is empty.</exception>
+    /// <exception cref="PropertyAccessException">The property does not exist or is read-only.</exception>
     public static void SetPropertyValue(object instance, string propertyName, object? value)
     {
         if (instance is null)
             throw new ArgumentNullException(nameof(instance));
+
+        ArgumentNullException.ThrowIfNull(propertyName);
 
         if (string.IsNullOrEmpty(propertyName))
             throw new ArgumentException("Property name cannot be null or empty", nameof(propertyName));
@@ -134,12 +151,12 @@ public static class ReflectionUtility
     /// <summary>
     /// Converts an object to a dictionary of its public properties.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="instance"/> is <see langword="null"/>.</exception>
     public static Dictionary<string, object?> ObjectToDictionary(object instance)
     {
-        var dictionary = new Dictionary<string, object?>();
+        ArgumentNullException.ThrowIfNull(instance);
 
-        if (instance is null)
-            return dictionary;
+        var dictionary = new Dictionary<string, object?>();
 
         var properties = GetPublicProperties(instance.GetType());
         foreach (var prop in properties)
@@ -160,6 +177,8 @@ public static class ReflectionUtility
     /// <summary>
     /// Creates a new instance of a type with constructor parameters.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">An instance of <paramref name="type"/> could not be created.</exception>
     public static object? CreateInstance(Type type, params object?[]? constructorParams)
     {
         if (type is null)
@@ -191,10 +210,10 @@ public static class ReflectionUtility
     /// <summary>
     /// Checks if a type is a primitive type or common value type.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
     public static bool IsPrimitiveOrValueType(Type type)
     {
-        if (type is null)
-            return false;
+        ArgumentNullException.ThrowIfNull(type);
 
         return type.IsPrimitive ||
                type == typeof(string) ||
@@ -207,8 +226,11 @@ public static class ReflectionUtility
     /// <summary>
     /// Gets the base type hierarchy of a type.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
     public static List<Type> GetTypeHierarchy(Type type)
     {
+        ArgumentNullException.ThrowIfNull(type);
+
         var hierarchy = new List<Type> { type };
 
         var current = type.BaseType;
@@ -224,8 +246,11 @@ public static class ReflectionUtility
     /// <summary>
     /// Finds a type by name in loaded assemblies.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is <see langword="null"/>.</exception>
     public static Type? FindType(string typeName)
     {
+        ArgumentNullException.ThrowIfNull(typeName);
+
         if (string.IsNullOrEmpty(typeName))
             return null;
 
@@ -248,10 +273,10 @@ public static class ReflectionUtility
     /// <summary>
     /// Gets assembly version information.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
     public static string? GetAssemblyVersion(Type type)
     {
-        if (type is null)
-            return null;
+        ArgumentNullException.ThrowIfNull(type);
 
         return type.Assembly.GetName().Version?.ToString();
     }
@@ -259,10 +284,10 @@ public static class ReflectionUtility
     /// <summary>
     /// Checks if a method is async.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="method"/> is <see langword="null"/>.</exception>
     public static bool IsAsyncMethod(MethodInfo method)
     {
-        if (method is null)
-            return false;
+        ArgumentNullException.ThrowIfNull(method);
 
         return method.ReturnType == typeof(Task) ||
                (method.ReturnType.IsGenericType &&
@@ -271,9 +296,13 @@ public static class ReflectionUtility
 }
 
 /// <summary>
-/// Exception for property access errors.
+/// Represents an error that occurs while accessing a property.
 /// </summary>
 public class PropertyAccessException : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PropertyAccessException"/> class.
+    /// </summary>
+    /// <param name="message">The message that describes the error.</param>
     public PropertyAccessException(string message) : base(message) { }
 }
