@@ -236,13 +236,47 @@ public static class ServiceExtensions
 /// </summary>
 public sealed class ServiceHealthSummary
 {
+    /// <summary>
+    /// The total number of services.
+    /// </summary>
     public int TotalServices { get; set; }
+
+    /// <summary>
+    /// The number of healthy services.
+    /// </summary>
     public int HealthyServices { get; set; }
+
+    /// <summary>
+    /// The number of unhealthy services.
+    /// </summary>
     public int UnhealthyServices { get; set; }
+
+    /// <summary>
+    /// The number of active streams.
+    /// </summary>
     public int ActiveStreams { get; set; }
+
+    /// <summary>
+    /// The timestamp when the summary was created.
+    /// </summary>
     public DateTime Timestamp { get; set; }
 
+    /// <summary>
+    /// The percentage of healthy services.
+    /// </summary>
     public double HealthPercentage => TotalServices > 0 ? (double)HealthyServices / TotalServices * 100 : 0;
 
+    /// <summary>
+    /// Indicates whether all services are healthy.
+    /// </summary>
     public bool IsHealthy => UnhealthyServices == 0;
+
+    /// <summary>
+    /// Returns a string representation of the service health summary.
+    /// </summary>
+    /// <returns>A string containing TotalServices, HealthyServices, UnhealthyServices, ActiveStreams, HealthPercentage, IsHealthy, and Timestamp.</returns>
+    public override string ToString()
+    {
+        return $"ServiceHealthSummary: TotalServices={TotalServices}, HealthyServices={HealthyServices}, UnhealthyServices={UnhealthyServices}, ActiveStreams={ActiveStreams}, HealthPercentage={HealthPercentage:F2}%, IsHealthy={IsHealthy}, Timestamp={Timestamp:O}";
+    }
 }
