@@ -174,6 +174,16 @@ public sealed class FlowControlWindow
     /// </summary>
     public void Reset(int size) =>
         Interlocked.Exchange(ref _availableCredits, Math.Clamp(size, 0, MaxSize));
+
+
+    /// <summary>
+    /// Returns a string representation of the FlowControlWindow.
+    /// </summary>
+    /// <returns>A string containing the current state of the FlowControlWindow.</returns>
+    public override string ToString()
+    {
+        return $"FlowControlWindow {{ MaxSize = {MaxSize}, AvailableCredits = {AvailableCredits}, Utilization = {Utilization:F2}, TotalProduced = {TotalProduced}, TotalConsumed = {TotalConsumed} }}";
+    }
 }
 
 /// <summary>
@@ -227,6 +237,15 @@ public sealed class StreamThroughputMetrics
 
     internal void RecordCreditWait(long milliseconds) =>
         Interlocked.Add(ref _totalCreditWaitMs, milliseconds);
+
+    /// <summary>
+    /// Returns a string representation of the StreamThroughputMetrics.
+    /// </summary>
+    /// <returns>A string containing the current state of the StreamThroughputMetrics.</returns>
+    public override string ToString()
+    {
+        return $"StreamThroughputMetrics {{ MessagesIn = {MessagesIn}, MessagesOut = {MessagesOut}, BytesIn = {BytesIn}, BytesOut = {BytesOut}, BackpressureEvents = {BackpressureEvents}, TotalCreditWaitMs = {TotalCreditWaitMs} }}";
+    }
 }
 
 /// <summary>
