@@ -59,6 +59,11 @@ public sealed class RouteHeaderTransformMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<RouteHeaderTransformMiddleware> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RouteHeaderTransformMiddleware"/> class.
+    /// </summary>
+    /// <param name="next">The next middleware in the request pipeline.</param>
+    /// <param name="logger">The logger used to record header transformation failures.</param>
     public RouteHeaderTransformMiddleware(
         RequestDelegate next,
         ILogger<RouteHeaderTransformMiddleware> logger)
@@ -67,6 +72,12 @@ public sealed class RouteHeaderTransformMiddleware
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// Applies matching route header transformation hooks and invokes the next middleware.
+    /// </summary>
+    /// <param name="context">The HTTP context for the current request.</param>
+    /// <param name="hooks">The registered route header transformation hooks.</param>
+    /// <returns>A task that represents the asynchronous middleware operation.</returns>
     public async Task InvokeAsync(
         HttpContext context,
         IEnumerable<IRouteHeaderTransformHook> hooks)
@@ -206,6 +217,7 @@ internal sealed class DelegateRouteHeaderTransformHook : IRouteHeaderTransformHo
     private readonly Func<IHeaderDictionary, Dictionary<string, string>, CancellationToken, Task> _requestTransform;
     private readonly Func<IHeaderDictionary, CancellationToken, Task>? _responseTransform;
 
+    /// <inheritdoc/>
     public string? RoutePrefix { get; }
 
     internal DelegateRouteHeaderTransformHook(
@@ -218,12 +230,14 @@ internal sealed class DelegateRouteHeaderTransformHook : IRouteHeaderTransformHo
         _responseTransform = responseTransform;
     }
 
+    /// <inheritdoc/>
     public Task TransformRequestAsync(
         IHeaderDictionary requestHeaders,
         Dictionary<string, string> grpcMetadata,
         CancellationToken cancellationToken) =>
         _requestTransform(requestHeaders, grpcMetadata, cancellationToken);
 
+    /// <inheritdoc/>
     public Task TransformResponseAsync(
         IHeaderDictionary responseHeaders,
         CancellationToken cancellationToken) =>
