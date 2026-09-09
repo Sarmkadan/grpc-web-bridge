@@ -23,6 +23,11 @@ public sealed class AuthenticationService
     private readonly ILogger<AuthenticationService> _logger;
     private readonly ConcurrentDictionary<string, AuthenticationContext> _contextCache = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuthenticationService"/> class.
+    /// </summary>
+    /// <param name="logger">The logger used to record authentication activity.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is <see langword="null"/>.</exception>
     public AuthenticationService(ILogger<AuthenticationService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
