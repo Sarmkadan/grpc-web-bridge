@@ -29,12 +29,38 @@ public sealed class StreamingWorkerSupervisor : BackgroundService
     private DateTime? _lastHeartbeatTime;
     private bool _isRunning = false;
 
+    /// <summary>
+    /// Gets the number of consecutive streaming service health check failures.
+    /// </summary>
     public int ConsecutiveFailureCount => _consecutiveFailureCount;
+
+    /// <summary>
+    /// Gets the total number of streaming service restarts.
+    /// </summary>
     public int TotalRestarts => _totalRestarts;
+
+    /// <summary>
+    /// Gets a value indicating whether the supervisor is running.
+    /// </summary>
     public bool IsRunning => _isRunning;
+
+    /// <summary>
+    /// Gets the time when the streaming service was last healthy.
+    /// </summary>
     public DateTime? LastHealthyTime => _lastHealthyTime;
+
+    /// <summary>
+    /// Gets the time of the last supervisor heartbeat.
+    /// </summary>
     public DateTime? LastHeartbeatTime => _lastHeartbeatTime;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StreamingWorkerSupervisor"/> class.
+    /// </summary>
+    /// <param name="logger">The logger used to record supervisor activity.</param>
+    /// <param name="streamingService">The streaming service to monitor.</param>
+    /// <param name="eventBus">The event bus used to publish health and restart events.</param>
+    /// <param name="options">The optional supervisor configuration.</param>
     public StreamingWorkerSupervisor(
         ILogger<StreamingWorkerSupervisor> logger,
         StreamingService streamingService,
