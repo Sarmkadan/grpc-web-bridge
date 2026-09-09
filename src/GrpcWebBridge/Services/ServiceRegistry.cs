@@ -44,10 +44,10 @@ public sealed class ServiceRegistry
     /// <summary>
     /// Registers a new gRPC service
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
     public void RegisterService(GrpcService service)
     {
-        if (service is null)
-            throw new ArgumentNullException(nameof(service));
+        ArgumentNullException.ThrowIfNull(service);
 
         service.Validate();
 
@@ -160,8 +160,11 @@ public sealed class ServiceRegistry
     /// <summary>
     /// Updates service status
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fullName"/> is null or empty.</exception>
     public void UpdateServiceStatus(string fullName, ServiceStatus status)
     {
+        ArgumentException.ThrowIfNullOrEmpty(fullName);
+
         var service = GetService(fullName);
         if (service is null)
             throw new ServiceRegistrationException(fullName, "Service not found");
@@ -195,8 +198,11 @@ public sealed class ServiceRegistry
     /// <summary>
     /// Retrieves cached service metadata
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fullName"/> is null or empty.</exception>
     public ServiceMetadata? GetCachedMetadata(string fullName)
     {
+        ArgumentException.ThrowIfNullOrEmpty(fullName);
+
         lock (_metadataLock)
         {
             if (_metadata.TryGetValue(fullName, out var metadata))
@@ -214,8 +220,11 @@ public sealed class ServiceRegistry
     /// <summary>
     /// Gets service health status
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fullName"/> is null or empty.</exception>
     public ServiceHealthStatus GetHealthStatus(string fullName)
     {
+        ArgumentException.ThrowIfNullOrEmpty(fullName);
+
         var service = GetService(fullName);
         if (service is null)
             return ServiceHealthStatus.Unknown;
