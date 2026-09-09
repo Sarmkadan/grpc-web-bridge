@@ -258,6 +258,11 @@ public static class MetricsCollectionWorkerExtensions
 /// </summary>
 internal static class LinearRegressionHelper
 {
+    /// <summary>
+    /// Calculates the slope of the linear regression line for a set of data points.
+    /// </summary>
+    /// <param name="dataPoints">A list of data points where X is the independent variable and Y is the dependent variable.</param>
+    /// <returns>The slope of the linear regression line. Returns 0 if there are fewer than 2 data points.</returns>
     public static double CalculateSlope(List<(double X, double Y)> dataPoints)
     {
         if (dataPoints.Count < 2)
