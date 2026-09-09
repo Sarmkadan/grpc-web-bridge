@@ -276,9 +276,24 @@ public static class ProtobufUtility
 /// </summary>
 public sealed class MessageMetadata
 {
+    /// <summary>
+    /// Gets or sets the name of the message.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the full name of the message (including namespace).
+    /// </summary>
     public string FullName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the number of fields in the message.
+    /// </summary>
     public int FieldCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of fields in the message.
+    /// </summary>
     public List<FieldMetadata> Fields { get; set; } = new();
 }
 
@@ -287,9 +302,28 @@ public sealed class MessageMetadata
 /// </summary>
 public sealed class FieldMetadata
 {
+    /// <summary>
+    /// Gets or sets the name of the field.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the type of the field.
+    /// </summary>
     public string Type { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets whether the field is required.
+    /// </summary>
     public bool IsRequired { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the field is repeated.
+    /// </summary>
     public bool IsRepeated { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default value of the field.
+    /// </summary>
     public string? DefaultValue { get; set; }
 }
