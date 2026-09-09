@@ -269,12 +269,44 @@ public static class CacheUtility
 /// </summary>
 public sealed class CacheStatistics
 {
+    /// <summary>
+    /// Total number of keys generated.
+    /// </summary>
     public long TotalKeysGenerated { get; set; }
+
+    /// <summary>
+    /// Total number of cache hits.
+    /// </summary>
     public long TotalCacheHits { get; set; }
+
+    /// <summary>
+    /// Total number of cache misses.
+    /// </summary>
     public long TotalCacheMisses { get; set; }
+
+    /// <summary>
+    /// Cache hit rate as a percentage.
+    /// </summary>
     public double HitRate => TotalCacheHits + TotalCacheMisses > 0
         ? (TotalCacheHits / (double)(TotalCacheHits + TotalCacheMisses)) * 100
         : 0;
+
+    /// <summary>
+    /// Total memory used by the cache in bytes.
+    /// </summary>
     public long TotalMemoryUsed { get; set; }
+
+    /// <summary>
+    /// Number of keys per namespace.
+    /// </summary>
     public Dictionary<string, long> KeysByNamespace { get; set; } = new();
+
+    /// <summary>
+    /// Returns a string representation of the cache statistics.
+    /// </summary>
+    /// <returns>A string containing the cache statistics.</returns>
+    public override string ToString()
+    {
+        return $"TotalKeysGenerated: {TotalKeysGenerated}, TotalCacheHits: {TotalCacheHits}, TotalCacheMisses: {TotalCacheMisses}, HitRate: {HitRate:F2}%, TotalMemoryUsed: {TotalMemoryUsed}, Namespaces: {KeysByNamespace.Count}";
+    }
 }
