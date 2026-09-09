@@ -20,6 +20,11 @@ public sealed class StartupConfiguration
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<StartupConfiguration> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StartupConfiguration"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="logger">The logger.</param>
     public StartupConfiguration(IServiceProvider serviceProvider, ILogger<StartupConfiguration> logger)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
@@ -175,11 +180,47 @@ public sealed class StartupConfiguration
 /// </summary>
 public sealed class SystemInfo
 {
+    /// <summary>
+    /// Gets or sets the instance identifier.
+    /// </summary>
     public string? InstanceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the instance name.
+    /// </summary>
     public string? InstanceName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the environment.
+    /// </summary>
     public string? Environment { get; set; }
+
+    /// <summary>
+    /// Gets or sets the version.
+    /// </summary>
     public string? Version { get; set; }
+
+    /// <summary>
+    /// Gets or sets the start time.
+    /// </summary>
     public DateTime StartTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum stream count.
+    /// </summary>
     public int MaxStreamCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum message size.
+    /// </summary>
     public int MaxMessageSize { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the system information.
+    /// </summary>
+    /// <returns>A string containing the instance ID, instance name, environment, version, start time, max stream count, and max message size.</returns>
+    public override string ToString()
+    {
+        return $"SystemInfo {{ InstanceId = {InstanceId}, InstanceName = {InstanceName}, Environment = {Environment}, Version = {Version}, StartTime = {StartTime}, MaxStreamCount = {MaxStreamCount}, MaxMessageSize = {MaxMessageSize} }}";
+    }
 }
