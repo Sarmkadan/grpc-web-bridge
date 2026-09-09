@@ -84,13 +84,12 @@ public sealed class ReflectionService
     /// A successful <see cref="ReflectionResult{T}"/> with the descriptor when the service
     /// is found; a failure result with an explanatory message when it is not.
     /// </returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fullName"/> is null or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fullName"/> is null or empty.</exception>
     public async Task<ReflectionResult<GrpcServiceDescriptor>> GetServiceDescriptorAsync(
         string fullName,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(fullName))
-            throw new ArgumentException("Service full name cannot be empty", nameof(fullName));
+        ArgumentException.ThrowIfNullOrEmpty(fullName);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -164,18 +163,15 @@ public sealed class ReflectionService
     /// a failure result when the service or method cannot be located.
     /// </returns>
     /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="serviceFullName"/> or <paramref name="methodName"/> is null or whitespace.
+    /// Thrown when <paramref name="serviceFullName"/> or <paramref name="methodName"/> is null or empty.
     /// </exception>
     public async Task<ReflectionResult<MethodDescriptor>> GetMethodDescriptorAsync(
         string serviceFullName,
         string methodName,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(serviceFullName))
-            throw new ArgumentException("Service full name cannot be empty", nameof(serviceFullName));
-
-        if (string.IsNullOrWhiteSpace(methodName))
-            throw new ArgumentException("Method name cannot be empty", nameof(methodName));
+        ArgumentException.ThrowIfNullOrEmpty(serviceFullName);
+        ArgumentException.ThrowIfNullOrEmpty(methodName);
 
         cancellationToken.ThrowIfCancellationRequested();
 
