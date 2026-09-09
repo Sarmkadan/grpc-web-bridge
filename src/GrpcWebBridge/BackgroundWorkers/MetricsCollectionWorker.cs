@@ -219,18 +219,66 @@ public sealed class MetricsCollectionWorker : BackgroundService
 /// </summary>
 public sealed class MetricsSnapshot
 {
+    /// <summary>
+    /// The timestamp of the snapshot.
+    /// </summary>
     public DateTime Timestamp { get; set; }
+    /// <summary>
+    /// The CPU usage percentage.
+    /// </summary>
     public double CpuUsagePercent { get; set; }
+    /// <summary>
+    /// The memory usage in megabytes.
+    /// </summary>
     public double MemoryUsageMb { get; set; }
+    /// <summary>
+    /// The number of threads.
+    /// </summary>
     public int ThreadCount { get; set; }
+    /// <summary>
+    /// The garbage collection counts per generation.
+    /// </summary>
     public object? GcCollections { get; set; }
+    /// <summary>
+    /// The request metrics data.
+    /// </summary>
     public RequestMetricsData? RequestMetrics { get; set; }
 
+    /// <summary>
+    /// Returns a string representation of the snapshot.
+    /// </summary>
+    /// <returns>A string containing Timestamp, CpuUsagePercent, MemoryUsageMb, ThreadCount, and RequestMetrics.</returns>
+    public override string ToString()
+    {
+        return $"MetricsSnapshot {{ Timestamp = {Timestamp}, CpuUsagePercent = {CpuUsagePercent}, MemoryUsageMb = {MemoryUsageMb}, ThreadCount = {ThreadCount}, RequestMetrics = {RequestMetrics} }}";
+    }
+
+    /// <summary>
+    /// Request metrics data collected during the snapshot period.
+    /// </summary>
     public sealed class RequestMetricsData
     {
+        /// <summary>
+        /// Total number of requests processed.
+        /// </summary>
         public long TotalRequests { get; set; }
+        /// <summary>
+        /// Total number of requests that resulted in errors.
+        /// </summary>
         public long TotalErrors { get; set; }
+        /// <summary>
+        /// The error rate as a percentage (0-100).
+        /// </summary>
         public double ErrorRate { get; set; }
+
+        /// <summary>
+        /// Returns a string representation of the request metrics.
+        /// </summary>
+        /// <returns>A string containing TotalRequests, TotalErrors, and ErrorRate.</returns>
+        public override string ToString()
+        {
+            return $"RequestMetricsData {{ TotalRequests = {TotalRequests}, TotalErrors = {TotalErrors}, ErrorRate = {ErrorRate} }}";
+        }
     }
 }
 
@@ -239,9 +287,24 @@ public sealed class MetricsSnapshot
 /// </summary>
 public sealed class MetricsCollectionOptions
 {
+    /// <summary>
+    /// The interval in seconds between metric collections.
+    /// </summary>
     public int CollectionIntervalSeconds { get; set; } = 30;
+    /// <summary>
+    /// The maximum number of snapshots to keep in history.
+    /// </summary>
     public int MaxSnapshotsToKeep { get; set; } = Constants.ServiceRegistry.MaxCachedServices; // Using an existing constant as a default for this option
+    /// <summary>
+    /// The CPU usage percentage threshold for triggering alerts.
+    /// </summary>
     public double CpuAlertThresholdPercent { get; set; } = 80;
+    /// <summary>
+    /// The memory usage in MB threshold for triggering alerts.
+    /// </summary>
     public double MemoryAlertThresholdMb { get; set; } = 1024;
+    /// <summary>
+    /// The error rate percentage threshold for triggering alerts.
+    /// </summary>
     public double ErrorRateAlertThresholdPercent { get; set; } = 5;
 }
