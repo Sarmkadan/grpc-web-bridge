@@ -20,6 +20,11 @@ public class CacheManager : IDisposable
     private readonly ILogger<CacheManager> _logger;
     private readonly CacheManagerOptions _options;
 
+    /// <summary>
+    /// Initializes a new instance of the CacheManager class.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="options">The cache manager options.</param>
     public CacheManager(ILogger<CacheManager> logger, CacheManagerOptions? options = null)
     {
         _cache = new ConcurrentDictionary<string, CacheEntry>();
@@ -282,6 +287,9 @@ public class CacheManager : IDisposable
         return totalSize / entries.Count;
     }
 
+    /// <summary>
+    /// Releases all resources used by the CacheManager.
+    /// </summary>
     public void Dispose()
     {
         _cleanupTimer?.Dispose();
@@ -296,10 +304,29 @@ public class CacheManager : IDisposable
 /// </summary>
 public sealed class CacheEntry
 {
+    /// <summary>
+    /// The cached value.
+    /// </summary>
     public object? Value { get; set; }
+
+    /// <summary>
+    /// The date and time when the entry expires.
+    /// </summary>
     public DateTime ExpiresAt { get; set; }
+
+    /// <summary>
+    /// The date and time when the entry was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// The date and time when the entry was last accessed.
+    /// </summary>
     public DateTime? LastAccessedAt { get; set; }
+
+    /// <summary>
+    /// The number of times the entry has been accessed.
+    /// </summary>
     public long HitCount { get; set; }
 
     public override string ToString() => $"CacheEntry {{ Value = {Value}, ExpiresAt = {ExpiresAt}, CreatedAt = {CreatedAt}, LastAccessedAt = {LastAccessedAt}, HitCount = {HitCount} }}";
@@ -310,12 +337,42 @@ public sealed class CacheEntry
 /// </summary>
 public sealed class CacheStatistics
 {
+    /// <summary>
+    /// The number of entries in the cache.
+    /// </summary>
     public int EntryCount { get; set; }
+
+    /// <summary>
+    /// The total number of hits (accesses) for all entries.
+    /// </summary>
     public long TotalHits { get; set; }
+
+    /// <summary>
+    /// The average number of hits per entry.
+    /// </summary>
     public double AverageHitsPerEntry { get; set; }
+
+    /// <summary>
+    /// The oldest cache entry, or null if no entries exist.
+    /// </summary>
     public CacheEntry? OldestEntry { get; set; }
+
+    /// <summary>
+    /// The most accessed cache entry, or null if no entries exist.
+    /// </summary>
     public CacheEntry? MostAccessedEntry { get; set; }
+
+    /// <summary>
+    /// The average size of a cache entry in bytes.
+    /// </summary>
     public long AverageEntrySize { get; set; }
+
+    public override string ToString()
+{
+    string oldestEntryStr = OldestEntry != null ? "present" : "null";
+    string mostAccessedEntryStr = MostAccessedEntry != null ? "present" : "null";
+    return $"CacheStatistics {{ EntryCount = {EntryCount}, TotalHits = {TotalHits}, AverageHitsPerEntry = {AverageHitsPerEntry}, OldestEntry = {oldestEntryStr}, MostAccessedEntry = {mostAccessedEntryStr} }}";
+}
 }
 
 /// <summary>
@@ -323,7 +380,18 @@ public sealed class CacheStatistics
 /// </summary>
 public sealed class CacheManagerOptions
 {
+    /// <summary>
+    /// The default time-to-live for cache entries.
+    /// </summary>
     public TimeSpan DefaultTtl { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// The maximum number of entries allowed in the cache.
+    /// </summary>
     public int MaxEntries { get; set; } = 10000;
+
+    /// <summary>
+    /// Whether to enable statistics collection.
+    /// </summary>
     public bool EnableStatistics { get; set; } = true;
 }
