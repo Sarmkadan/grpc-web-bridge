@@ -23,6 +23,12 @@ public sealed class ServiceDiscoveryClient : IDisposable
     private Timer? _refreshTimer;
     private DateTime _lastRefreshTime;
 
+    /// <summary>
+    /// Initializes a new instance of the ServiceDiscoveryClient class.
+    /// </summary>
+    /// <param name="httpClientFactory">Factory for creating HTTP clients.</param>
+    /// <param name="logger">Logger for diagnostic information.</param>
+    /// <param name="options">Configuration options for service discovery.</param>
     public ServiceDiscoveryClient(
         HttpClientFactory httpClientFactory,
         ILogger<ServiceDiscoveryClient> logger,
@@ -237,6 +243,9 @@ public sealed class ServiceDiscoveryClient : IDisposable
         };
     }
 
+    /// <summary>
+    /// Releases all resources used by the ServiceDiscoveryClient.
+    /// </summary>
     public void Dispose()
     {
         _refreshTimer?.Dispose();
@@ -250,13 +259,37 @@ public sealed class ServiceDiscoveryClient : IDisposable
 /// </summary>
 public sealed class ServiceInstance
 {
+    /// <summary>
+    /// Unique identifier of the service instance.
+    /// </summary>
     public string Id { get; set; } = string.Empty;
+    /// <summary>
+    /// Human-readable name of the service.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+    /// <summary>
+    /// Hostname or IP address where the service is running.
+    /// </summary>
     public string Host { get; set; } = string.Empty;
+    /// <summary>
+    /// Network port on which the service is listening.
+    /// </summary>
     public int Port { get; set; }
+    /// <summary>
+    /// Current health status of the service (e.g., UP, DOWN).
+    /// </summary>
     public string Status { get; set; } = "UP";
+    /// <summary>
+    /// Additional metadata associated with the service instance.
+    /// </summary>
     public Dictionary<string, string>? Metadata { get; set; }
+    /// <summary>
+    /// Timestamp when the service was first registered.
+    /// </summary>
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
+    /// <summary>
+    /// Timestamp of the last heartbeat received from the service.
+    /// </summary>
     public DateTime? LastHeartbeat { get; set; }
 
     public override string ToString() => $"ServiceInstance {{ Id = {Id}, Name = {Name}, Host = {Host}, Port = {Port}, Status = {Status}, Metadata = {Metadata} }}";
@@ -265,11 +298,29 @@ public sealed class ServiceInstance
 /// <summary>
 /// Configuration options for service discovery.
 /// </summary>
+/// <summary>
+/// Configuration options for service discovery.
+/// </summary>
 public sealed class ServiceDiscoveryOptions
 {
+    /// <summary>
+    /// URL of the service discovery service (Consul, Eureka, etc.).
+    /// </summary>
     public string DiscoveryServiceUrl { get; set; } = "http://localhost:8500";
+    /// <summary>
+    /// Time-to-live for service registrations in seconds.
+    /// </summary>
     public int RegistrationTtlSeconds { get; set; } = 30;
+    /// <summary>
+    /// Interval for sending heartbeats in seconds.
+    /// </summary>
     public int HeartbeatIntervalSeconds { get; set; } = 10;
+    /// <summary>
+    /// Whether to enable automatic service discovery refresh.
+    /// </summary>
     public bool EnableAutoRefresh { get; set; } = true;
+    /// <summary>
+    /// Interval for refreshing service discovery in seconds.
+    /// </summary>
     public int RefreshIntervalSeconds { get; set; } = 60;
 }
