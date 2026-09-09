@@ -36,6 +36,13 @@ public sealed class GrpcServiceDescriptor
 
     /// <summary>Gets the descriptors of every method exposed by this service.</summary>
     public IReadOnlyCollection<MethodDescriptor> Methods { get; init; } = [];
+
+    /// <summary>
+    /// Returns a string that represents the service descriptor.
+    /// </summary>
+    /// <returns>A string containing the service name, package name, full name, and method count.</returns>
+    public override string ToString() =>
+        $"GrpcServiceDescriptor {{ Name = {Name}, PackageName = {PackageName}, FullName = {FullName}, MethodCount = {Methods.Count} }}";
 }
 
 /// <summary>
@@ -75,6 +82,13 @@ public sealed class MethodDescriptor
 
     /// <summary>Gets the default timeout for this method in milliseconds.</summary>
     public int TimeoutMilliseconds { get; init; }
+
+    /// <summary>
+    /// Returns a string that represents the method descriptor.
+    /// </summary>
+    /// <returns>A string containing the method name, method type, input type, and output type.</returns>
+    public override string ToString() =>
+        $"MethodDescriptor {{ Name = {Name}, MethodType = {MethodType}, InputMessageType = {InputMessageType}, OutputMessageType = {OutputMessageType} }}";
 }
 
 /// <summary>
