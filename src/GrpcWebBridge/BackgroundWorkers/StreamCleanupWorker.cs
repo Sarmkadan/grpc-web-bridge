@@ -22,7 +22,13 @@ public sealed class StreamCleanupWorker : BackgroundService
     private int _totalCleanupsRun = 0;
     private int _totalStreamsRemoved = 0;
 
-    public StreamCleanupWorker(
+    /// <summary>
+/// Initializes a new instance of the <see cref="StreamCleanupWorker"/> class.
+/// </summary>
+/// <param name="logger">The logger instance.</param>
+/// <param name="streamingService">The streaming service instance.</param>
+/// <param name="options">The stream cleanup options. If null, default options are used.</param>
+public StreamCleanupWorker(
         ILogger<StreamCleanupWorker> logger,
         StreamingService streamingService,
         StreamCleanupOptions? options = null)
@@ -162,8 +168,23 @@ public sealed class StreamCleanupWorker : BackgroundService
 /// </summary>
 public sealed class StreamCleanupOptions
 {
+    /// <summary>
+    /// Gets or sets the cleanup interval in seconds. Default value: 60.
+    /// </summary>
     public int CleanupIntervalSeconds { get; set; } = 60; // Could also be made a constant if needed, but wasn't in Constants.cs
+
+    /// <summary>
+    /// Gets or sets the idle timeout duration. Default value: 300 seconds (5 minutes).
+    /// </summary>
     public TimeSpan IdleTimeoutDuration { get; set; } = TimeSpan.FromSeconds(Constants.Streaming.StreamIdleTimeoutSeconds);
+
+    /// <summary>
+    /// Gets or sets the stale stream duration. Default value: 30 seconds.
+    /// </summary>
     public TimeSpan StaleStreamDuration { get; set; } = TimeSpan.FromSeconds(Constants.Streaming.StreamHeartbeatIntervalSeconds);
+
+    /// <summary>
+    /// Gets or sets the GC trigger threshold. Default value: 10.
+    /// </summary>
     public int GcTriggerThreshold { get; set; } = 10;
 }
