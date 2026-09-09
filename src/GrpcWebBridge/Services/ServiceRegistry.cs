@@ -266,13 +266,46 @@ public sealed class ServiceRegistry
 /// </summary>
 public sealed class ServiceMetadata
 {
+    /// <summary>
+    /// Gets or sets the service name.
+    /// </summary>
     public string? ServiceName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the fully qualified service name.
+    /// </summary>
     public string? FullName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the service endpoint.
+    /// </summary>
     public string? Endpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the service port.
+    /// </summary>
     public int Port { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of methods exposed by the service.
+    /// </summary>
     public int MethodCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date and time when the metadata was cached.
+    /// </summary>
     public DateTime CachedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date and time when the cached metadata expires.
+    /// </summary>
     public DateTime ExpiresAt { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the service metadata.
+    /// </summary>
+    /// <returns>A string containing the service metadata property values.</returns>
+    public override string ToString() => $"ServiceMetadata {{ ServiceName = {ServiceName}, FullName = {FullName}, Endpoint = {Endpoint}, Port = {Port}, MethodCount = {MethodCount}, CachedAt = {CachedAt}, ExpiresAt = {ExpiresAt} }}";
 }
 
 /// <summary>
