@@ -26,6 +26,9 @@ public sealed class WebhookPublisher : IDisposable
     private Task? _processingTask;
     private CancellationTokenSource? _cancellationTokenSource;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WebhookPublisher"/> class.
+    /// </summary>
     public WebhookPublisher(
         ILogger<WebhookPublisher> logger,
         HttpClientFactory httpClientFactory,
@@ -340,6 +343,9 @@ public sealed class WebhookPublisher : IDisposable
         return (int)delayWithJitter;
     }
 
+    /// <summary>
+    /// Releases resources used by the webhook publisher.
+    /// </summary>
     public void Dispose()
     {
         _cancellationTokenSource?.Cancel();
@@ -355,16 +361,63 @@ public sealed class WebhookPublisher : IDisposable
 /// </summary>
 public sealed class WebhookSubscription
 {
+    /// <summary>
+    /// Gets or sets the unique subscription identifier.
+    /// </summary>
     public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the webhook endpoint URL.
+    /// </summary>
     public string Url { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event types accepted by the subscription.
+    /// </summary>
     public string[] EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the HTTP headers sent with webhook requests.
+    /// </summary>
     public Dictionary<string, string>? Headers { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether failed deliveries are retried.
+    /// </summary>
     public bool RetryOnFailure { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the subscription is active.
+    /// </summary>
     public bool IsActive { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC date and time when the subscription was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC date and time of the last successful delivery.
+    /// </summary>
     public DateTime? LastSuccessfulDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of successful deliveries.
+    /// </summary>
     public long SuccessCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of failed deliveries.
+    /// </summary>
     public long FailureCount { get; set; }
+
+    /// <summary>
+    /// Returns a string that represents the webhook subscription.
+    /// </summary>
+    public override string ToString()
+    {
+        return $"Id={Id}, Url={Url}, EventTypes={EventTypes.Length}, IsActive={IsActive}, SuccessCount={SuccessCount}, FailureCount={FailureCount}";
+    }
 }
 
 /// <summary>
@@ -372,12 +425,39 @@ public sealed class WebhookSubscription
 /// </summary>
 public sealed class WebhookEvent
 {
+    /// <summary>
+    /// Gets or sets the unique event identifier.
+    /// </summary>
     public string EventId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event type.
+    /// </summary>
     public string EventType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the UTC date and time when the webhook event was created.
+    /// </summary>
     public DateTime Timestamp { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event payload.
+    /// </summary>
     public object? Payload { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the target subscription.
+    /// </summary>
     public string SubscriptionId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the current retry count.
+    /// </summary>
     public int RetryCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of retry attempts.
+    /// </summary>
     public int MaxRetries { get; set; }
 }
 
@@ -386,6 +466,13 @@ public sealed class WebhookEvent
 /// </summary>
 public sealed class WebhookPublisherOptions
 {
+    /// <summary>
+    /// Gets or sets the maximum number of webhook delivery retries.
+    /// </summary>
     public int MaxRetries { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets the failure count above which a subscription is disabled.
+    /// </summary>
     public int FailureThresholdForDisable { get; set; } = 10;
 }
