@@ -13,10 +13,21 @@ namespace GrpcWebBridge.Configuration;
 /// </summary>
 public sealed class GrpcWebBridgeOptions
 {
+    /// <summary>
+    /// Gets or sets the bridge configuration.
+    /// </summary>
     public BridgeConfiguration Configuration { get; set; } = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GrpcWebBridgeOptions"/> class.
+    /// </summary>
     public GrpcWebBridgeOptions() { }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GrpcWebBridgeOptions"/> class for the specified environment and instance.
+    /// </summary>
+    /// <param name="environment">The environment in which the bridge runs.</param>
+    /// <param name="instanceName">The optional name used to identify the bridge instance.</param>
     public GrpcWebBridgeOptions(string environment, string? instanceName = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(environment);
