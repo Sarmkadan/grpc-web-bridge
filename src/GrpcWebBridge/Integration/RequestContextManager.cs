@@ -21,6 +21,10 @@ public sealed class RequestContextManager : IDisposable
     private readonly ILogger<RequestContextManager> _logger;
     private int _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequestContextManager"/> class.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
     public RequestContextManager(ILogger<RequestContextManager> logger)
     {
         ArgumentNullException.ThrowIfNull(logger);
@@ -392,6 +396,9 @@ public sealed class RequestContextManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    /// </summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
@@ -430,15 +437,43 @@ public sealed class RequestContext
     /// </summary>
     public const int MaxTotalMetadataSize = 65536;
 
+    /// <summary>
+    /// Gets or sets the unique identifier for the request.
+    /// </summary>
     public string RequestId { get; set; } = Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Gets or sets the identifier of the user associated with the request.
+    /// </summary>
     public string? UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time at which the request started.
+    /// </summary>
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the time at which the request ended.
+    /// </summary>
     public DateTime? EndTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the metadata associated with the request.
+    /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new();
 
+    /// <summary>
+    /// Gets the elapsed time in milliseconds since the request started.
+    /// Returns -1 if the request has not ended.
+    /// </summary>
     public long ElapsedMilliseconds =>
         EndTime.HasValue ? (long)(EndTime.Value - StartTime).TotalMilliseconds : -1;
 
+    /// <summary>
+    /// Retrieves the value associated with the specified metadata key.
+    /// </summary>
+    /// <param name="key">The metadata key to look up.</param>
+    /// <returns>The metadata value if found; otherwise, null.</returns>
     public string? GetMetadata(string key) =>
         Metadata.TryGetValue(key, out var value) ? value : null;
 
@@ -455,6 +490,12 @@ public sealed class RequestContextMiddleware
     private readonly RequestContextManager _contextManager;
     private readonly ILogger<RequestContextMiddleware> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequestContextMiddleware"/> class.
+    /// </summary>
+    /// <param name="next">The next delegate in the pipeline.</param>
+    /// <param name="contextManager">The request context manager instance.</param>
+    /// <param name="logger">The logger instance.</param>
     public RequestContextMiddleware(
         RequestDelegate next,
         RequestContextManager contextManager,
@@ -465,6 +506,12 @@ public sealed class RequestContextMiddleware
         _logger = logger;
     }
 
+    /// <summary>
+    /// Invokes the middleware logic for the current HTTP context.
+    /// Creates a request context, processes the request, and cleans up the context afterwards.
+    /// </summary>
+    /// <param name="httpContext">The HTTP context for the current request.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task InvokeAsync(HttpContext httpContext)
     {
         // Generate or extract request ID
