@@ -27,6 +27,12 @@ public class ConfigurationController : ControllerBase
     private readonly ILogger<ConfigurationController> _logger;
     private static Dictionary<string, object> _runtimeConfig = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConfigurationController"/> class.
+    /// </summary>
+    /// <param name="options">The bridge configuration options.</param>
+    /// <param name="serviceRegistry">The registry of configured services.</param>
+    /// <param name="logger">The logger for configuration operations.</param>
     public ConfigurationController(
         GrpcWebBridgeOptions options,
         ServiceRegistry serviceRegistry,
@@ -223,5 +229,8 @@ public class ConfigurationController : ControllerBase
 /// </summary>
 public sealed class ConfigurationUpdateRequest
 {
+    /// <summary>
+    /// Gets or sets the configuration settings to update.
+    /// </summary>
     public Dictionary<string, object> Settings { get; set; } = new();
 }
