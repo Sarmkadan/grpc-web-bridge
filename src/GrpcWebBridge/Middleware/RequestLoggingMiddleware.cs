@@ -20,6 +20,11 @@ public sealed class RequestLoggingMiddleware
     private readonly ILogger<RequestLoggingMiddleware> _logger;
     private readonly HashSet<string> _excludedPaths;
 
+    /// <summary>
+    /// Initializes a new instance of the RequestLoggingMiddleware.
+    /// </summary>
+    /// <param name="next">The next delegate in the middleware pipeline.</param>
+    /// <param name="logger">The logger instance for logging request and response details.</param>
     public RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggingMiddleware> logger)
     {
         _next = next;
@@ -34,6 +39,11 @@ public sealed class RequestLoggingMiddleware
         };
     }
 
+    /// <summary>
+    /// Processes the HTTP request, logs request and response details, and calls the next middleware.
+    /// </summary>
+    /// <param name="context">The HTTP context containing request and response information.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
         _logger.LogInformation("InvokeAsync started for {Method} {Path}", context.Request.Method, context.Request.Path.Value);
@@ -189,6 +199,11 @@ public sealed class RequestLoggingMiddleware
 /// </summary>
 public static class RequestLoggingMiddlewareExtensions
 {
+    /// <summary>
+    /// Registers the request logging middleware in the application pipeline.
+    /// </summary>
+    /// <param name="builder">The application builder to add the middleware to.</param>
+    /// <returns>The application builder with request logging middleware registered.</returns>
     public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder builder)
     {
         return builder.UseMiddleware<RequestLoggingMiddleware>();
