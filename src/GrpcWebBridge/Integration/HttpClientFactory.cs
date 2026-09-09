@@ -68,6 +68,11 @@ public sealed class HttpClientFactory : IDisposable
     // Single shared handler used by all HttpClient instances
     private PooledHandler _sharedHandler;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpClientFactory"/> class.
+    /// </summary>
+    /// <param name="logger">The logger used to record HTTP client activity.</param>
+    /// <param name="options">The optional HTTP client factory configuration.</param>
     public HttpClientFactory(ILogger<HttpClientFactory> logger, HttpClientFactoryOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
@@ -436,10 +441,18 @@ public sealed class HttpClientFactory : IDisposable
     /// </summary>
     private sealed class PooledHandler : IDisposable
     {
+        /// <summary>
+        /// Gets the pooled HTTP message handler.
+        /// </summary>
         public SocketsHttpHandler Handler { get; }
         private readonly HttpClientFactoryOptions _options;
         private bool _disposed;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PooledHandler"/> class.
+        /// </summary>
+        /// <param name="options">The HTTP client factory configuration.</param>
+        /// <param name="handlerName">The name of the handler.</param>
         public PooledHandler(HttpClientFactoryOptions options, string handlerName)
         {
             _options = options;
@@ -467,6 +480,9 @@ public sealed class HttpClientFactory : IDisposable
             };
         }
 
+        /// <summary>
+        /// Releases the resources used by the pooled handler.
+        /// </summary>
         public void Dispose()
         {
             if (_disposed)
