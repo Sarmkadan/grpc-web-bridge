@@ -4,8 +4,28 @@ using System.Threading.Channels;
 
 namespace GrpcWebBridge.Streaming
 {
+    /// <summary>
+    /// Provides extension methods for <see cref="FlowControlOptions"/>.
+    /// </summary>
     public static class FlowControlOptionsExtensions
     {
+        /// <summary>
+        /// Validates the specified <see cref="FlowControlOptions"/> instance.
+        /// </summary>
+        /// <param name="options">The <see cref="FlowControlOptions"/> instance to validate.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when any of the following conditions are met:
+        /// <list type="bullet">
+        /// <item><description><see cref="FlowControlOptions.InitialWindowSize"/> is less than or equal to zero.</description></item>
+        /// <item><description><see cref="FlowControlOptions.MaxWindowSize"/> is less than <see cref="FlowControlOptions.InitialWindowSize"/>.</description></item>
+        /// <item><description><see cref="FlowControlOptions.InboundChannelCapacity"/> is less than or equal to zero.</description></item>
+        /// <item><description><see cref="FlowControlOptions.OutboundChannelCapacity"/> is less than or equal to zero.</description></item>
+        /// <item><description><see cref="FlowControlOptions.BackpressureThreshold"/> is less than 0.0 or greater than 1.0.</description></item>
+        /// <item><description><see cref="FlowControlOptions.CreditReplenishmentBatch"/> is less than or equal to zero.</description></item>
+        /// <item><description><see cref="FlowControlOptions.MaxProducerWaitTime"/> has a value that is less than zero.</description></item>
+        /// <item><description><see cref="FlowControlOptions.AdaptiveAdjustmentInterval"/> is less than zero.</description></item>
+        /// </list>
+        /// </exception>
         public static void Validate(this FlowControlOptions options)
         {
             if (options.InitialWindowSize <= 0) throw new ArgumentOutOfRangeException(nameof(options.InitialWindowSize), "Must be positive.");
@@ -18,6 +38,11 @@ namespace GrpcWebBridge.Streaming
             if (options.AdaptiveAdjustmentInterval < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(options.AdaptiveAdjustmentInterval), "Must be positive.");
         }
 
+        /// <summary>
+        /// Creates a copy of the specified <see cref="FlowControlOptions"/> instance.
+        /// </summary>
+        /// <param name="options">The <see cref="FlowControlOptions"/> instance to copy.</param>
+        /// <returns>A new <see cref="FlowControlOptions"/> instance with the same property values as the specified instance.</returns>
         public static FlowControlOptions Clone(this FlowControlOptions options)
         {
             return new FlowControlOptions
