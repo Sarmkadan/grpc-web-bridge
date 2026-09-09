@@ -17,7 +17,11 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
 {
     private readonly JsonFormatterOptions _options;
 
-    public JsonFormatter(JsonFormatterOptions? options = null)
+    /// <summary>
+/// Initializes a new instance of the <see cref="JsonFormatter"/> class with the specified options.
+/// </summary>
+/// <param name="options">The formatter options. If null, default options are used.</param>
+public JsonFormatter(JsonFormatterOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options ?? new JsonFormatterOptions();
@@ -25,7 +29,12 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
 
     public override string ToString() => $"JsonFormatter {{ PrettyPrint = {_options.PrettyPrint}, SortKeys = {_options.SortKeys}, MaxDepth = {_options.MaxDepth}, IncludeNullValues = {_options.IncludeNullValues} }}";
 
-    public bool Equals(JsonFormatter? other)
+    /// <summary>
+/// Determines whether the specified <see cref="JsonFormatter"/> is equal to the current instance.
+/// </summary>
+/// <param name="other">The formatter to compare with the current instance.</param>
+/// <returns>true if the specified formatter is equal to the current instance; otherwise, false.</returns>
+public bool Equals(JsonFormatter? other)
     {
         ArgumentNullException.ThrowIfNull(other);
         if (other is null) return false;
@@ -46,13 +55,25 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
         return HashCode.Combine(_options.PrettyPrint, _options.SortKeys, _options.MaxDepth, _options.IncludeNullValues);
     }
 
-    public static bool operator ==(JsonFormatter? left, JsonFormatter? right)
+    /// <summary>
+/// Determines whether two specified <see cref="JsonFormatter"/> instances are equal.
+/// </summary>
+/// <param name="left">The first formatter to compare, or null.</param>
+/// <param name="right">The second formatter to compare, or null.</param>
+/// <returns>true if the value of <paramref name="left"/> is the same as the value of <paramref name="right"/>; otherwise, false.</returns>
+public static bool operator ==(JsonFormatter? left, JsonFormatter? right)
     {
         if (left is null) return right is null;
         return left.Equals(right);
     }
 
-    public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
+    /// <summary>
+/// Determines whether two specified <see cref="JsonFormatter"/> instances are not equal.
+/// </summary>
+/// <param name="left">The first formatter to compare, or null.</param>
+/// <param name="right">The second formatter to compare, or null.</param>
+/// <returns>true if the value of <paramref name="left"/> is different from the value of <paramref name="right"/>; otherwise, false.</returns>
+public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
     {
         return !(left == right);
     }
@@ -251,6 +272,12 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
         return result;
     }
 
+    /// <summary>
+    /// Extracts property names, types, and values from an object.
+    /// Useful for generating schema documentation.
+    /// </summary>
+    /// <param name="obj">The object whose properties to describe.</param>
+    /// <returns>A dictionary mapping property names to their type and value.</returns>
     public Dictionary<string, object?> GetPropertyDescriptions(object obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -323,8 +350,27 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
 /// </summary>
 public sealed class JsonFormatterOptions
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether JSON output is indented for readability.
+    /// </summary>
+    /// <value>true to pretty-print the output; otherwise, false. The default is false.</value>
     public bool PrettyPrint { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether JSON object keys are sorted alphabetically.
+    /// </summary>
+    /// <value>true to sort keys; otherwise, false. The default is false.</value>
     public bool SortKeys { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the maximum depth to which JSON is serialized.
+    /// </summary>
+    /// <value>The maximum depth. The default is 10.</value>
     public int MaxDepth { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether null values are included in JSON output.
+    /// </summary>
+    /// <value>true to include null values; otherwise, false. The default is false.</value>
     public bool IncludeNullValues { get; set; } = false;
 }
