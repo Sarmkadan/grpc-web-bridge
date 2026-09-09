@@ -155,12 +155,20 @@ public sealed class StreamingSessionManager : IStreamingSessionManager
     /// <param name="authContextId">Optional identifier of the resolved authentication context.</param>
     /// <param name="metadata">Optional key-value metadata attached at the session level.</param>
     /// <returns>The newly created <see cref="StreamingSession"/>.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="userId"/>, <paramref name="clientOrigin"/>, or
+    /// <paramref name="authContextId"/> is <see langword="null"/> or empty.
+    /// </exception>
     public StreamingSession CreateSession(
         string? userId = null,
         string? clientOrigin = null,
         string? authContextId = null,
         Dictionary<string, string>? metadata = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        ArgumentException.ThrowIfNullOrEmpty(clientOrigin);
+        ArgumentException.ThrowIfNullOrEmpty(authContextId);
+
         var session = new StreamingSession
         {
             UserId = userId,
@@ -190,8 +198,15 @@ public sealed class StreamingSessionManager : IStreamingSessionManager
     /// <c>true</c> when the association was established successfully;
     /// <c>false</c> when the session was not found.
     /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="sessionId"/> or <paramref name="streamId"/> is
+    /// <see langword="null"/> or empty.
+    /// </exception>
     public bool AssociateStream(string sessionId, string streamId)
     {
+        ArgumentException.ThrowIfNullOrEmpty(sessionId);
+        ArgumentException.ThrowIfNullOrEmpty(streamId);
+
         if (!_sessions.TryGetValue(sessionId, out var session))
         {
             _logger.LogWarning(
@@ -215,8 +230,13 @@ public sealed class StreamingSessionManager : IStreamingSessionManager
     /// Safe to call even when the stream has no session mapping.
     /// </summary>
     /// <param name="streamId">Stream identifier to disassociate.</param>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="streamId"/> is <see langword="null"/> or empty.
+    /// </exception>
     public void DisassociateStream(string streamId)
     {
+        ArgumentException.ThrowIfNullOrEmpty(streamId);
+
         if (!_streamToSession.TryRemove(streamId, out var sessionId))
             return;
 
@@ -265,11 +285,16 @@ public sealed class StreamingSessionManager : IStreamingSessionManager
     /// <c>true</c> when the session was found and removed; <c>false</c> when the session
     /// did not exist.
     /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="sessionId"/> is <see langword="null"/> or empty.
+    /// </exception>
     public async Task<bool> CloseSessionAsync(
         string sessionId,
         GrpcStatusCode finalStatus = GrpcStatusCode.Ok,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(sessionId);
+
         if (!_sessions.TryRemove(sessionId, out var session))
         {
             _logger.LogDebug("CloseSessionAsync: session '{SessionId}' not found.", sessionId);
