@@ -252,13 +252,49 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
 /// </summary>
 public sealed class ConnectionMetrics
 {
+    /// <summary>
+    /// Gets or sets the name of the gRPC service.
+    /// </summary>
     public string? ServiceName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address of the gRPC service.
+    /// </summary>
     public string? Address { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time when the connection was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time when the connection was last used.
+    /// </summary>
     public DateTime LastUsedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the number of requests made using the connection.
+    /// </summary>
     public int RequestCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of bytes sent using the connection.
+    /// </summary>
     public long BytesSent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of bytes received using the connection.
+    /// </summary>
     public long BytesReceived { get; set; }
 
     public TimeSpan GetConnectionDuration() => DateTime.UtcNow - CreatedAt;
+
+    /// <summary>
+    /// Returns a string representation of the connection metrics.
+    /// </summary>
+    /// <returns>A compact string containing the connection metrics.</returns>
+    public override string ToString()
+    {
+        return $"ConnectionMetrics {{ ServiceName = {ServiceName}, Address = {Address}, RequestCount = {RequestCount}, BytesSent = {BytesSent}, BytesReceived = {BytesReceived}, ConnectionDuration = {GetConnectionDuration()} }}";
+    }
 }
