@@ -27,6 +27,14 @@ public sealed class BridgeController : ControllerBase
     private readonly StreamingService _streamingService;
     private readonly ILogger<BridgeController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BridgeController"/> class.
+    /// </summary>
+    /// <param name="protocolService">The protocol translation service for gRPC/HTTP conversion.</param>
+    /// <param name="serviceRegistry">The service registry for looking up gRPC services and methods.</param>
+    /// <param name="authService">The authentication service for validating requests.</param>
+    /// <param name="streamingService">The streaming service for handling streaming operations.</param>
+    /// <param name="logger">The logger for recording controller activities.</param>
     public BridgeController(
         ProtocolTranslationService protocolService,
         ServiceRegistry serviceRegistry,
@@ -327,10 +335,29 @@ public sealed class BridgeController : ControllerBase
 /// </summary>
 public sealed class BridgeRequest
 {
+    /// <summary>
+    /// Gets or sets the identifier of the target gRPC service.
+    /// </summary>
     public string ServiceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the name of the gRPC method to invoke.
+    /// </summary>
     public string MethodName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the payload to send with the gRPC request.
+    /// </summary>
     public object? Payload { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTTP headers to include in the gRPC request.
+    /// </summary>
     public Dictionary<string, string>? Headers { get; set; }
+
+    /// <summary>
+    /// Gets or sets the timeout in milliseconds for the gRPC call.
+    /// </summary>
     public int? TimeoutMs { get; set; }
 }
 
@@ -339,8 +366,19 @@ public sealed class BridgeRequest
 /// </summary>
 public sealed class StreamRequest
 {
+    /// <summary>
+    /// Gets or sets the identifier of the target gRPC service.
+    /// </summary>
     public string ServiceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the name of the gRPC method to invoke for streaming.
+    /// </summary>
     public string MethodName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the initial message to send when establishing the stream (for bidirectional streaming).
+    /// </summary>
     public object? InitialMessage { get; set; }
 }
 
@@ -349,6 +387,9 @@ public sealed class StreamRequest
 /// </summary>
 public sealed class BatchRequest
 {
+    /// <summary>
+    /// Gets or sets the list of batch operations to execute.
+    /// </summary>
     public List<BatchOperation> Operations { get; set; } = new();
 }
 
@@ -357,10 +398,29 @@ public sealed class BatchRequest
 /// </summary>
 public sealed class BatchOperation
 {
+    /// <summary>
+    /// Gets or sets the unique identifier for this batch operation.
+    /// </summary>
     public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Gets or sets the identifier of the target gRPC service.
+    /// </summary>
     public string ServiceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the name of the gRPC method to invoke.
+    /// </summary>
     public string MethodName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the payload to send with the gRPC request.
+    /// </summary>
     public object? Payload { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTTP headers to include in the gRPC request.
+    /// </summary>
     public Dictionary<string, string>? Headers { get; set; }
 }
 
@@ -373,4 +433,13 @@ public sealed class BatchOperationResult
     public bool Success { get; set; }
     public object? Data { get; set; }
     public string? Error { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the batch operation result.
+    /// </summary>
+    /// <returns>A string containing the operation ID, success status, data type, and error message if any.</returns>
+    public override string ToString()
+    {
+        return $"OperationId: {OperationId}, Success: {Success}, Data: {(Data != null ? Data.GetType().Name : "null")}, Error: {Error ?? "none"}";
+    }
 }
