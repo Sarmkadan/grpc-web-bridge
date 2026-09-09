@@ -15,6 +15,10 @@ namespace GrpcWebBridge.Controllers
         private readonly IBidirectionalStreamingEngine _engine;
         private const double DefaultBackpressureWarnThreshold = 0.10; // matches StreamDiagnosticsOptions default
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StreamDiagnosticsController"/> class.
+        /// </summary>
+        /// <param name="engine">The bidirectional streaming engine used to query stream metrics.</param>
         public StreamDiagnosticsController(IBidirectionalStreamingEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -26,6 +30,14 @@ namespace GrpcWebBridge.Controllers
         /// <remarks>
         /// The shape mirrors <see cref="StreamingDiagnosticsEvent"/> but is returned as JSON.
         /// </remarks>
+        /// <returns>
+        /// An HTTP 200 response whose body is a JSON object with the following properties:
+        /// <c>ActiveStreamCount</c>, <c>TotalMessagesIn</c>, <c>TotalMessagesOut</c>,
+        /// <c>TotalBytesIn</c>, <c>TotalBytesOut</c>, <c>TotalBackpressureEvents</c>,
+        /// <c>TotalCreditWaitMs</c>, <c>ZeroActivityStreamCount</c>, and
+        /// <c>HighBackpressureStreamCount</c>.
+        /// </returns>
+        /// <response code="200">Returns the aggregate stream diagnostics snapshot.</response>
         [HttpGet("diagnostics")]
         public IActionResult GetDiagnostics()
         {
