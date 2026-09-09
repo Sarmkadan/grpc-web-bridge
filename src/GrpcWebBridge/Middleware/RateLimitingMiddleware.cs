@@ -22,6 +22,9 @@ public sealed partial class RateLimitingMiddleware : IDisposable
     private readonly ConcurrentDictionary<string, ClientRateLimit> _clientLimits;
     private readonly Timer _cleanupTimer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RateLimitingMiddleware"/> class.
+    /// </summary>
     public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger, RateLimitingOptions options)
     {
         ArgumentNullException.ThrowIfNull(next);
@@ -37,6 +40,9 @@ public sealed partial class RateLimitingMiddleware : IDisposable
         _cleanupTimer = new Timer(CleanupOldEntries, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
     }
 
+    /// <summary>
+    /// Processes an HTTP request and applies the configured rate limits.
+    /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -103,6 +109,9 @@ public sealed partial class RateLimitingMiddleware : IDisposable
         LogRequestProcessed(_logger, context.Request.Path);
     }
 
+    /// <summary>
+    /// Releases the resources used by the middleware.
+    /// </summary>
     public void Dispose()
     {
         _cleanupTimer.Dispose();
@@ -179,6 +188,9 @@ public sealed class ClientRateLimit
     private readonly object _lockObject = new();
     private DateTime _lastRequestTime;
 
+    /// <summary>
+    /// Determines whether a request is allowed within the specified rate-limit window.
+    /// </summary>
     public bool AllowRequest(int requestsPerSecond, int windowSizeSeconds)
     {
         lock (_lockObject)
@@ -204,6 +216,9 @@ public sealed class ClientRateLimit
         }
     }
 
+    /// <summary>
+    /// Gets the number of requests recorded within the specified window.
+    /// </summary>
     public int GetRequestCount(int windowSizeSeconds)
     {
         lock (_lockObject)
@@ -220,6 +235,9 @@ public sealed class ClientRateLimit
         }
     }
 
+    /// <summary>
+    /// Determines whether the client has been inactive for longer than the specified timeout.
+    /// </summary>
     public bool IsStale(TimeSpan timeout)
     {
         lock (_lockObject)
@@ -234,12 +252,43 @@ public sealed class ClientRateLimit
 /// </summary>
 public sealed class RateLimitingOptions
 {
+    /// <summary>
+    /// Gets or sets the maximum number of requests allowed per second.
+    /// </summary>
     public int RequestsPerSecond { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets the size of the rate-limit window, in seconds.
+    /// </summary>
     public int WindowSizeSeconds { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the number of seconds clients should wait before retrying.
+    /// </summary>
     public int RetryAfterSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the global rate limit is enabled.
+    /// </summary>
     public bool EnableGlobalLimit { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the maximum number of requests allowed globally per second.
+    /// </summary>
     public int GlobalRequestsPerSecond { get; set; } = 10000;
+
+    /// <summary>
+    /// Gets or sets the request paths that are exempt from rate limiting.
+    /// </summary>
     public IReadOnlyList<string> ExemptPaths { get; set; } = new[] { "/health", "/swagger" };
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"RequestsPerSecond={RequestsPerSecond}, WindowSizeSeconds={WindowSizeSeconds}, " +
+               $"RetryAfterSeconds={RetryAfterSeconds}, EnableGlobalLimit={EnableGlobalLimit}, " +
+               $"GlobalRequestsPerSecond={GlobalRequestsPerSecond}, ExemptPathsCount={ExemptPaths.Count}";
+    }
 
     public void Validate()
     {
