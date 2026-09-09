@@ -207,17 +207,56 @@ public sealed class Stream
 {
     private readonly Queue<StreamMessage> _messageQueue = [];
 
+    /// <summary>
+    /// Gets or sets the stream identifier.
+    /// </summary>
     public string StreamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the type of gRPC method.
+    /// </summary>
     public MethodType MethodType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current state of the stream.
+    /// </summary>
     public StreamState State { get; set; } = StreamState.New;
+
+    /// <summary>
+    /// Gets or sets the number of messages processed.
+    /// </summary>
     public int MessageCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time the stream was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the time of the last activity on the stream.
+    /// </summary>
     public DateTime LastActivityTime { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the final gRPC status code of the stream.
+    /// </summary>
     public GrpcStatusCode? FinalStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the final message of the stream.
+    /// </summary>
     public string? FinalMessage { get; set; }
 
+    /// <summary>
+    /// Gets the number of messages queued for processing.
+    /// </summary>
     public int QueuedMessageCount => _messageQueue.Count;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Stream"/> class.
+    /// </summary>
+    /// <param name="streamId">Unique identifier for the stream.</param>
+    /// <param name="methodType">The type of gRPC method (e.g., ServerStreaming).</param>
     public Stream(string streamId, MethodType methodType)
     {
         StreamId = streamId;
@@ -225,6 +264,10 @@ public sealed class Stream
         State = StreamState.Active;
     }
 
+    /// <summary>
+    /// Adds a message to the stream queue.
+    /// </summary>
+    /// <param name="message">The <see cref="StreamMessage"/> to enqueue.</param>
     public void EnqueueMessage(StreamMessage message)
     {
         _messageQueue.Enqueue(message);
@@ -232,12 +275,21 @@ public sealed class Stream
         LastActivityTime = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Dequeues the next message from the stream.
+    /// </summary>
+    /// <returns>The next <see cref="StreamMessage"/> from the queue, or null if empty.</returns>
     public StreamMessage? DequeueMessage()
     {
         LastActivityTime = DateTime.UtcNow;
         return _messageQueue.Count > 0 ? _messageQueue.Dequeue() : null;
     }
 
+    /// <summary>
+    /// Closes the stream and releases resources.
+    /// </summary>
+    /// <param name="statusCode">The gRPC status code indicating completion status.</param>
+    /// <param name="message">Optional message describing the closing status.</param>
     public void Close(GrpcStatusCode? statusCode = null, string? message = null)
     {
         State = StreamState.Closed;
@@ -255,11 +307,44 @@ public sealed class Stream
 /// </summary>
 public sealed class StreamStatistics
 {
+    /// <summary>
+    /// Gets or sets the stream identifier.
+    /// </summary>
     public string? StreamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of messages processed.
+    /// </summary>
     public int MessageCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of messages queued.
+    /// </summary>
     public int QueuedMessageCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current state of the stream.
+    /// </summary>
     public StreamState State { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time the stream was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time of the last activity on the stream.
+    /// </summary>
     public DateTime LastActivityTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the duration of the stream in seconds.
+    /// </summary>
     public int DurationSeconds { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the stream statistics.
+    /// </summary>
+    /// <returns>A string containing the stream statistics.</returns>
+    public override string ToString() => $"StreamStatistics {{ StreamId = {StreamId}, MessageCount = {MessageCount}, QueuedMessageCount = {QueuedMessageCount}, State = {State}, CreatedAt = {CreatedAt}, LastActivityTime = {LastActivityTime}, DurationSeconds = {DurationSeconds} }}";
 }
