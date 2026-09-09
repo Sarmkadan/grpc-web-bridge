@@ -233,8 +233,11 @@ public sealed class XmlFormatter
     /// <summary>
     /// Extracts all text content from XML.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="xml"/> is <see langword="null"/>.</exception>
     public string GetTextContent(string xml)
     {
+        ArgumentNullException.ThrowIfNull(xml);
+
         if (string.IsNullOrEmpty(xml))
             return string.Empty;
 
@@ -252,8 +255,11 @@ public sealed class XmlFormatter
     /// <summary>
     /// Converts XML to dictionary representation.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="xml"/> is <see langword="null"/>.</exception>
     public Dictionary<string, object?> XmlToDictionary(string xml)
     {
+        ArgumentNullException.ThrowIfNull(xml);
+
         if (string.IsNullOrEmpty(xml))
             return new Dictionary<string, object?>();
 
@@ -294,9 +300,28 @@ public sealed class XmlFormatter
 /// </summary>
 public sealed class XmlFormatterOptions
 {
+    /// <summary>
+    /// Gets or sets whether the XML output is indented.
+    /// </summary>
     public bool Indent { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the character string used for indentation.
+    /// </summary>
     public string IndentChars { get; set; } = "  ";
+
+    /// <summary>
+    /// Gets or sets whether to omit the XML declaration.
+    /// </summary>
     public bool OmitXmlDeclaration { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets whether to omit XML namespaces during serialization.
+    /// </summary>
     public bool OmitNamespaces { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the encoding used for XML output.
+    /// </summary>
     public System.Text.Encoding Encoding { get; set; } = System.Text.Encoding.UTF8;
 }
