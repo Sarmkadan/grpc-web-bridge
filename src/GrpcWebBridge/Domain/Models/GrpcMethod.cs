@@ -16,18 +16,54 @@ public sealed class GrpcMethod
     private readonly List<MethodParameter> _inputParameters = [];
     private readonly List<MethodParameter> _outputParameters = [];
 
+    /// <summary>
+    /// Gets or sets the name of the method.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+    /// <summary>
+    /// Gets or sets the full name of the method.
+    /// </summary>
     public string FullName { get; set; } = string.Empty;
+    /// <summary>
+    /// Gets or sets the type of the method (e.g., Unary, ServerStreaming, etc.).
+    /// </summary>
     public MethodType Type { get; set; } = MethodType.Unary;
+    /// <summary>
+    /// Gets or sets the input message type.
+    /// </summary>
     public string InputMessageType { get; set; } = string.Empty;
+    /// <summary>
+    /// Gets or sets the output message type.
+    /// </summary>
     public string OutputMessageType { get; set; } = string.Empty;
+    /// <summary>
+    /// Gets or sets a value indicating whether the method is deprecated.
+    /// </summary>
     public bool IsDeprecated { get; set; }
+    /// <summary>
+    /// Gets or sets the description of the method.
+    /// </summary>
     public string? Description { get; set; }
+    /// <summary>
+    /// Gets or sets the timeout in milliseconds for the method.
+    /// </summary>
     public int TimeoutMilliseconds { get; set; } = Constants.Grpc.DefaultTimeout;
+    /// <summary>
+    /// Gets or sets the date and time when the method was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>
+    /// Gets or sets the date and time when the method was last updated.
+    /// </summary>
     public DateTime? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// Gets the collection of input parameters for the method.
+    /// </summary>
     public IReadOnlyCollection<MethodParameter> InputParameters => _inputParameters.AsReadOnly();
+    /// <summary>
+    /// Gets the collection of output parameters for the method.
+    /// </summary>
     public IReadOnlyCollection<MethodParameter> OutputParameters => _outputParameters.AsReadOnly();
 
     public GrpcMethod() { }
@@ -41,6 +77,12 @@ public sealed class GrpcMethod
         OutputMessageType = ValidateMessageType(outputMessage);
     }
 
+    /// <summary>
+    /// Adds an input parameter to the method.
+    /// </summary>
+    /// <param name="parameter">The parameter to add.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameter"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a parameter with the same name already exists.</exception>
     public void AddInputParameter(MethodParameter parameter)
     {
         if (parameter is null)
@@ -55,6 +97,12 @@ public sealed class GrpcMethod
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Adds an output parameter to the method.
+    /// </summary>
+    /// <param name="parameter">The parameter to add.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameter"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a parameter with the same name already exists.</exception>
     public void AddOutputParameter(MethodParameter parameter)
     {
         if (parameter is null)
@@ -69,6 +117,11 @@ public sealed class GrpcMethod
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Removes the input parameter with the specified name from the method.
+    /// </summary>
+    /// <param name="parameterName">The name of the parameter to remove.</param>
+    /// <remarks>If the parameter does not exist, this method does nothing.</remarks>
     public void RemoveInputParameter(string parameterName)
     {
         var parameter = _inputParameters.FirstOrDefault(p => p.Name == parameterName);
@@ -79,6 +132,10 @@ public sealed class GrpcMethod
         }
     }
 
+    /// <summary>
+    /// Validates the method's properties.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the method name, full name, input message type, output message type is empty or whitespace, or when the timeout is less than or equal to zero.</exception>
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Name))
@@ -120,6 +177,11 @@ public sealed class GrpcMethod
 
     public override string ToString() => $"{FullName} ({Type})";
 
+    /// <summary>
+    /// Determines whether the specified object is equal to the current method.
+    /// </summary>
+    /// <param name="obj">The object to compare with the current method.</param>
+    /// <returns>true if the specified object is equal to the current method; otherwise, false.</returns>
     public override bool Equals(object? obj)
     {
         if (obj is not GrpcMethod other)
@@ -128,5 +190,9 @@ public sealed class GrpcMethod
         return FullName == other.FullName && Type == other.Type;
     }
 
+    /// <summary>
+    /// Serves as the default hash function.
+    /// </summary>
+    /// <returns>A hash code for the current method.</returns>
     public override int GetHashCode() => HashCode.Combine(FullName, Type);
 }
