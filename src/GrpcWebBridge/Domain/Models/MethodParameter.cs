@@ -11,16 +11,29 @@ namespace GrpcWebBridge.Domain.Models;
 /// </summary>
 public sealed class MethodParameter
 {
+    /// <summary>Represents the name of the parameter.</summary>
     public string Name { get; set; } = string.Empty;
+    /// <summary>Represents the type name of the parameter.</summary>
     public string TypeName { get; set; } = string.Empty;
+    /// <summary>Represents the description of the parameter.</summary>
     public string? Description { get; set; }
+    /// <summary>Indicates whether the parameter is required.</summary>
     public bool IsRequired { get; set; }
+    /// <summary>Indicates whether the parameter is repeated.</summary>
     public bool IsRepeated { get; set; }
+    /// <summary>Represents the field number of the parameter in the protobuf schema.</summary>
     public int FieldNumber { get; set; }
+    /// <summary>Represents the serialization format of the parameter.</summary>
     public SerializationFormat Format { get; set; } = SerializationFormat.Protobuf;
 
+    /// <summary>Initializes a new instance of the MethodParameter class.</summary>
     public MethodParameter() { }
 
+    /// <summary>Initializes a new instance of the MethodParameter class with the specified name, type name, field number, and requirement.</summary>
+    /// <param name="name">The name of the parameter.</param>
+    /// <param name="typeName">The type name of the parameter.</param>
+    /// <param name="fieldNumber">The field number of the parameter.</param>
+    /// <param name="isRequired">Indicates whether the parameter is required. Defaults to true.</param>
     public MethodParameter(string name, string typeName, int fieldNumber, bool isRequired = true)
     {
         Name = ValidateName(name);
@@ -29,6 +42,10 @@ public sealed class MethodParameter
         IsRequired = isRequired;
     }
 
+    /// <summary>Validates the parameter properties.</summary>
+    /// <exception cref="ArgumentException">Thrown when the parameter name is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when the parameter type name is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when the field number is less than or equal to zero.</exception>
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Name))
@@ -64,6 +81,9 @@ public sealed class MethodParameter
 
     public override string ToString() => $"{Name}: {TypeName} (field {FieldNumber})";
 
+    /// <summary>Determines whether the specified object is equal to the current object.</summary>
+    /// <param name="obj">The object to compare with the current object.</param>
+    /// <returns>true if the specified object is equal to the current object; otherwise, false.</returns>
     public override bool Equals(object? obj)
     {
         if (obj is not MethodParameter other)
@@ -72,5 +92,7 @@ public sealed class MethodParameter
         return Name == other.Name && TypeName == other.TypeName && FieldNumber == other.FieldNumber;
     }
 
+    /// <summary>Serves as the default hash function.</summary>
+    /// <returns>A hash code for the current object.</returns>
     public override int GetHashCode() => HashCode.Combine(Name, TypeName, FieldNumber);
 }
