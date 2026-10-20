@@ -18,14 +18,29 @@ namespace GrpcWebBridge.Integration;
 public sealed class HttpClientFactoryOptions
 {
     /// <summary>
+    /// Default request timeout in milliseconds (30 seconds).
+    /// </summary>
+    public const int DefaultRequestTimeoutMs = 30000;
+
+    /// <summary>
+    /// Default maximum number of connections per server.
+    /// </summary>
+    public const int DefaultMaxConnectionsPerServer = 10;
+
+    /// <summary>
+    /// Default pooled connection lifetime in milliseconds (2 minutes).
+    /// </summary>
+    public const int DefaultPooledConnectionLifetimeMs = 120000;
+
+    /// <summary>
     /// Gets or sets the request timeout in milliseconds.
     /// </summary>
-    public int RequestTimeoutMs { get; set; } = 30000;
+    public int RequestTimeoutMs { get; set; } = DefaultRequestTimeoutMs;
 
     /// <summary>
     /// Gets or sets the maximum number of connections per server.
     /// </summary>
-    public int MaxConnectionsPerServer { get; set; } = 10;
+    public int MaxConnectionsPerServer { get; set; } = DefaultMaxConnectionsPerServer;
 
     /// <summary>
     /// Gets or sets a value indicating whether to use cookies.
@@ -48,7 +63,7 @@ public sealed class HttpClientFactoryOptions
     /// prevent DNS staleness and ensure connection freshness.
     /// Default is 2 minutes (120000 ms).
     /// </summary>
-    public int PooledConnectionLifetimeMs { get; set; } = 120000;
+    public int PooledConnectionLifetimeMs { get; set; } = DefaultPooledConnectionLifetimeMs;
 }
 
 /// <summary>
