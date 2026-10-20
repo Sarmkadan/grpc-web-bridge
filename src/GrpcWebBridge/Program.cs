@@ -35,15 +35,15 @@ var services = builder.Services;
 // Register gRPC services
 services.AddGrpc(options =>
 {
-    options.MaxReceiveMessageSize = 4 * 1024 * 1024; // 4MB
-    options.MaxSendMessageSize = 4 * 1024 * 1024;
+    options.MaxReceiveMessageSize = Constants.Grpc.MaxMessageSize;
+    options.MaxSendMessageSize = Constants.Grpc.MaxMessageSize;
 });
 
 // Register gRPC-Web bridge services
 services.AddGrpcWebBridge(options =>
 {
     options.WithDevelopment()
-        .WithMaxStreamCount(10000)
+        .WithMaxStreamCount(Constants.Streaming.MaxStreamCount)
         .WithCompression(true, 6)
         .WithSwagger(true)
         .WithCors(true)
