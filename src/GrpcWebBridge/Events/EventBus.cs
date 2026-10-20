@@ -645,6 +645,18 @@ public sealed class EventBusException : Exception
         : base(message, innerException)
     {
     }
+
+    /// <summary>
+    /// Returns a string representation of the exception including message and inner exception details.
+    /// </summary>
+    /// <returns>A string containing the exception type, message, and inner exception if present.</returns>
+    public override string ToString()
+    {
+        var inner = InnerException is not null
+            ? $", InnerException: {InnerException.GetType().Name}: {InnerException.Message}"
+            : string.Empty;
+        return $"EventBusException: {Message}{inner}";
+    }
 }
 
 // Concrete event types for the bridge
