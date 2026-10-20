@@ -24,6 +24,16 @@ public sealed class EventBus : IDisposable
     private int _disposed;
 
     /// <summary>
+    /// Default value for <see cref="DispatchOptions.MaxQueueSize"/>.
+    /// </summary>
+    public const int DefaultMaxQueueSize = 1024;
+
+    /// <summary>
+    /// Default value for the <c>maxHistorySize</c> constructor parameter.
+    /// </summary>
+    public const int DefaultMaxHistorySize = 1000;
+
+    /// <summary>
     /// Configuration for backpressure and dispatch behavior.
     /// </summary>
     public sealed record DispatchOptions
@@ -31,9 +41,9 @@ public sealed class EventBus : IDisposable
         /// <summary>
         /// Maximum number of events that can be queued for dispatch.
         /// When the queue is full, the policy determines behavior.
-        /// Defaults to 1024.
+        /// Defaults to <see cref="DefaultMaxQueueSize"/> (1024).
         /// </summary>
-        public int MaxQueueSize { get; init; } = 1024;
+        public int MaxQueueSize { get; init; } = DefaultMaxQueueSize;
 
         /// <summary>
         /// Policy to apply when the dispatch queue is full.
@@ -88,7 +98,7 @@ public sealed class EventBus : IDisposable
     /// <exception cref="ArgumentNullException"><paramref name="logger"/> is null.</exception>
     public EventBus(
         ILogger<EventBus> logger,
-        int maxHistorySize = 1000,
+        int maxHistorySize = DefaultMaxHistorySize,
         TimeSpan? maxHistoryAge = null,
         DispatchOptions? dispatchOptions = null)
     {
