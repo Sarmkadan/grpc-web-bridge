@@ -112,7 +112,7 @@ namespace GrpcWebBridge.Tests
             // Assert
             Assert.NotNull(json);
             Assert.Contains("\"TotalServiceCount\": 5", json);
-            Assert.Contains("\"ServiceRegistrationTimestamps\":null", json);
+            Assert.Contains("\"ServiceRegistrationTimestamps\": null", json);
         }
 
         [Fact]
@@ -131,7 +131,7 @@ namespace GrpcWebBridge.Tests
             // Assert
             Assert.NotNull(json);
             Assert.Contains("\"TotalServiceCount\": 0", json);
-            Assert.Contains("\"ServiceRegistrationTimestamps\":{}", json);
+            Assert.Contains("\"ServiceRegistrationTimestamps\": {}", json);
         }
     }
 }

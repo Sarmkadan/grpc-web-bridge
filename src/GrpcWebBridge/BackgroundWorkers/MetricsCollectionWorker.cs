@@ -29,6 +29,7 @@ public sealed class MetricsCollectionWorker : BackgroundService
         ILogger<MetricsCollectionWorker> logger,
         MetricsCollectionOptions? options = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
         _options = options ?? new MetricsCollectionOptions();
         _currentSnapshot = new MetricsSnapshot { Timestamp = DateTime.UtcNow };
@@ -141,7 +142,8 @@ public sealed class MetricsCollectionWorker : BackgroundService
     {
         lock (_lockObject)
         {
-            var cutoffTime = DateTime.UtcNow.AddMinutes(-lastMinutes);
+            // Non-positive windows cover all retained history
+            var cutoffTime = lastMinutes > 0 ? DateTime.UtcNow.AddMinutes(-lastMinutes) : DateTime.MinValue;
             var relevantSnapshots = _snapshotHistory
                 .Where(s => s.Timestamp >= cutoffTime)
                 .ToList();

@@ -62,6 +62,10 @@ public class ValidationException : GrpcWebBridgeException
     public ValidationException(string fieldName, object? invalidValue, string validationRule, string message)
         : base($"Validation failed for '{fieldName}': {message} (Value: {invalidValue}, Rule: {validationRule})", "VALIDATION_FAILED")
     {
+        ArgumentNullException.ThrowIfNull(fieldName);
+        ArgumentNullException.ThrowIfNull(validationRule);
+        ArgumentNullException.ThrowIfNull(message);
+
         FieldName = fieldName;
         InvalidValue = invalidValue;
         ValidationRule = validationRule;

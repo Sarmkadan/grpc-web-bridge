@@ -436,7 +436,7 @@ public sealed class StreamMessageTests
     {
         // Arrange
         var message1 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
-        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
+        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData) { Id = message1.Id };
 
         // Act
         var result = message1.Equals(message2);
@@ -473,7 +473,7 @@ public sealed class StreamMessageTests
     {
         // Arrange
         var message1 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
-        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
+        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData) { Id = message1.Id };
 
         // Act
         var hash1 = message1.GetHashCode();

@@ -120,14 +120,14 @@ public sealed class MemoryLeakTests
         activeContexts.Should().Contain(c => c.RequestId == "req-1");
         activeContexts.Should().Contain(c => c.RequestId == "req-2");
 
-        // Clear first context
+        // Clear removes the current (most recently created) context only
         manager.Clear();
         activeContexts = manager.GetActiveContexts();
         activeContexts.Should().HaveCount(1);
-        activeContexts.Should().Contain(c => c.RequestId == "req-2");
+        activeContexts.Should().Contain(c => c.RequestId == "req-1");
 
-        // Clear second context
-        manager.Clear();
+        // Remove the remaining context explicitly
+        manager.TryRemoveContext("req-1").Should().BeTrue();
         activeContexts = manager.GetActiveContexts();
         activeContexts.Should().BeEmpty();
 

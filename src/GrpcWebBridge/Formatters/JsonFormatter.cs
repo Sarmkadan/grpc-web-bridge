@@ -23,7 +23,6 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
 /// <param name="options">The formatter options. If null, default options are used.</param>
 public JsonFormatter(JsonFormatterOptions? options = null)
     {
-        ArgumentNullException.ThrowIfNull(options);
         _options = options ?? new JsonFormatterOptions();
     }
 
@@ -83,7 +82,6 @@ public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
     /// </summary>
     public string Format<T>(T obj) where T : class
     {
-        ArgumentNullException.ThrowIfNull(obj);
         return JsonUtility.Serialize(obj, _options.PrettyPrint);
     }
 

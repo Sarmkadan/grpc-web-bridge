@@ -118,11 +118,9 @@ public sealed class AuthenticationContext
     /// Determines whether the authentication context has the specified role.
     /// </summary>
     /// <param name="role">The role to check.</param>
-    /// <returns>true if the role exists; otherwise, false.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="role"/> is null, empty, or consists only of white-space characters.</exception>
+    /// <returns>true if the role exists; otherwise, false (including for null, empty, or white-space roles).</returns>
     public bool HasRole(string role)
     {
-        ArgumentException.ThrowIfNullOrEmpty(role);
         if (string.IsNullOrWhiteSpace(role))
             return false;
 

@@ -37,7 +37,7 @@ public class GrpcWebBridgeException : Exception
     /// <param name="message">The error message that explains the reason for the exception.</param>
     public GrpcWebBridgeException(string message) : base(message)
     {
-        ArgumentException.ThrowIfNullOrEmpty(message);
+        ArgumentNullException.ThrowIfNull(message);
     }
 
     /// <summary>
@@ -47,8 +47,7 @@ public class GrpcWebBridgeException : Exception
     /// <param name="innerException">The exception that is the cause of the current exception, or a null reference if no inner exception is specified.</param>
     public GrpcWebBridgeException(string message, Exception? innerException) : base(message, innerException)
     {
-        ArgumentException.ThrowIfNullOrEmpty(message);
-        ArgumentNullException.ThrowIfNull(innerException);
+        ArgumentNullException.ThrowIfNull(message);
     }
 
     /// <summary>
@@ -58,7 +57,7 @@ public class GrpcWebBridgeException : Exception
     /// <param name="errorCode">The error code.</param>
     public GrpcWebBridgeException(string message, string errorCode) : base(message)
     {
-        ArgumentException.ThrowIfNullOrEmpty(message);
+        ArgumentNullException.ThrowIfNull(message);
         ArgumentException.ThrowIfNullOrEmpty(errorCode);
         ErrorCode = errorCode;
     }
@@ -70,7 +69,7 @@ public class GrpcWebBridgeException : Exception
     /// <param name="statusCode">The gRPC status code.</param>
     public GrpcWebBridgeException(string message, GrpcStatusCode statusCode) : base(message)
     {
-        ArgumentException.ThrowIfNullOrEmpty(message);
+        ArgumentNullException.ThrowIfNull(message);
         GrpcStatus = statusCode;
     }
 
@@ -95,10 +94,10 @@ public class GrpcWebBridgeException : Exception
     /// </summary>
     /// <param name="key">The context key.</param>
     /// <returns>The context value if the key is found; otherwise, null.</returns>
-    /// <exception cref="ArgumentException">Thrown when the key is empty or consists only of white-space.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when the key is null.</exception>
     public object? GetContext(string key)
     {
-        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(key);
         return Context.TryGetValue(key, out var value) ? value : null;
     }
 

@@ -321,8 +321,8 @@ public sealed class EventBusExtensionsTests : IDisposable
 
         // Use reflection to access the private _eventHistory field
         var historyField = typeof(EventBus).GetField("_eventHistory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var history = (System.Collections.Concurrent.ConcurrentBag<EventRecord>)historyField!.GetValue(_eventBus)!;
-        history.Add(record);
+        var history = (System.Collections.Concurrent.ConcurrentQueue<EventRecord>)historyField!.GetValue(_eventBus)!;
+        history.Enqueue(record);
 
         // Act
         var result = _eventBus.GetEventHistoryJson();

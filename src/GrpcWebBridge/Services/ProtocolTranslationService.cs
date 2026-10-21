@@ -46,8 +46,12 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public GrpcRequest TranslateHttpToGrpc(string serviceName, string methodName, byte[] httpBody, SerializationFormat format)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
-        ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
+        if (string.IsNullOrWhiteSpace(serviceName))
+            throw new ProtocolException("Service name cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(methodName))
+            throw new ProtocolException("Method name cannot be empty");
+
         ArgumentNullException.ThrowIfNull(httpBody);
 
         try
@@ -193,7 +197,8 @@ public sealed class ProtocolTranslationService
     /// </summary>
     public Dictionary<string, string> TranslateMetadata(Dictionary<string, string> sourceMetadata)
     {
-        ArgumentNullException.ThrowIfNull(sourceMetadata);
+        if (sourceMetadata is null)
+            return new Dictionary<string, string>(StringComparer.Ordinal);
 
         var translated = new Dictionary<string, string>(sourceMetadata.Count, StringComparer.Ordinal);
 

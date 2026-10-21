@@ -12,10 +12,16 @@ namespace GrpcWebBridge.Tests;
 public sealed class ValidationExceptionTests
 {
     [Fact]
-    public void Constructor_NoParameters_ThrowsArgumentNullException()
+    public void Constructor_NoParameters_CreatesExceptionWithoutDetails()
     {
-        // Act and Assert
-        Assert.Throws<ArgumentNullException>(() => new ValidationException());
+        // Act
+        var exception = new ValidationException();
+
+        // Assert
+        exception.FieldName.Should().BeNull();
+        exception.InvalidValue.Should().BeNull();
+        exception.ValidationRule.Should().BeNull();
+        exception.ErrorCode.Should().BeNull();
     }
 
     [Fact]
@@ -43,7 +49,7 @@ public sealed class ValidationExceptionTests
     public void FieldName_Getter_ReturnsFieldName()
     {
         // Arrange
-        var exception = new ValidationException("Test message", "Test field", "Test value", "Test rule");
+        var exception = new ValidationException("Test field", "Test value", "Test rule", "Test message");
 
         // Act and Assert
         exception.FieldName.Should().Be("Test field");
@@ -53,7 +59,7 @@ public sealed class ValidationExceptionTests
     public void InvalidValue_Getter_ReturnsInvalidValue()
     {
         // Arrange
-        var exception = new ValidationException("Test message", "Test field", "Test value", "Test rule");
+        var exception = new ValidationException("Test field", "Test value", "Test rule", "Test message");
 
         // Act and Assert
         exception.InvalidValue.Should().Be("Test value");
@@ -63,7 +69,7 @@ public sealed class ValidationExceptionTests
     public void ValidationRule_Getter_ReturnsValidationRule()
     {
         // Arrange
-        var exception = new ValidationException("Test message", "Test field", "Test value", "Test rule");
+        var exception = new ValidationException("Test field", "Test value", "Test rule", "Test message");
 
         // Act and Assert
         exception.ValidationRule.Should().Be("Test rule");
@@ -73,7 +79,7 @@ public sealed class ValidationExceptionTests
     public void ToString_ReturnsExpectedString()
     {
         // Arrange
-        var exception = new ValidationException("Test message", "Test field", "Test value", "Test rule");
+        var exception = new ValidationException("Test field", "Test value", "Test rule", "Test message");
 
         // Act
         var result = exception.ToString();

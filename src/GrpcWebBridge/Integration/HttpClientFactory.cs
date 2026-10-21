@@ -113,12 +113,12 @@ public sealed class HttpClientFactory : IDisposable
     /// </summary>
     /// <param name="name">The name of the client.</param>
     /// <returns>An HTTP client instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if name is null.</exception>
-    /// <exception cref="ConfigurationException">Thrown if name is empty.</exception>
+    /// <exception cref="ConfigurationException">Thrown if name is null or empty.</exception>
     /// <exception cref="ObjectDisposedException">Thrown if the factory has been disposed.</exception>
     public HttpClient GetClient(string name = "default")
     {
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new ConfigurationException(nameof(name), "Client name cannot be null or empty");
 
         if (_disposed)
             throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has been disposed and cannot create new clients.");
@@ -213,10 +213,14 @@ public sealed class HttpClientFactory : IDisposable
     /// <param name="client">The HTTP client to register.</param>
     /// <exception cref="ArgumentException">Thrown if name is null or empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown if client is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the factory has been disposed.</exception>
     public void RegisterClient(string name, HttpClient client)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentNullException.ThrowIfNull(client);
+
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has been disposed and cannot register new clients.");
 
         _clients.AddOrUpdate(name, client, (_, old) =>
         {
@@ -270,9 +274,9 @@ public sealed class HttpClientFactory : IDisposable
         if (string.IsNullOrEmpty(uri))
             throw new ConfigurationException(nameof(uri), "URI cannot be null or empty");
 
+        var client = GetClient(clientName ?? "default");
         try
         {
-            var client = GetClient(clientName ?? "default");
             var response = await client.GetAsync(uri).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
@@ -309,9 +313,9 @@ public sealed class HttpClientFactory : IDisposable
         if (payload is null)
             throw new ConfigurationException(nameof(payload), "Payload cannot be null");
 
+        var client = GetClient(clientName ?? "default");
         try
         {
-            var client = GetClient(clientName ?? "default");
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
@@ -358,9 +362,9 @@ public sealed class HttpClientFactory : IDisposable
         if (method is null)
             throw new ConfigurationException(nameof(method), "HTTP method cannot be null");
 
+        var client = GetClient(clientName ?? "default");
         try
         {
-            var client = GetClient(clientName ?? "default");
             var request = new HttpRequestMessage(method, uri)
             {
                 Content = content
@@ -397,9 +401,13 @@ public sealed class HttpClientFactory : IDisposable
     /// <param name="name">The client name to remove.</param>
     /// <returns>True if the client was found and removed; otherwise false.</returns>
     /// <exception cref="ArgumentNullException">Thrown if name is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the factory has been disposed.</exception>
     public bool RemoveClient(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
+
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has been disposed and cannot remove clients.");
 
         if (_clients.TryRemove(name, out var client))
         {

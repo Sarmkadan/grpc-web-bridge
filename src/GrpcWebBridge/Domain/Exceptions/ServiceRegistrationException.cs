@@ -64,6 +64,9 @@ public class ServiceRegistrationException : GrpcWebBridgeException
     public ServiceRegistrationException(string serviceName, string endpoint, string message)
         : base($"Failed to connect to service '{serviceName}' at {endpoint}: {message}", "SERVICE_UNAVAILABLE")
     {
+        ArgumentNullException.ThrowIfNull(serviceName);
+        ArgumentNullException.ThrowIfNull(endpoint);
+        ArgumentNullException.ThrowIfNull(message);
         ServiceName = serviceName;
         ServiceEndpoint = endpoint;
         GrpcStatus = GrpcStatusCode.Unavailable;

@@ -57,7 +57,7 @@ public sealed class CorrelationIdManagerExtensionsTests
     public void HasCorrelationId_WhenCorrelationIdIsEmpty_ReturnsFalse()
     {
         // Arrange
-        _manager.SetCorrelationId(string.Empty);
+        _manager.ClearCorrelationId();
 
         // Act
         var result = _manager.HasCorrelationId();
@@ -420,7 +420,7 @@ public sealed class CorrelationIdManagerExtensionsTests
     // ─────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void CleanupOldTraces_WithDefaultRetention_RemovesOldCompletedTraces()
+    public void CleanupOldTraces_WithDefaultRetention_KeepsRecentCompletedTraces()
     {
         // Arrange
         var trace1 = _manager.StartTrace("operation1");
@@ -429,15 +429,12 @@ public sealed class CorrelationIdManagerExtensionsTests
         _manager.CompleteTrace(trace1.TraceId);
         _manager.CompleteTrace(trace2.TraceId);
 
-        // Ensure traces are old enough
-        Thread.Sleep(20);
-
         // Act
         var removedCount = _manager.CleanupOldTraces();
 
-        // Assert
-        removedCount.Should().BeGreaterThanOrEqualTo(0);
-        _manager.HasTraces().Should().BeFalse();
+        // Assert - the default retention is 24 hours, so freshly completed traces are kept
+        removedCount.Should().Be(0);
+        _manager.HasTraces().Should().BeTrue();
     }
 
     [Fact]

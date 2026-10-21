@@ -40,7 +40,14 @@ public sealed class HttpClientFactoryTests : IDisposable
 
     public void Dispose()
     {
-        _factory.Dispose();
+        // Some tests dispose the factory themselves; a second Dispose is rejected by design
+        try
+        {
+            _factory.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -567,16 +574,17 @@ public sealed class HttpClientFactoryTests : IDisposable
     }
 
     [Fact]
-    public void Dispose_WithGetClientAfterDispose_ReturnsNewClient()
+    public void Dispose_WithGetClientAfterDispose_DoesNotRegisterClient()
     {
         // Arrange
         _factory.Dispose();
 
-        // Act - factory doesn't track disposal state, can still be used
-        var client = _factory.GetClient("new-client");
+        // Act
+        Action act = () => _factory.GetClient("new-client");
 
-        // Assert - factory continues to work after dispose
-        client.Should().NotBeNull();
+        // Assert - a disposed factory must not create clients
+        act.Should().Throw<ObjectDisposedException>();
+        _factory.GetRegisteredClientNames().Should().BeEmpty();
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -679,12 +687,12 @@ public sealed class HttpClientFactoryTests : IDisposable
         // Wait for lifetime to expire
         await Task.Delay(150).ConfigureAwait(false);
 
-        // Get another client with the same name - should return the same client instance
+        // Get another client with the same name - rotation replaces the expired handler and its clients
         var client2 = factory.GetClient("rotation-test");
         client2.Should().NotBeNull();
 
-        // Both clients should be the same instance (cached)
-        client1.Should().BeSameAs(client2);
+        // The rotated client must be a new instance, not the one bound to the expired handler
+        client2.Should().NotBeSameAs(client1);
 
         factory.Dispose();
     }

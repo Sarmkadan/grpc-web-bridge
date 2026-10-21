@@ -16,8 +16,8 @@ namespace GrpcWebBridge.Integration;
 public sealed class RequestContextManager : IDisposable
 {
     private static readonly AsyncLocal<RequestContext> _context = new();
-    private static readonly ConcurrentDictionary<string, RequestContext> _activeContexts = new();
-    private static readonly object _registryLock = new();
+    private readonly ConcurrentDictionary<string, RequestContext> _activeContexts = new();
+    private readonly object _registryLock = new();
     private readonly ILogger<RequestContextManager> _logger;
     private int _disposed;
 
