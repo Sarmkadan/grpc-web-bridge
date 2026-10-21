@@ -156,6 +156,140 @@ The bridge's browser endpoint takes JSON, not `application/grpc-web-text`. See K
 - **JSON payloads are dropped.** `BridgeRequest.Payload` is forwarded only when it is a `byte[]`. A JSON object, as in the example above, arrives as an empty payload.
 - **No `application/grpc-web-text` route.** The bridge's only browser endpoint is the JSON `POST /api/bridge/invoke`. Nothing in the bridge maps gRPC-Web paths such as `/helloworld.Greeter/SayHello`, so a grpc-web-text request to a bridged method is not handled.
 
+## REST/JSON transcoding
+
+> **Status: not wired up.** `HttpTranscoder` exists, but no endpoint calls it, and it does not read `google.api.http` annotations. The bridge does not serve REST paths such as `GET /v1/items/{id}` or `POST /v1/items` today. This section shows the intended proto, the registration, and what the bridge returns now.
+
+### 1. Annotate the proto
+
+The annotations come from `google/api/annotations.proto` in googleapis. The bridge ignores them, so this service is handled as a plain gRPC service.
+
+```proto
+syntax = "proto3";
+
+package items.v1;
+
+import "google/api/annotations.proto";
+
+service ItemService {
+  rpc GetItem (GetItemRequest) returns (Item) {
+    option (google.api.http) = {
+      get: "/v1/items/{id}"
+    };
+  }
+
+  rpc CreateItem (CreateItemRequest) returns (Item) {
+    option (google.api.http) = {
+      post: "/v1/items"
+      body: "*"
+    };
+  }
+}
+
+message GetItemRequest {
+  string id = 1;
+}
+
+message CreateItemRequest {
+  string name = 1;
+}
+
+message Item {
+  string id = 1;
+  string name = 2;
+}
+```
+
+### 2. Register HttpTranscoder
+
+`AddGrpcWebBridge` does not register `HttpTranscoder`. Add it yourself. Its dependencies, `ILogger<HttpTranscoder>` and `ProtocolTranslationService`, are registered by `AddGrpcWebBridge`, so one line is enough:
+
+```csharp
+using GrpcWebBridge.Configuration;
+using GrpcWebBridge.Services;
+
+builder.Services.AddGrpcWebBridge(bridgeOptions);
+builder.Services.AddSingleton<HttpTranscoder>();
+```
+
+The transcoder only accepts gRPC-style paths, `/ServiceName/MethodName`, and passes the raw body through. Calling it with a REST path does not route the request: `/v1/items` is parsed as service `v1`, method `items`.
+
+### 3. Call the REST paths
+
+Both calls below are answered by ASP.NET Core's router, not the bridge, because no route is bound to them. The bridge returns a 404 with an empty body:
+
+```bash
+curl -i http://localhost:5000/v1/items/42
+```
+
+```http
+HTTP/1.1 404 Not Found
+Content-Length: 0
+```
+
+```bash
+curl -i -X POST http://localhost:5000/v1/items \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"widget"}'
+```
+
+```http
+HTTP/1.1 404 Not Found
+Content-Length: 0
+```
+
+Headers such as `Date` and `Server` are trimmed. The JSON success response for these calls is not shown because the bridge does not produce one yet.
+
+### 4. Error output from the transcoder
+
+If your endpoint calls `HttpTranscoder.TranscodeRequest` with a path that is not `/ServiceName/MethodName`, the transcoder throws `ProtocolException`. `ErrorHandlingMiddleware` returns it as HTTP 400. Example for `path=/SayHello`, trimmed (`traceId` and `timestamp` vary):
+
+```json
+{
+  "success": false,
+  "type": "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
+  "title": "Protocol Translation Failed",
+  "error": "Protocol Translation Failed",
+  "status": 400,
+  "detail": "Invalid gRPC path format: '/SayHello'. Expected /ServiceName/MethodName",
+  "message": "Invalid gRPC path format: '/SayHello'. Expected /ServiceName/MethodName",
+  "details": {
+    "sourceFormat": "unknown",
+    "targetFormat": "unknown",
+    "exceptionType": "GrpcWebBridge.Domain.Exceptions.ProtocolException"
+  },
+  "path": "/your-endpoint",
+  "traceId": "...",
+  "timestamp": "..."
+}
+```
+
+A valid gRPC-style path, such as `/items.v1.ItemService/GetItem`, does not produce an error. It returns a `GrpcRequest` for that method.
+
+### 5. gRPC status to HTTP status
+
+When an exception is a `GrpcWebBridgeException` with `GrpcStatus` set, the HTTP status comes from `MapGrpcStatusToHttpStatus` in `src/GrpcWebBridge/Domain/Exceptions/ProblemDetailsExtensions.cs`:
+
+| gRPC status | HTTP status |
+|---|---|
+| `InvalidArgument` | 400 Bad Request |
+| `OutOfRange` | 400 Bad Request |
+| `Unauthenticated` | 401 Unauthorized |
+| `PermissionDenied` | 403 Forbidden |
+| `NotFound` | 404 Not Found |
+| `AlreadyExists` | 409 Conflict |
+| `FailedPrecondition` | 412 Precondition Failed |
+| `ResourceExhausted` | 429 Too Many Requests |
+| `Aborted` | 500 Internal Server Error |
+| `Internal` | 500 Internal Server Error |
+| `DataLoss` | 500 Internal Server Error |
+| `Unimplemented` | 501 Not Implemented |
+| `Unavailable` | 503 Service Unavailable |
+| `DeadlineExceeded` | 504 Gateway Timeout |
+| anything else, including `Cancelled` and `Unknown` | 500 Internal Server Error |
+
+Other exceptions do not use this table. For example, `ProtocolException` and `ValidationException` return 400, `UnauthorizedAccessException` returns 401, `TimeoutException` returns 504, and any unlisted exception returns 500.
+
 ## StreamingExceptionExtensions
 
 The `StreamingExceptionExtensions` class provides a set of extension methods for working with `StreamingException` instances. These methods allow you to determine the state of a stream, add context to an exception, and retrieve stream-related context. For example, you can use the `IsTerminalState` method to check if a stream is in a terminal state, or use the `WithContext` method to add additional context to an exception:
