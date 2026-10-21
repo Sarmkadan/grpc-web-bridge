@@ -50,6 +50,112 @@ curl -s -X POST "${GOAL_TRACKER_BASE_URL:-https://tracker.sarmkadan.com}/api/goa
 
 This document provides an overview of the gRPC Web Bridge project, including setup instructions, architecture, and usage examples.
 
+## Getting Started
+
+This walkthrough runs the bridge in an ASP.NET Core app and makes a first unary call from a browser. Read [Known limitations](#known-limitations) before relying on the result: the invoke endpoint does not forward calls to the backend yet.
+
+### 1. Install the package
+
+```bash
+dotnet add package grpc-web-bridge
+```
+
+The package id is `grpc-web-bridge`. If it is not on your NuGet feed, reference the project directly instead:
+
+```bash
+dotnet add reference path/to/grpc-web-bridge/src/GrpcWebBridge/GrpcWebBridge.csproj
+```
+
+### 2. Register and wire the bridge in `Program.cs`
+
+There is no single `UseGrpcWebBridge()` call. Register the bridge with `AddGrpcWebBridge`, add its CORS policy, and map its controllers. `AddBidirectionalStreaming()` is required: the bridge's `StreamingWorkerSupervisor` depends on the `EventBus` that it registers, and the host fails at startup without it.
+
+```csharp
+using GrpcWebBridge.Configuration;
+using GrpcWebBridge.Domain;
+using GrpcWebBridge.Domain.Models;
+using GrpcWebBridge.Middleware;
+using GrpcWebBridge.Services;
+using GrpcWebBridge.Streaming;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var bridgeOptions = new GrpcWebBridgeOptions()
+    .AddAllowedOrigin("http://localhost:3000");
+
+builder.Services.AddGrpcWebBridge(bridgeOptions);
+builder.Services.AddGrpcWebBridgeCors(bridgeOptions);
+builder.Services.AddBidirectionalStreaming(); // required, see above
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseErrorHandling();
+app.UseRouting();
+app.UseCors("AllowGrpcWeb");
+app.MapControllers();
+
+// Register the Greeter service from the proto below so the bridge can route to it.
+var registry = app.Services.GetRequiredService<ServiceRegistry>();
+var greeter = new GrpcService("Greeter", "helloworld", "127.0.0.1", 50051);
+greeter.AddMethod(new GrpcMethod(
+    "SayHello", "helloworld.Greeter.SayHello", MethodType.Unary, "HelloRequest", "HelloReply"));
+registry.RegisterService(greeter);
+
+app.Run();
+```
+
+### 3. Describe the backend service in a `.proto` file
+
+The bridge does not read `.proto` files. The names in the `Greeter` registration above (package, service, method, and message types) must match this file.
+
+```proto
+syntax = "proto3";
+
+package helloworld;
+
+service Greeter {
+  rpc SayHello (HelloRequest) returns (HelloReply);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+```
+
+### 4. Call a unary method from the browser
+
+Serve the page from `http://localhost:3000`, the origin allowed in step 2. The bridge listens on `http://localhost:5000` by default; adjust the URL if you changed it.
+
+```html
+<script type="module">
+  const response = await fetch('http://localhost:5000/api/bridge/invoke', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      serviceId: 'Greeter',
+      methodName: 'SayHello',
+      payload: { name: 'Ada' } // not forwarded yet, see Known limitations
+    })
+  });
+
+  const result = await response.json();
+  console.log(response.status, result); // 200 { success: true, data: "", metadata: {}, timestamp: "..." }
+</script>
+```
+
+The bridge's browser endpoint takes JSON, not `application/grpc-web-text`. See Known limitations.
+
+### Known limitations
+
+- **Calls are not forwarded to the backend.** `ProtocolTranslationService.TranslateAndInvokeAsync` returns an OK response without opening a channel to the registered `Endpoint` and `Port`. The invoke endpoint therefore answers `success: true` with empty `data`.
+- **JSON payloads are dropped.** `BridgeRequest.Payload` is forwarded only when it is a `byte[]`. A JSON object, as in the example above, arrives as an empty payload.
+- **No `application/grpc-web-text` route.** The bridge's only browser endpoint is the JSON `POST /api/bridge/invoke`. Nothing in the bridge maps gRPC-Web paths such as `/helloworld.Greeter/SayHello`, so a grpc-web-text request to a bridged method is not handled.
+
 ## StreamingExceptionExtensions
 
 The `StreamingExceptionExtensions` class provides a set of extension methods for working with `StreamingException` instances. These methods allow you to determine the state of a stream, add context to an exception, and retrieve stream-related context. For example, you can use the `IsTerminalState` method to check if a stream is in a terminal state, or use the `WithContext` method to add additional context to an exception:
