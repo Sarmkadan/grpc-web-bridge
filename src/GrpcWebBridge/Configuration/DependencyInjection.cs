@@ -11,6 +11,7 @@ using GrpcWebBridge.Services;
 using GrpcWebBridge.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -34,6 +35,13 @@ public static class DependencyInjection
         // Register configuration
         options ??= new GrpcWebBridgeOptions();
         services.AddSingleton(options);
+
+        // Validate the options when the host starts so invalid configuration fails fast.
+        // The options are registered as an instance, so IOptions must point at the same configuration object.
+        services.AddSingleton<IValidateOptions<GrpcWebBridgeOptions>, GrpcWebBridgeOptionsValidator>();
+        services.AddOptions<GrpcWebBridgeOptions>()
+            .Configure(bridgeOptions => bridgeOptions.Configuration = options.Configuration)
+            .ValidateOnStart();
 
         // Register core services
         services.AddSingleton<ProtocolTranslationService>();

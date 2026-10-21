@@ -233,6 +233,8 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    // Non-zero exit so supervisors (systemd, Docker, k8s) see a failed start, e.g. invalid options.
+    Environment.ExitCode = 1;
 }
 finally
 {
