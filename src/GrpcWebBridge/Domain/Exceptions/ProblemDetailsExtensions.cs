@@ -30,7 +30,7 @@ public static class ProblemDetailsExtensions
         var problemDetails = new ProblemDetails
         {
             Type = "about:blank",
-            Title = "An error occurred while processing your request.",
+            Title = "Internal Server Error",
             Status = (int)HttpStatusCode.InternalServerError,
             Detail = exception.Message,
             Timestamp = DateTime.UtcNow,
@@ -82,7 +82,7 @@ public static class ProblemDetailsExtensions
 
             case TimeoutException te:
                 problemDetails.Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.4";
-                problemDetails.Title = "Gateway Timeout";
+                problemDetails.Title = "Operation Timeout";
                 problemDetails.Status = (int)HttpStatusCode.GatewayTimeout;
                 problemDetails.Detail = exception.Message;
                 break;

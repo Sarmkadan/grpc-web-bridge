@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using GrpcWebBridge.Utilities;
@@ -14,8 +15,8 @@ public class ProtobufUtilityTests
     {
         var timestamp = new Timestamp { Seconds = 1620000000, Nanos = 123456789 };
         var json = ProtobufUtility.ToJson(timestamp);
-        Assert.Contains("\"seconds\":1620000000", json);
-        Assert.Contains("\"nanos\":123456789", json);
+        // Timestamp uses the RFC 3339 string form in the protobuf JSON mapping
+        Assert.Equal("\"2021-05-03T00:00:00.123456789Z\"", json);
     }
 
     [Fact]
@@ -50,12 +51,13 @@ public class ProtobufUtilityTests
     [Fact]
     public void ToDict_ShouldContainAllFields()
     {
-        var timestamp = new Timestamp { Seconds = 10, Nanos = 20 };
-        var dict = ProtobufUtility.ToDict(timestamp);
+        // Struct maps to a plain JSON object, so its fields become dictionary entries
+        var message = new Struct { Fields = { ["seconds"] = Value.ForNumber(10), ["nanos"] = Value.ForNumber(20) } };
+        var dict = ProtobufUtility.ToDict(message);
         Assert.True(dict.ContainsKey("seconds"));
         Assert.True(dict.ContainsKey("nanos"));
-        Assert.Equal(10L, dict["seconds"]);
-        Assert.Equal(20L, dict["nanos"]);
+        Assert.Equal(10, ((JsonElement)dict["seconds"]!).GetInt32());
+        Assert.Equal(20, ((JsonElement)dict["nanos"]!).GetInt32());
     }
 
     [Fact]

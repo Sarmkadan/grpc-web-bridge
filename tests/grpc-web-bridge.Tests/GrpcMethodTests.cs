@@ -295,13 +295,14 @@ public sealed class GrpcMethodTests
     public void Validate_WithEmptyName_ThrowsArgumentException()
     {
         // Arrange
-        var method = new GrpcMethod(
-            "",
-            "test.TestMethod",
-            Domain.MethodType.Unary,
-            "InputMessage",
-            "OutputMessage"
-        );
+        var method = new GrpcMethod
+        {
+            Name = "",
+            FullName = "test.TestMethod",
+            Type = Domain.MethodType.Unary,
+            InputMessageType = "InputMessage",
+            OutputMessageType = "OutputMessage"
+        };
 
         // Act & Assert
         var act = () => method.Validate();
@@ -312,13 +313,14 @@ public sealed class GrpcMethodTests
     public void Validate_WithEmptyFullName_ThrowsArgumentException()
     {
         // Arrange
-        var method = new GrpcMethod(
-            "TestMethod",
-            "",
-            Domain.MethodType.Unary,
-            "InputMessage",
-            "OutputMessage"
-        );
+        var method = new GrpcMethod
+        {
+            Name = "TestMethod",
+            FullName = "",
+            Type = Domain.MethodType.Unary,
+            InputMessageType = "InputMessage",
+            OutputMessageType = "OutputMessage"
+        };
 
         // Act & Assert
         var act = () => method.Validate();
@@ -329,13 +331,14 @@ public sealed class GrpcMethodTests
     public void Validate_WithEmptyInputMessage_ThrowsArgumentException()
     {
         // Arrange
-        var method = new GrpcMethod(
-            "TestMethod",
-            "test.TestMethod",
-            Domain.MethodType.Unary,
-            "",
-            "OutputMessage"
-        );
+        var method = new GrpcMethod
+        {
+            Name = "TestMethod",
+            FullName = "test.TestMethod",
+            Type = Domain.MethodType.Unary,
+            InputMessageType = "",
+            OutputMessageType = "OutputMessage"
+        };
 
         // Act & Assert
         var act = () => method.Validate();
@@ -346,13 +349,14 @@ public sealed class GrpcMethodTests
     public void Validate_WithEmptyOutputMessage_ThrowsArgumentException()
     {
         // Arrange
-        var method = new GrpcMethod(
-            "TestMethod",
-            "test.TestMethod",
-            Domain.MethodType.Unary,
-            "InputMessage",
-            ""
-        );
+        var method = new GrpcMethod
+        {
+            Name = "TestMethod",
+            FullName = "test.TestMethod",
+            Type = Domain.MethodType.Unary,
+            InputMessageType = "InputMessage",
+            OutputMessageType = ""
+        };
 
         // Act & Assert
         var act = () => method.Validate();

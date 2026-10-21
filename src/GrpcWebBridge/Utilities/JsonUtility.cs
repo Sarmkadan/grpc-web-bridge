@@ -42,7 +42,6 @@ public static class JsonUtility
     /// </summary>
     public static string Serialize<T>(T obj, bool indented = false)
     {
-        ArgumentNullException.ThrowIfNull(obj);
         if (obj is null)
             return "null";
 
@@ -65,7 +64,10 @@ public static class JsonUtility
     /// </summary>
     public static T? Deserialize<T>(string json)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentNullException.ThrowIfNull(json);
+        if (string.IsNullOrWhiteSpace(json))
+            return default;
+
         try
         {
             return JsonSerializer.Deserialize<T>(json, DefaultOptions);
@@ -82,7 +84,10 @@ public static class JsonUtility
     /// </summary>
     public static Dictionary<string, object>? DeserializeToDictionary(string json)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentNullException.ThrowIfNull(json);
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+
         try
         {
             return JsonSerializer.Deserialize<Dictionary<string, object>>(json, DefaultOptions);
@@ -215,8 +220,10 @@ public static class JsonUtility
     /// </summary>
     public static bool ValidateRequired(string json, params string[] requiredProperties)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
         ArgumentNullException.ThrowIfNull(requiredProperties);
+        if (string.IsNullOrWhiteSpace(json))
+            return false;
+
         try
         {
             var dict = DeserializeToDictionary(json);

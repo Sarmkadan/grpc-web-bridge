@@ -12,10 +12,15 @@ namespace GrpcWebBridge.Tests;
 public sealed class ServiceRegistrationExceptionTests
 {
     [Fact]
-    public void Constructor_NoParameters_ThrowsArgumentNullException()
+    public void Constructor_NoParameters_CreatesExceptionWithoutDetails()
     {
-        // Act and Assert
-        Assert.Throws<ArgumentNullException>(() => new ServiceRegistrationException());
+        // Act
+        var exception = new ServiceRegistrationException();
+
+        // Assert
+        exception.ServiceName.Should().BeNull();
+        exception.ServiceEndpoint.Should().BeNull();
+        exception.ErrorCode.Should().BeNull();
     }
 
     [Fact]
@@ -36,7 +41,7 @@ public sealed class ServiceRegistrationExceptionTests
     public void ServiceName_Getter_ReturnsServiceName()
     {
         // Arrange
-        var exception = new ServiceRegistrationException("Test message", "Test service", "Test endpoint");
+        var exception = new ServiceRegistrationException("Test service", "Test endpoint", "Test message");
 
         // Act and Assert
         exception.ServiceName.Should().Be("Test service");
@@ -46,7 +51,7 @@ public sealed class ServiceRegistrationExceptionTests
     public void ServiceEndpoint_Getter_ReturnsServiceEndpoint()
     {
         // Arrange
-        var exception = new ServiceRegistrationException("Test message", "Test service", "Test endpoint");
+        var exception = new ServiceRegistrationException("Test service", "Test endpoint", "Test message");
 
         // Act and Assert
         exception.ServiceEndpoint.Should().Be("Test endpoint");
@@ -56,7 +61,7 @@ public sealed class ServiceRegistrationExceptionTests
     public void ToString_ReturnsExpectedString()
     {
         // Arrange
-        var exception = new ServiceRegistrationException("Test message", "Test service", "Test endpoint");
+        var exception = new ServiceRegistrationException("Test service", "Test endpoint", "Test message");
 
         // Act
         var result = exception.ToString();

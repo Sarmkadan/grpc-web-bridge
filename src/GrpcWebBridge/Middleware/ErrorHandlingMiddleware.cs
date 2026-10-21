@@ -68,8 +68,10 @@ public sealed class ErrorHandlingMiddleware
             Success = false,
             Type = problemDetails.Type,
             Title = problemDetails.Title,
+            Error = problemDetails.Title,
             Status = problemDetails.Status,
             Detail = problemDetails.Detail,
+            Message = problemDetails.Detail,
             Instance = problemDetails.Instance,
             Path = problemDetails.Path,
             TraceId = problemDetails.TraceId,
@@ -109,6 +111,11 @@ public sealed class ErrorResponse
     public string? Title { get; set; }
 
     /// <summary>
+    /// Short error summary (backward-compatible alias of <see cref="Title"/>).
+    /// </summary>
+    public string? Error { get; set; }
+
+    /// <summary>
     /// The HTTP status code.
     /// </summary>
     public int? Status { get; set; }
@@ -117,6 +124,11 @@ public sealed class ErrorResponse
     /// A human-readable explanation specific to this occurrence.
     /// </summary>
     public string? Detail { get; set; }
+
+    /// <summary>
+    /// Human-readable explanation (backward-compatible alias of <see cref="Detail"/>).
+    /// </summary>
+    public string? Message { get; set; }
 
     /// <summary>
     /// A URI reference that identifies the specific occurrence.

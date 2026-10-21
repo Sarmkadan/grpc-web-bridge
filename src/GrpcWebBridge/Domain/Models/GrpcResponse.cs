@@ -86,7 +86,6 @@ public sealed class GrpcResponse
     public GrpcResponse(string requestId, byte[] payload)
     {
         ArgumentException.ThrowIfNullOrEmpty(requestId);
-        ArgumentNullException.ThrowIfNull(payload);
         RequestId = ValidateRequestId(requestId);
         Payload = payload ?? [];
     }

@@ -65,8 +65,7 @@ public static class GrpcMethodExtensions
         // CancellationToken parameter
         if (includeCancellationToken)
         {
-            if (method.InputParameters.Count > 0 || method.OutputParameters.Count > 0)
-                builder.Append(", ");
+            builder.Append(", ");
             builder.Append("CancellationToken cancellationToken = default");
         }
 
@@ -132,6 +131,8 @@ public static class GrpcMethodExtensions
                 builder.AppendLine($"/// <param name=\"{parameter.Name}\">{parameter.Description ?? $"{parameter.TypeName} parameter"}</param>");
             }
         }
+
+        builder.AppendLine($"/// <param name=\"request\">{method.InputMessageType} parameter</param>");
 
         builder.AppendLine("/// <returns>Response message</returns>");
 

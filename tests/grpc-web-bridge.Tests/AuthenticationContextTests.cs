@@ -37,7 +37,7 @@ public sealed class AuthenticationContextTests
         var scheme = AuthenticationScheme.Bearer;
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => new AuthenticationContext(userId!, scheme));
+        Assert.Throws<ArgumentNullException>(() => new AuthenticationContext(userId!, scheme));
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public sealed class AuthenticationContextTests
         string? role = null;
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => context.AddRole(role!));
+        Assert.Throws<ArgumentNullException>(() => context.AddRole(role!));
     }
 
     [Fact]
@@ -278,7 +278,7 @@ public sealed class AuthenticationContextTests
         var value = "read";
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => context.AddClaim(key!, value));
+        Assert.Throws<ArgumentNullException>(() => context.AddClaim(key!, value));
     }
 
     [Fact]
@@ -518,7 +518,7 @@ public sealed class AuthenticationContextTests
         var value = 42;
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => context.AddCustomData(key!, value));
+        Assert.Throws<ArgumentNullException>(() => context.AddCustomData(key!, value));
     }
 
     [Fact]

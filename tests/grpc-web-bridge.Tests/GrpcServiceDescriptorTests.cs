@@ -169,7 +169,7 @@ public class GrpcServiceDescriptorTests
         };
 
         // Act & Assert
-        Assert.Equal(string.Empty, descriptor.Description);
+        Assert.Null(descriptor.Description);
         Assert.Empty(descriptor.Methods);
     }
 }

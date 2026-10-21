@@ -70,6 +70,7 @@ public sealed class HealthEndpointsTests
     {
         // Arrange
         var builder = WebApplication.CreateBuilder();
+        builder.Services.AddHealthChecks();
         var app = builder.Build();
 
         // Act
@@ -414,14 +415,15 @@ public sealed class HealthEndpointsTests
     }
 
     /// <summary>
-    /// Helper method to access the private GetOverallServiceHealth method via reflection.
+    /// Helper method to access the private GetOverallServiceHealthAsync method via reflection.
     /// </summary>
     private static string GetOverallServiceHealthViaReflection(ServiceRegistry registry)
     {
         var method = typeof(HealthEndpoints).GetMethod(
-            "GetOverallServiceHealth",
+            "GetOverallServiceHealthAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
-        return (string)method!.Invoke(null, new object[] { registry })!;
+        var task = (Task<string>)method!.Invoke(null, new object?[] { registry, null, CancellationToken.None })!;
+        return task.GetAwaiter().GetResult();
     }
 }

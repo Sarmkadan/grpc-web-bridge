@@ -39,7 +39,7 @@ public class StreamCleanupWorkerTests
             averageStreamsPerCleanup = 0.0,
             cleanupInterval = 60,
             idleTimeout = 300.0, // 5 minutes * 60
-            staleStreamTimeout = 600.0 // 10 minutes * 60
+            staleStreamTimeout = 30.0 // default stale stream duration
         };
         stats.Should().BeEquivalentTo(expected);
     }
@@ -92,7 +92,7 @@ public class StreamCleanupWorkerTests
             averageStreamsPerCleanup = 0.0,
             cleanupInterval = 60,
             idleTimeout = 300.0,
-            staleStreamTimeout = 600.0
+            staleStreamTimeout = 30.0
         };
         stats.Should().BeEquivalentTo(expected);
     }
