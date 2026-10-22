@@ -43,6 +43,11 @@ public static class DependencyInjection
             .Configure(bridgeOptions => bridgeOptions.Configuration = options.Configuration)
             .ValidateOnStart();
 
+        // HttpTranscoder options use the default instance unless the host configures them with services.Configure<HttpTranscoderOptions>.
+        services.AddSingleton<IValidateOptions<HttpTranscoderOptions>, HttpTranscoderOptionsValidator>();
+        services.AddOptions<HttpTranscoderOptions>()
+            .ValidateOnStart();
+
         // Register core services
         services.AddSingleton<ProtocolTranslationService>();
         services.AddSingleton<StreamingService>();
