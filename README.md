@@ -1061,3 +1061,7 @@ cache.SetExpiration("user:42", TimeSpan.FromMinutes(1));
 var remaining = cache.GetTimeToLive("user:42");
 var statistics = cache.GetStatistics();
 ```
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for the full text.
