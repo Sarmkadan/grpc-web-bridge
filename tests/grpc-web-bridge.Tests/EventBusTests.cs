@@ -137,10 +137,8 @@ public sealed class EventBusTests : IDisposable
     {
         _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_MultipleHandlersForSameEvent_AddsAllHandlers));
         // Arrange
-        var handler1Called = false;
-        var handler2Called = false;
-        void Handler1(ServiceRegisteredEvent @event) => handler1Called = true;
-        void Handler2(ServiceRegisteredEvent @event) => handler2Called = true;
+        void Handler1(ServiceRegisteredEvent @event) { }
+        void Handler2(ServiceRegisteredEvent @event) { }
 
         // Act
         _eventBus.Subscribe<ServiceRegisteredEvent>(Handler1);
@@ -159,10 +157,8 @@ public sealed class EventBusTests : IDisposable
     {
         _mockLogger.LogInformation("Starting test {TestName}", nameof(Subscribe_DifferentEventTypes_AddsSeparateHandlers));
         // Arrange
-        var serviceHandlerCalled = false;
-        var methodHandlerCalled = false;
-        void ServiceHandler(ServiceRegisteredEvent @event) => serviceHandlerCalled = true;
-        void MethodHandler(MethodInvokedEvent @event) => methodHandlerCalled = true;
+        void ServiceHandler(ServiceRegisteredEvent @event) { }
+        void MethodHandler(MethodInvokedEvent @event) { }
 
         // Act
         _eventBus.Subscribe<ServiceRegisteredEvent>(ServiceHandler);
@@ -218,8 +214,7 @@ public sealed class EventBusTests : IDisposable
     {
         _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_WithExistingSyncHandler_RemovesHandler));
         // Arrange
-        var handlerCalled = false;
-        void Handler(ServiceRegisteredEvent @event) => handlerCalled = true;
+        void Handler(ServiceRegisteredEvent @event) { }
         _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
 
         // Act
@@ -239,10 +234,8 @@ public sealed class EventBusTests : IDisposable
     {
         _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_WithExistingAsyncHandler_RemovesHandler));
         // Arrange
-        var handlerCalled = false;
         Task Handler(ServiceRegisteredEvent @event)
         {
-            handlerCalled = true;
             return Task.CompletedTask;
         }
         _eventBus.Subscribe<ServiceRegisteredEvent>(Handler);
@@ -264,10 +257,8 @@ public sealed class EventBusTests : IDisposable
     {
         _mockLogger.LogInformation("Starting test {TestName}", nameof(Unsubscribe_MultipleHandlers_RemovesOnlySpecifiedHandler));
         // Arrange
-        var handler1Called = false;
-        var handler2Called = false;
-        void Handler1(ServiceRegisteredEvent @event) => handler1Called = true;
-        void Handler2(ServiceRegisteredEvent @event) => handler2Called = true;
+        void Handler1(ServiceRegisteredEvent @event) { }
+        void Handler2(ServiceRegisteredEvent @event) { }
         _eventBus.Subscribe<ServiceRegisteredEvent>(Handler1);
         _eventBus.Subscribe<ServiceRegisteredEvent>(Handler2);
 
@@ -1003,7 +994,7 @@ public sealed class EventBusTests : IDisposable
         // Assert
         var exception = await act.Should().ThrowAsync<EventBusException>();
         exception.And.InnerException.Should().BeOfType<AggregateException>();
-        var aggregateException = (AggregateException)exception.And.InnerException;
+        var aggregateException = (AggregateException)exception.And.InnerException!;
         aggregateException.InnerExceptions.Should().HaveCount(2);
         _mockLogger.LogInformation("Finished test {TestName}", nameof(PublishAsync_WithMultipleExceptions_AggregatesAllExceptions));
     }

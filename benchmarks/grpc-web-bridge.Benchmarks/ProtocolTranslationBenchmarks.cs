@@ -111,8 +111,6 @@ public sealed class ProtocolTranslationBenchmarks
     /// <summary>
     /// Translates a Protobuf response to HTTP.
     /// </summary>
-    /// <param name="response">The Protobuf response.</param>
-    /// <param name="format">The payload format.</param>
     /// <returns>The translated HTTP response.</returns>
     [Benchmark(Description = "TranslateGrpcToHttp — Protobuf passthrough")]
     public byte[] TranslateGrpcToHttp_Passthrough() =>
@@ -121,8 +119,6 @@ public sealed class ProtocolTranslationBenchmarks
     /// <summary>
     /// Translates a Protobuf response to HTTP, converting the payload to JSON.
     /// </summary>
-    /// <param name="response">The Protobuf response.</param>
-    /// <param name="format">The payload format.</param>
     /// <returns>The translated HTTP response.</returns>
     [Benchmark(Description = "TranslateGrpcToHttp — Protobuf→Json")]
     public byte[] TranslateGrpcToHttp_Convert() =>

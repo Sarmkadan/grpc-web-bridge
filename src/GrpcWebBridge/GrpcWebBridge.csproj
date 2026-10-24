@@ -2,24 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
     <RootNamespace>GrpcWebBridge</RootNamespace>
     <AssemblyName>GrpcWebBridge</AssemblyName>
     <PackageId>grpc-web-bridge</PackageId>
     <Version>1.0.0</Version>
-    <Authors>Vladyslav Zaiets</Authors>
     <Description>A high-performance bridge service for translating gRPC-Web requests to gRPC backend services.</Description>
     <PackageTags>grpc;grpc-web;bridge;dotnet</PackageTags>
-    <PackageProjectUrl>https://github.com/sarmkadan/grpc-web-bridge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/sarmkadan/grpc-web-bridge</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsPackable>true</IsPackable>
-    <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' OR '$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
