@@ -19,7 +19,7 @@ docker build -t grpc-web-bridge .               # multi-stage, sdk:10.0 -> aspne
 
 `Makefile` wraps these (`make build|test|run|format|lint|publish|docker-build|ci`). Note: `make test` runs `dotnet test` inside `src/GrpcWebBridge`, which is not a test project - run tests from the repo root or the test project instead.
 
-Shared compiler settings live in `Directory.Build.props`: `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `TreatWarningsAsErrors false`, a long `NoWarn` list (nullable CS86xx, CS1591, SYSLIB obsoletes). `GenerateDocumentationFile` is on for the main project.
+Shared compiler settings live in `Directory.Build.props`: `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `TreatWarningsAsErrors true`, `Deterministic true`, a long `NoWarn` list (nullable CS86xx, CS1591, SYSLIB obsoletes). `GenerateDocumentationFile` is on for every project except `*.Tests`. Project files should not repeat these properties.
 
 ## Test
 

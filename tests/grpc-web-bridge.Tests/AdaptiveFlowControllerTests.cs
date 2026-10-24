@@ -325,7 +325,7 @@ public sealed class AdaptiveFlowControllerTests
         {
             ["missing-stream"] = new StreamThroughputMetrics()
         });
-        engine.GetStream("missing-stream").Returns((IFlowControlledStream)null);
+        engine.GetStream("missing-stream").Returns((IFlowControlledStream?)null);
 
         var controller = CreateController(new FlowControlOptions
         {

@@ -664,7 +664,6 @@ public sealed class EventBusException : Exception
 /// <summary>
 /// Fired when a service is registered.
 /// </summary>
-/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
 public sealed class ServiceRegisteredEvent : EventBase
 {
     /// <summary>
@@ -684,7 +683,6 @@ public sealed class ServiceRegisteredEvent : EventBase
 /// <summary>
 /// Fired when a service is unregistered.
 /// </summary>
-/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
 public sealed class ServiceUnregisteredEvent : EventBase
 {
     /// <summary>
@@ -700,7 +698,6 @@ public sealed class ServiceUnregisteredEvent : EventBase
 /// <summary>
 /// Fired when a method is invoked.
 /// </summary>
-/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
 public sealed class MethodInvokedEvent : EventBase
 {
     /// <summary>
@@ -742,7 +739,6 @@ public enum StreamCompletionStatus
 /// <summary>
 /// Fired when a stream starts.
 /// </summary>
-/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
 public sealed class StreamStartedEvent : EventBase
 {
     /// <summary>
@@ -764,7 +760,6 @@ public sealed class StreamStartedEvent : EventBase
 /// <summary>
 /// Fired when a stream ends.
 /// </summary>
-/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
 public sealed class StreamEndedEvent : EventBase
 {
     /// <summary>
@@ -801,7 +796,6 @@ public sealed class StreamEndedEvent : EventBase
 /// <summary>
 /// Fired when authentication fails.
 /// </summary>
-/// <param name="requestId">The correlation/request ID for tracing the operation.</param>
 public sealed class AuthenticationFailedEvent : EventBase
 {
     /// <summary>
