@@ -1,19 +1,19 @@
 ---
 name: Feature Request
-about: Suggest a feature for grpc-web-bridge
-title: '[FEATURE] '
+about: Suggest a feature or improvement for grpc-web-bridge
+title: '[Feature] '
 labels: enhancement
 assignees: ''
 ---
 
-## Problem Statement
-A clear description of the problem or limitation.
+## Problem
+A clear description of the problem or limitation you are running into.
 
 ## Proposed Solution
-Describe the solution you'd like to see.
+Describe the solution you would like to see.
 
-## Alternatives Considered
-List any alternative solutions or workarounds you've considered.
+## Alternatives
+Any alternative solutions or workarounds you have considered.
 
 ## Additional Context
-Any other context, mockups, or examples.
+Any other context, examples, or references.
