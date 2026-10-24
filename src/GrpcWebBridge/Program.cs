@@ -101,11 +101,12 @@ app.UseGrpcWebContentTypeValidation();
 app.UseRequestLogging();
 app.UseRouting();
 app.UseCorrelationId();
-app.UseRequestContext(); // Add RequestContext middleware for ambient context tracking
 app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
 
 app.UseCors("AllowGrpcWeb");
 app.UseAuthentication();
+// After authentication so the request context carries the authenticated user id; events published from here on are correlated.
+app.UseRequestContext(); // Add RequestContext middleware for ambient context tracking
 app.UseAuthorization();
 
 // Map controller routes (REST API controllers)

@@ -5,6 +5,7 @@
 // =============================================================================
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Primitives;
 
 namespace GrpcWebBridge.Integration;
 
@@ -20,6 +21,13 @@ public sealed class RequestContextManager : IDisposable
     private readonly object _registryLock = new();
     private readonly ILogger<RequestContextManager> _logger;
     private int _disposed;
+
+    /// <summary>
+    /// Gets the request context of the current async flow.
+    /// Static because the ambient value lives in an <see cref="AsyncLocal{T}"/>, which lets singletons such as
+    /// the event bus read it without depending on the scoped <see cref="RequestContextManager"/> instance.
+    /// </summary>
+    internal static RequestContext? Current => _context.Value;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RequestContextManager"/> class.
@@ -496,6 +504,9 @@ public sealed class RequestContext
 /// </summary>
 public sealed class RequestContextMiddleware
 {
+    private const string RequestIdHeader = "X-Request-ID";
+    private const int MaxRequestIdLength = 128;
+
     private readonly RequestDelegate _next;
     private readonly RequestContextManager _contextManager;
     private readonly ILogger<RequestContextMiddleware> _logger;
@@ -506,11 +517,16 @@ public sealed class RequestContextMiddleware
     /// <param name="next">The next delegate in the pipeline.</param>
     /// <param name="contextManager">The request context manager instance.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
     public RequestContextMiddleware(
         RequestDelegate next,
         RequestContextManager contextManager,
         ILogger<RequestContextMiddleware> logger)
     {
+        ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(contextManager);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _next = next;
         _contextManager = contextManager;
         _logger = logger;
@@ -518,26 +534,26 @@ public sealed class RequestContextMiddleware
 
     /// <summary>
     /// Invokes the middleware logic for the current HTTP context.
-    /// Creates a request context, processes the request, and cleans up the context afterwards.
+    /// Establishes the request context (and therefore the correlation ID) before the rest of the pipeline runs,
+    /// processes the request, and cleans up the context afterwards.
     /// </summary>
     /// <param name="httpContext">The HTTP context for the current request.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="httpContext"/> is null.</exception>
     public async Task InvokeAsync(HttpContext httpContext)
     {
-        // Generate or extract request ID
-        var requestId = httpContext.Request.Headers.TryGetValue("X-Request-ID", out var headerValue)
-            ? headerValue.ToString()
-            : Guid.NewGuid().ToString();
+        ArgumentNullException.ThrowIfNull(httpContext);
 
-        // Extract user ID from claims if available
-        var userId = httpContext.User?.FindFirst("sub")?.Value
-            ?? httpContext.User?.Identity?.Name;
+        var requestId = ResolveRequestId(httpContext.Request.Headers[RequestIdHeader]);
 
-        // Create request context
-        var context = _contextManager.CreateContext(requestId, userId);
+        // Read after authentication has run, so the subject claim of the authenticated user is available
+        var userId = httpContext.User.FindFirst("sub")?.Value
+            ?? httpContext.User.Identity?.Name;
 
-        // Add request ID to response headers
-        httpContext.Response.Headers.Add("X-Request-ID", requestId);
+        _contextManager.CreateContext(requestId, userId);
+
+        // Indexer rather than Add: Add throws if the header is already present on the response
+        httpContext.Response.Headers[RequestIdHeader] = requestId;
 
         try
         {
@@ -549,6 +565,35 @@ public sealed class RequestContextMiddleware
             _contextManager.Clear();
         }
     }
+
+    /// <summary>
+    /// Returns the caller-supplied request ID when it is a usable identifier, otherwise a freshly generated one.
+    /// A usable identifier is non-empty, at most <see cref="MaxRequestIdLength"/> characters and printable ASCII,
+    /// so that it can be echoed in headers and log lines safely.
+    /// </summary>
+    /// <param name="headerValues">The raw <c>X-Request-ID</c> header values.</param>
+    /// <returns>The request identifier to use for the request.</returns>
+    private string ResolveRequestId(StringValues headerValues)
+    {
+        // A repeated header has no single meaningful value, so it is treated the same as an unusable one
+        var candidate = headerValues.Count == 1 ? headerValues.ToString() : null;
+
+        if (candidate is not null && IsUsableRequestId(candidate))
+        {
+            return candidate;
+        }
+
+        if (headerValues.Count > 0)
+        {
+            _logger.LogDebug("Ignoring unusable {HeaderName} header and generating a new request ID", RequestIdHeader);
+        }
+
+        return Guid.NewGuid().ToString();
+    }
+
+    private static bool IsUsableRequestId(string candidate) =>
+        candidate.Length is > 0 and <= MaxRequestIdLength
+        && candidate.All(static c => c is >= ' ' and <= '~');
 }
 
 /// <summary>
