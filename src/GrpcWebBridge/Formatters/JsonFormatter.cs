@@ -18,10 +18,10 @@ public sealed class JsonFormatter : IEquatable<JsonFormatter>
     private readonly JsonFormatterOptions _options;
 
     /// <summary>
-/// Initializes a new instance of the <see cref="JsonFormatter"/> class with the specified options.
-/// </summary>
-/// <param name="options">The formatter options. If null, default options are used.</param>
-public JsonFormatter(JsonFormatterOptions? options = null)
+    /// Initializes a new instance of the <see cref="JsonFormatter"/> class with the specified options.
+    /// </summary>
+    /// <param name="options">The formatter options. If null, default options are used.</param>
+    public JsonFormatter(JsonFormatterOptions? options = null)
     {
         _options = options ?? new JsonFormatterOptions();
     }
@@ -29,15 +29,23 @@ public JsonFormatter(JsonFormatterOptions? options = null)
     public override string ToString() => $"JsonFormatter {{ PrettyPrint = {_options.PrettyPrint}, SortKeys = {_options.SortKeys}, MaxDepth = {_options.MaxDepth}, IncludeNullValues = {_options.IncludeNullValues} }}";
 
     /// <summary>
-/// Determines whether the specified <see cref="JsonFormatter"/> is equal to the current instance.
-/// </summary>
-/// <param name="other">The formatter to compare with the current instance.</param>
-/// <returns>true if the specified formatter is equal to the current instance; otherwise, false.</returns>
-public bool Equals(JsonFormatter? other)
+    /// Determines whether the specified <see cref="JsonFormatter"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The formatter to compare with the current instance.</param>
+    /// <returns>true if the specified formatter is equal to the current instance; otherwise, false.</returns>
+    public bool Equals(JsonFormatter? other)
     {
         ArgumentNullException.ThrowIfNull(other);
-        if (other is null) return false;
-        if (ReferenceEquals(this, other)) return true;
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
         return _options.PrettyPrint == other._options.PrettyPrint &&
                _options.SortKeys == other._options.SortKeys &&
                _options.MaxDepth == other._options.MaxDepth &&
@@ -55,24 +63,28 @@ public bool Equals(JsonFormatter? other)
     }
 
     /// <summary>
-/// Determines whether two specified <see cref="JsonFormatter"/> instances are equal.
-/// </summary>
-/// <param name="left">The first formatter to compare, or null.</param>
-/// <param name="right">The second formatter to compare, or null.</param>
-/// <returns>true if the value of <paramref name="left"/> is the same as the value of <paramref name="right"/>; otherwise, false.</returns>
-public static bool operator ==(JsonFormatter? left, JsonFormatter? right)
+    /// Determines whether two specified <see cref="JsonFormatter"/> instances are equal.
+    /// </summary>
+    /// <param name="left">The first formatter to compare, or null.</param>
+    /// <param name="right">The second formatter to compare, or null.</param>
+    /// <returns>true if the value of <paramref name="left"/> is the same as the value of <paramref name="right"/>; otherwise, false.</returns>
+    public static bool operator ==(JsonFormatter? left, JsonFormatter? right)
     {
-        if (left is null) return right is null;
+        if (left is null)
+        {
+            return right is null;
+        }
+
         return left.Equals(right);
     }
 
     /// <summary>
-/// Determines whether two specified <see cref="JsonFormatter"/> instances are not equal.
-/// </summary>
-/// <param name="left">The first formatter to compare, or null.</param>
-/// <param name="right">The second formatter to compare, or null.</param>
-/// <returns>true if the value of <paramref name="left"/> is different from the value of <paramref name="right"/>; otherwise, false.</returns>
-public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
+    /// Determines whether two specified <see cref="JsonFormatter"/> instances are not equal.
+    /// </summary>
+    /// <param name="left">The first formatter to compare, or null.</param>
+    /// <param name="right">The second formatter to compare, or null.</param>
+    /// <returns>true if the value of <paramref name="left"/> is different from the value of <paramref name="right"/>; otherwise, false.</returns>
+    public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
     {
         return !(left == right);
     }
@@ -96,7 +108,9 @@ public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
         var dict = JsonUtility.DeserializeToDictionary(json);
 
         if (dict is null)
+        {
             return json;
+        }
 
         var sorted = new SortedDictionary<string, object?>(dict, StringComparer.Ordinal);
         return JsonUtility.Serialize(sorted, _options.PrettyPrint);
@@ -108,7 +122,9 @@ public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
     public static string Minify(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
+        {
             return json;
+        }
 
         var dict = JsonUtility.DeserializeToDictionary(json);
         return JsonUtility.Serialize(dict, indented: false);
@@ -120,7 +136,9 @@ public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
     public static string PrettyPrint(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
+        {
             return json;
+        }
 
         var dict = JsonUtility.DeserializeToDictionary(json);
         return JsonUtility.Serialize(dict, indented: true);
@@ -216,7 +234,9 @@ public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
 
         var dict = JsonUtility.DeserializeToDictionary(json);
         if (dict is null)
+        {
             return result;
+        }
 
         foreach (var field in fieldNames)
         {
@@ -282,7 +302,9 @@ public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
         var descriptions = new Dictionary<string, object>();
 
         if (obj is null)
+        {
             return descriptions;
+        }
 
         var properties = obj.GetType().GetProperties();
         foreach (var prop in properties)
@@ -300,23 +322,33 @@ public static bool operator !=(JsonFormatter? left, JsonFormatter? right)
     private bool AreObjectsEqual(object? obj1, object? obj2)
     {
         if (obj1 is null && obj2 is null)
+        {
             return true;
+        }
 
         if (obj1 is null || obj2 is null)
+        {
             return false;
+        }
 
         if (obj1 is Dictionary<string, object?> dict1 && obj2 is Dictionary<string, object?> dict2)
         {
             if (dict1.Count != dict2.Count)
+            {
                 return false;
+            }
 
             foreach (var kvp in dict1)
             {
                 if (!dict2.TryGetValue(kvp.Key, out var value2))
+                {
                     return false;
+                }
 
                 if (!AreObjectsEqual(kvp.Value, value2))
+                {
                     return false;
+                }
             }
 
             return true;

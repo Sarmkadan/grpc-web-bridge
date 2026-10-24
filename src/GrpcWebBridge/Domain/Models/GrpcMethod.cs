@@ -86,12 +86,16 @@ public sealed class GrpcMethod
     public void AddInputParameter(MethodParameter parameter)
     {
         if (parameter is null)
+        {
             throw new ArgumentNullException(nameof(parameter));
+        }
 
         parameter.Validate();
 
         if (_inputParameters.Any(p => p.Name == parameter.Name))
+        {
             throw new InvalidOperationException($"Parameter '{parameter.Name}' already exists");
+        }
 
         _inputParameters.Add(parameter);
         UpdatedAt = DateTime.UtcNow;
@@ -106,12 +110,16 @@ public sealed class GrpcMethod
     public void AddOutputParameter(MethodParameter parameter)
     {
         if (parameter is null)
+        {
             throw new ArgumentNullException(nameof(parameter));
+        }
 
         parameter.Validate();
 
         if (_outputParameters.Any(p => p.Name == parameter.Name))
+        {
             throw new InvalidOperationException($"Parameter '{parameter.Name}' already exists");
+        }
 
         _outputParameters.Add(parameter);
         UpdatedAt = DateTime.UtcNow;
@@ -139,39 +147,58 @@ public sealed class GrpcMethod
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Name))
+        {
             throw new ArgumentException("Method name cannot be empty", nameof(Name));
+        }
 
         if (string.IsNullOrWhiteSpace(FullName))
+        {
             throw new ArgumentException("Method full name cannot be empty", nameof(FullName));
+        }
 
         if (string.IsNullOrWhiteSpace(InputMessageType))
+        {
             throw new ArgumentException("Input message type cannot be empty", nameof(InputMessageType));
+        }
 
         if (string.IsNullOrWhiteSpace(OutputMessageType))
+        {
             throw new ArgumentException("Output message type cannot be empty", nameof(OutputMessageType));
+        }
 
         if (TimeoutMilliseconds <= 0)
+        {
             throw new ArgumentException("Timeout must be greater than 0", nameof(TimeoutMilliseconds));
+        }
     }
 
     private static string ValidateName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             throw new ArgumentException("Method name cannot be empty", nameof(name));
+        }
+
         return name.Trim();
     }
 
     private static string ValidateFullName(string fullName)
     {
         if (string.IsNullOrWhiteSpace(fullName))
+        {
             throw new ArgumentException("Full name cannot be empty", nameof(fullName));
+        }
+
         return fullName.Trim();
     }
 
     private static string ValidateMessageType(string messageType)
     {
         if (string.IsNullOrWhiteSpace(messageType))
+        {
             throw new ArgumentException("Message type cannot be empty", nameof(messageType));
+        }
+
         return messageType.Trim();
     }
 
@@ -185,7 +212,9 @@ public sealed class GrpcMethod
     public override bool Equals(object? obj)
     {
         if (obj is not GrpcMethod other)
+        {
             return false;
+        }
 
         return FullName == other.FullName && Type == other.Type;
     }

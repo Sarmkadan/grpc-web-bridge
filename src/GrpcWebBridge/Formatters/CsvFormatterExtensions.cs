@@ -32,7 +32,9 @@ public static class CsvFormatterExtensions
         ArgumentNullException.ThrowIfNull(formatter);
 
         if (string.IsNullOrWhiteSpace(filePath))
+        {
             throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
+        }
 
         var csv = formatter.ToCsv(items);
         await File.AppendAllTextAsync(filePath, csv, Encoding.UTF8).ConfigureAwait(false);
@@ -97,15 +99,21 @@ public static class CsvFormatterExtensions
         ArgumentNullException.ThrowIfNull(formatter);
 
         if (string.IsNullOrWhiteSpace(outputFilePath))
+        {
             throw new ArgumentException("Output file path cannot be null or empty.", nameof(outputFilePath));
+        }
 
         ArgumentNullException.ThrowIfNull(inputFilePaths);
 
         if (inputFilePaths.Length == 0)
+        {
             throw new ArgumentException("At least one input file path is required.", nameof(inputFilePaths));
+        }
 
         if (inputFilePaths.Any(string.IsNullOrWhiteSpace))
+        {
             throw new ArgumentException("Input file paths cannot be null or empty.", nameof(inputFilePaths));
+        }
 
         var allLines = new List<string>();
 
@@ -113,7 +121,9 @@ public static class CsvFormatterExtensions
         foreach (var inputPath in inputFilePaths)
         {
             if (!File.Exists(inputPath))
+            {
                 throw new FileNotFoundException($"Input file not found: {inputPath}");
+            }
 
             var csv = await File.ReadAllTextAsync(inputPath, Encoding.UTF8).ConfigureAwait(false);
             var lines = csv.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
@@ -129,7 +139,9 @@ public static class CsvFormatterExtensions
                 for (int i = 1; i < lines.Length; i++)
                 {
                     if (!string.IsNullOrWhiteSpace(lines[i]))
+                    {
                         allLines.Add(lines[i]);
+                    }
                 }
             }
         }
@@ -161,16 +173,24 @@ public static class CsvFormatterExtensions
         ArgumentNullException.ThrowIfNull(formatter);
 
         if (string.IsNullOrWhiteSpace(inputFilePath))
+        {
             throw new ArgumentException("Input file path cannot be null or empty.", nameof(inputFilePath));
+        }
 
         if (string.IsNullOrWhiteSpace(outputDirectory))
+        {
             throw new ArgumentException("Output directory cannot be null or empty.", nameof(outputDirectory));
+        }
 
         if (rowsPerFile <= 0)
+        {
             throw new ArgumentException("Rows per file must be positive.", nameof(rowsPerFile));
+        }
 
         if (!File.Exists(inputFilePath))
+        {
             throw new FileNotFoundException($"Input file not found: {inputFilePath}");
+        }
 
         // Ensure output directory exists
         Directory.CreateDirectory(outputDirectory);
@@ -179,7 +199,9 @@ public static class CsvFormatterExtensions
         var lines = csv.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
         if (lines.Length <= 1)
+        {
             return; // Only header or empty
+        }
 
         var headers = lines[0];
         var dataLines = lines.Skip(1).Where(line => !string.IsNullOrWhiteSpace(line)).ToList();

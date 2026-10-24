@@ -24,7 +24,9 @@ public sealed class GrpcConnectionManagerExtensionsTests : IAsyncDisposable
             .GetField("_metrics", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         var dict = (Dictionary<string, ConnectionMetrics>)field.GetValue(_manager)!;
         foreach (var (key, metrics) in entries)
+        {
             dict[key] = metrics;
+        }
     }
 
     // --- Empty manager ---

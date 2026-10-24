@@ -5,10 +5,10 @@
 // CTO & Software Architect
 // =====================================================================
 
+using System.Diagnostics.CodeAnalysis;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
-using System.Diagnostics.CodeAnalysis;
 
 namespace GrpcWebBridge.Benchmarks;
 

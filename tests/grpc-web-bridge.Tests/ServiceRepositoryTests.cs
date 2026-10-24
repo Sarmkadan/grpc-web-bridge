@@ -4,6 +4,9 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using GrpcWebBridge.Data;
 using GrpcWebBridge.Domain; // For MethodType
@@ -11,9 +14,6 @@ using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace GrpcWebBridge.Tests;
 
@@ -138,7 +138,7 @@ public sealed class ServiceRepositoryTests
         // Assert
         deleteResult.Should().BeTrue();
         getResult.Should().BeNull();
-        
+
         _logger.LogInformation("Completed test {TestName} with result: {Result}", nameof(DeleteAsync_WithExistingService_ReturnsTrueAndRemoves), deleteResult);
     }
 
@@ -174,7 +174,7 @@ public sealed class ServiceRepositoryTests
         // Arrange
         var service = CreateValidGrpcService("ServiceToUpdate", "update.package", "localhost", 5000);
         await _repository.AddAsync(service);
-        
+
         // Modify some properties
         service.PackageName = "UpdatedPackage";
         service.Description = "Updated description";

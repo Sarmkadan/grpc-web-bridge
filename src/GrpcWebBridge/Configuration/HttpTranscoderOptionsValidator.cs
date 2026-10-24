@@ -17,13 +17,13 @@ public sealed class HttpTranscoderOptionsValidator : IValidateOptions<HttpTransc
 {
     private const string OptionsPath = nameof(HttpTranscoderOptions);
 
-    private static readonly HashSet<string> AllowedHttpMethods = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> _allowedHttpMethods = new(StringComparer.Ordinal)
     {
         "GET", "PUT", "POST", "DELETE", "PATCH"
     };
 
     // A variable is a brace group with no braces inside, such as {id} or {name=books/*}.
-    private static readonly Regex VariableGroup = new(@"\{[^{}]*\}", RegexOptions.CultureInvariant);
+    private static readonly Regex _variableGroup = new(@"\{[^{}]*\}", RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Validates the transcoder options and collects all failures.
@@ -40,10 +40,14 @@ public sealed class HttpTranscoderOptionsValidator : IValidateOptions<HttpTransc
         ValidateRoutePrefix(options.RoutePrefix, failures);
 
         if (options.JsonSerializerOptions is null)
+        {
             failures.Add(Failure(nameof(HttpTranscoderOptions.JsonSerializerOptions), "must not be null"));
+        }
 
         if (options.MaxRequestBodySize <= 0)
+        {
             failures.Add(Failure(nameof(HttpTranscoderOptions.MaxRequestBodySize), $"must be greater than 0 (was {options.MaxRequestBodySize})"));
+        }
 
         ValidateRoutes(options.Routes, failures);
 
@@ -57,12 +61,18 @@ public sealed class HttpTranscoderOptionsValidator : IValidateOptions<HttpTransc
         const string property = nameof(HttpTranscoderOptions.RoutePrefix);
 
         if (prefix is null)
+        {
             return;
+        }
 
         if (!prefix.StartsWith('/'))
+        {
             failures.Add(Failure(property, $"must start with '/' (was '{prefix}')"));
+        }
         else if (prefix.EndsWith('/'))
+        {
             failures.Add(Failure(property, $"must not end with '/' (was '{prefix}')"));
+        }
     }
 
     private static void ValidateRoutes(List<HttpRouteBinding>? routes, List<string> failures)
@@ -91,9 +101,11 @@ public sealed class HttpTranscoderOptionsValidator : IValidateOptions<HttpTransc
 
             var routeName = $"{route.ServiceName}/{route.MethodName}";
 
-            if (!AllowedHttpMethods.Contains(route.HttpMethod))
+            if (!_allowedHttpMethods.Contains(route.HttpMethod))
+            {
                 failures.Add(Failure($"{path}.{nameof(HttpRouteBinding.HttpMethod)}",
                     $"must be one of GET, PUT, POST, DELETE, PATCH (was '{route.HttpMethod}' for {routeName})"));
+            }
 
             if (!TryParseVariables(route.Template, out var variables, out var error))
             {
@@ -108,16 +120,22 @@ public sealed class HttpTranscoderOptionsValidator : IValidateOptions<HttpTransc
                 // Nested paths such as {book.id} are matched on their top-level field only.
                 var topLevelField = variable.Split('.')[0];
                 if (!requestFields.Contains(topLevelField, StringComparer.Ordinal))
+                {
                     failures.Add(Failure($"{path}.{nameof(HttpRouteBinding.Template)}",
                         $"variable '{{{variable}}}' for {routeName} does not match a request field"));
+                }
             }
 
-            var key = $"{route.HttpMethod} {VariableGroup.Replace(route.Template!, "{}")}";
+            var key = $"{route.HttpMethod} {_variableGroup.Replace(route.Template!, "{}")}";
             if (seen.TryGetValue(key, out var firstRoute))
+            {
                 failures.Add(Failure(path,
                     $"route '{route.HttpMethod} {route.Template}' for {routeName} duplicates {firstRoute}"));
+            }
             else
+            {
                 seen[key] = $"'{route.HttpMethod} {route.Template}' for {routeName} at {property}[{i}]";
+            }
         }
     }
 

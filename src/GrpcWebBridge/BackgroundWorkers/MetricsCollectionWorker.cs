@@ -5,8 +5,8 @@
 // =============================================================================
 
 using GrpcWebBridge.Controllers;
-using GrpcWebBridge.Services;
 using GrpcWebBridge.Domain;
+using GrpcWebBridge.Services;
 
 namespace GrpcWebBridge.BackgroundWorkers;
 
@@ -149,7 +149,9 @@ public sealed class MetricsCollectionWorker : BackgroundService
                 .ToList();
 
             if (relevantSnapshots.Count == 0)
+            {
                 return new { message = "No metrics data available for the specified time period" };
+            }
 
             return new
             {

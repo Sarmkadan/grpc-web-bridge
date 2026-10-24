@@ -128,7 +128,9 @@ public sealed class AdaptiveFlowController : BackgroundService
         var metrics = _engine.GetAllMetrics();
 
         if (metrics.Count == 0)
+        {
             return;
+        }
 
         int widened = 0, pressured = 0, neutral = 0;
 
@@ -136,7 +138,9 @@ public sealed class AdaptiveFlowController : BackgroundService
         {
             var stream = _engine.GetStream(streamId);
             if (stream is null)
+            {
                 continue;
+            }
 
             var bp = stream.BackpressureController;
             double utilization = bp.WindowUtilization;

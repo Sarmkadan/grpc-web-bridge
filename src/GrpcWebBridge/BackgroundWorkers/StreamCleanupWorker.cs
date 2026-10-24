@@ -4,8 +4,8 @@
 // CTO & Software Architect
 // =============================================================================
 
-using GrpcWebBridge.Services;
 using GrpcWebBridge.Domain;
+using GrpcWebBridge.Services;
 
 namespace GrpcWebBridge.BackgroundWorkers;
 
@@ -23,15 +23,15 @@ public sealed class StreamCleanupWorker : BackgroundService
     private int _totalStreamsRemoved = 0;
 
     /// <summary>
-/// Initializes a new instance of the <see cref="StreamCleanupWorker"/> class.
-/// </summary>
-/// <param name="logger">The logger instance.</param>
-/// <param name="streamingService">The streaming service instance.</param>
-/// <param name="options">The stream cleanup options. If null, default options are used.</param>
-public StreamCleanupWorker(
-        ILogger<StreamCleanupWorker> logger,
-        StreamingService streamingService,
-        StreamCleanupOptions? options = null)
+    /// Initializes a new instance of the <see cref="StreamCleanupWorker"/> class.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="streamingService">The streaming service instance.</param>
+    /// <param name="options">The stream cleanup options. If null, default options are used.</param>
+    public StreamCleanupWorker(
+            ILogger<StreamCleanupWorker> logger,
+            StreamingService streamingService,
+            StreamCleanupOptions? options = null)
     {
         _logger = logger;
         _streamingService = streamingService;
@@ -87,7 +87,9 @@ public StreamCleanupWorker(
                 {
                     var stats = _streamingService.GetStreamStatistics(streamId);
                     if (stats is null)
+                    {
                         continue;
+                    }
 
                     var lastActivityTime = stats.LastActivityTime;
                     var idleDuration = startTime - lastActivityTime;

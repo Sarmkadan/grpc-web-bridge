@@ -33,13 +33,19 @@ public static class GrpcMethodExtensions
 
         // Async modifier
         if (includeAsync)
+        {
             builder.Append("async ");
+        }
 
         // Return type
         if (method.Type is MethodType.ServerStreaming or MethodType.BidirectionalStreaming)
+        {
             builder.Append("IAsyncEnumerable<");
+        }
         else
+        {
             builder.Append("Task<");
+        }
 
         builder.Append(method.OutputMessageType);
         builder.Append("> ");

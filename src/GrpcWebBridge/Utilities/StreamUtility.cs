@@ -29,20 +29,28 @@ public static class StreamUtility
         int chunkSize = DefaultBufferSize)
     {
         if (source is null)
+        {
             throw new ArgumentNullException(nameof(source));
+        }
 
         if (destination is null)
+        {
             throw new ArgumentNullException(nameof(destination));
+        }
 
         if (chunkSize <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(chunkSize), chunkSize, "Chunk size must be positive");
+        }
 
         var buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
         try
         {
             int bytesRead;
             while ((bytesRead = await source.ReadAsync(buffer.AsMemory(0, chunkSize))) > 0)
+            {
                 await destination.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+            }
 
             await destination.FlushAsync().ConfigureAwait(false);
         }
@@ -59,7 +67,9 @@ public static class StreamUtility
     public static async Task<byte[]> ReadStreamToEndAsync(Stream stream, int maxSizeBytes = DefaultMaxReadSizeBytes)
     {
         if (stream is null)
+        {
             throw new ArgumentNullException(nameof(stream));
+        }
 
         const int chunkSize = 81920;
         var buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
@@ -71,7 +81,9 @@ public static class StreamUtility
             while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, chunkSize))) > 0)
             {
                 if (ms.Length + bytesRead > maxSizeBytes)
+                {
                     throw new InvalidOperationException($"Stream exceeds maximum size of {maxSizeBytes} bytes");
+                }
 
                 await ms.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
             }
@@ -90,7 +102,9 @@ public static class StreamUtility
     public static async IAsyncEnumerable<string> ReadLinesAsync(Stream stream)
     {
         if (stream is null)
+        {
             throw new ArgumentNullException(nameof(stream));
+        }
 
         using (var reader = new StreamReader(stream))
         {
@@ -109,7 +123,9 @@ public static class StreamUtility
     public static PipeReader CreatePipeReader(Stream stream, int bufferSize = DefaultBufferSize)
     {
         if (stream is null)
+        {
             throw new ArgumentNullException(nameof(stream));
+        }
 
         return PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: bufferSize));
     }
@@ -120,7 +136,9 @@ public static class StreamUtility
     public static PipeWriter CreatePipeWriter(Stream stream, int bufferSize = DefaultBufferSize)
     {
         if (stream is null)
+        {
             throw new ArgumentNullException(nameof(stream));
+        }
 
         return PipeWriter.Create(stream, new StreamPipeWriterOptions());
     }
@@ -131,10 +149,14 @@ public static class StreamUtility
     public static async Task CompressStreamAsync(Stream source, Stream destination)
     {
         if (source is null)
+        {
             throw new ArgumentNullException(nameof(source));
+        }
 
         if (destination is null)
+        {
             throw new ArgumentNullException(nameof(destination));
+        }
 
         using (var gzip = new System.IO.Compression.GZipStream(destination, System.IO.Compression.CompressionMode.Compress))
         {
@@ -148,10 +170,14 @@ public static class StreamUtility
     public static async Task DecompressStreamAsync(Stream source, Stream destination)
     {
         if (source is null)
+        {
             throw new ArgumentNullException(nameof(source));
+        }
 
         if (destination is null)
+        {
             throw new ArgumentNullException(nameof(destination));
+        }
 
         using (var gzip = new System.IO.Compression.GZipStream(source, System.IO.Compression.CompressionMode.Decompress))
         {
@@ -170,17 +196,25 @@ public static class StreamUtility
         int delayMs = DefaultRetryDelayMs)
     {
         if (stream is null)
+        {
             throw new ArgumentNullException(nameof(stream));
+        }
 
         // Fix: validate boundary values for retry parameters
         if (maxRetries < 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(maxRetries), maxRetries, "Max retries cannot be negative");
+        }
 
         if (delayMs < 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(delayMs), delayMs, "Delay cannot be negative");
+        }
 
         if (data is null || data.Length == 0)
+        {
             return;
+        }
 
         int retries = 0;
         while (true)
@@ -205,7 +239,9 @@ public static class StreamUtility
     public static void SafeSeek(Stream stream, long offset, SeekOrigin origin)
     {
         if (stream is null)
+        {
             throw new ArgumentNullException(nameof(stream));
+        }
 
         if (stream.CanSeek)
         {
@@ -223,7 +259,9 @@ public static class StreamUtility
     public static long? GetStreamLength(Stream stream)
     {
         if (stream is null)
+        {
             return null;
+        }
 
         try
         {
@@ -249,7 +287,9 @@ public static class StreamUtility
     public static async Task<string> StreamToBase64Async(Stream stream)
     {
         if (stream is null)
+        {
             throw new ArgumentNullException(nameof(stream));
+        }
 
         var bytes = await ReadStreamToEndAsync(stream).ConfigureAwait(false);
         return Convert.ToBase64String(bytes);
@@ -261,7 +301,9 @@ public static class StreamUtility
     public static Stream Base64ToStream(string base64String)
     {
         if (string.IsNullOrEmpty(base64String))
+        {
             throw new ArgumentException("Base64 string cannot be null or empty", nameof(base64String));
+        }
 
         try
         {
@@ -281,10 +323,14 @@ public static class StreamUtility
     public static async Task<string> CalculateStreamHashAsync(Stream stream, System.Security.Cryptography.HashAlgorithm algorithm)
     {
         if (stream is null)
+        {
             throw new ArgumentNullException(nameof(stream));
+        }
 
         if (algorithm is null)
+        {
             throw new ArgumentNullException(nameof(algorithm));
+        }
 
         var originalPosition = stream.CanSeek ? stream.Position : -1;
 
@@ -309,10 +355,14 @@ public static class StreamUtility
     public static async Task TeeStreamAsync(Stream source, params Stream[] destinations)
     {
         if (source is null)
+        {
             throw new ArgumentNullException(nameof(source));
+        }
 
         if (destinations is null || destinations.Length == 0)
+        {
             throw new ArgumentException("At least one destination stream required", nameof(destinations));
+        }
 
         const int bufferSize = 81920;
         var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
@@ -330,7 +380,9 @@ public static class StreamUtility
             }
 
             foreach (var dest in destinations.Where(d => d is not null))
+            {
                 await dest.FlushAsync().ConfigureAwait(false);
+            }
         }
         finally
         {

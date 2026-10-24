@@ -13,7 +13,7 @@ using Xunit;
 /// </summary>
 public sealed class DateTimeUtilityTests
 {
-    private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _unixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     /// <summary>
     /// Verifies that ToUnixTimestamp returns 0 for the Unix epoch.
@@ -22,7 +22,7 @@ public sealed class DateTimeUtilityTests
     public void ToUnixTimestamp_WithUnixEpoch_ReturnsZero()
     {
         // Arrange & Act
-        var timestamp = DateTimeUtility.ToUnixTimestamp(UnixEpoch);
+        var timestamp = DateTimeUtility.ToUnixTimestamp(_unixEpoch);
 
         // Assert
         timestamp.Should().Be(0L);
@@ -38,7 +38,7 @@ public sealed class DateTimeUtilityTests
         var result = DateTimeUtility.FromUnixTimestamp(0);
 
         // Assert
-        result.Should().Be(UnixEpoch);
+        result.Should().Be(_unixEpoch);
     }
 
     /// <summary>

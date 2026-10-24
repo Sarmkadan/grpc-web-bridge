@@ -157,30 +157,46 @@ public sealed record FlowControlOptions
     public void Validate()
     {
         if (InitialWindowSize <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(InitialWindowSize), "Must be positive.");
+        }
 
         if (MaxWindowSize < InitialWindowSize)
+        {
             throw new ArgumentOutOfRangeException(nameof(MaxWindowSize),
                 $"Must be >= {nameof(InitialWindowSize)} ({InitialWindowSize}).");
+        }
 
         if (InboundChannelCapacity <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(InboundChannelCapacity), "Must be positive.");
+        }
 
         if (OutboundChannelCapacity <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(OutboundChannelCapacity), "Must be positive.");
+        }
 
         if (BackpressureThreshold is < 0.0 or > 1.0)
+        {
             throw new ArgumentOutOfRangeException(nameof(BackpressureThreshold),
                 "Must be a value between 0.0 and 1.0 inclusive.");
+        }
 
         if (CreditReplenishmentBatch <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(CreditReplenishmentBatch), "Must be positive.");
+        }
 
         if (MaxProducerWaitTime.HasValue && MaxProducerWaitTime.Value <= TimeSpan.Zero)
+        {
             throw new ArgumentOutOfRangeException(nameof(MaxProducerWaitTime),
                 "Must be a positive duration, or null for indefinite wait.");
+        }
 
         if (AdaptiveAdjustmentInterval <= TimeSpan.Zero)
+        {
             throw new ArgumentOutOfRangeException(nameof(AdaptiveAdjustmentInterval), "Must be positive.");
+        }
     }
 }

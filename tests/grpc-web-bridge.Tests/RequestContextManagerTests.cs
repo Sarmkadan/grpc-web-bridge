@@ -166,11 +166,13 @@ public sealed class RequestContextManagerTests
         RequestContext? context2 = null;
 
         // Act - create contexts concurrently and capture them
-        var task1 = Task.Run(() => {
+        var task1 = Task.Run(() =>
+        {
             manager.CreateContext(requestId1);
             context1 = manager.GetContext();
         });
-        var task2 = Task.Run(() => {
+        var task2 = Task.Run(() =>
+        {
             manager.CreateContext(requestId2);
             context2 = manager.GetContext();
         });

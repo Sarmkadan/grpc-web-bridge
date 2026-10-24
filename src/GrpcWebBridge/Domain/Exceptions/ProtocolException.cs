@@ -64,10 +64,14 @@ public class ProtocolException : GrpcWebBridgeException
     {
         var result = base.ToString();
         if (!string.IsNullOrEmpty(RequestId))
+        {
             result += $" | Request: {RequestId}";
+        }
 
         if (!string.IsNullOrEmpty(SourceFormat) || !string.IsNullOrEmpty(TargetFormat))
+        {
             result += $" | Conversion: {SourceFormat} -> {TargetFormat}";
+        }
 
         return result;
     }

@@ -33,7 +33,9 @@ public sealed class CsvFormatter
     {
         ArgumentNullException.ThrowIfNull(items);
         if (!items.Any())
+        {
             return string.Empty;
+        }
 
         var sb = new StringBuilder();
         var properties = typeof(T).GetProperties();
@@ -65,11 +67,15 @@ public sealed class CsvFormatter
     {
         ArgumentException.ThrowIfNullOrEmpty(nameof(csv));
         if (string.IsNullOrEmpty(csv))
+        {
             return new List<Dictionary<string, string>>();
+        }
 
         var lines = csv.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         if (lines.Length == 0)
+        {
             return new List<Dictionary<string, string>>();
+        }
 
         var result = new List<Dictionary<string, string>>();
         var headers = ParseCsvLine(lines[0]);
@@ -77,7 +83,9 @@ public sealed class CsvFormatter
         for (int i = 1; i < lines.Length; i++)
         {
             if (string.IsNullOrWhiteSpace(lines[i]))
+            {
                 continue;
+            }
 
             var values = ParseCsvLine(lines[i]);
             var dict = new Dictionary<string, string>();
@@ -100,7 +108,9 @@ public sealed class CsvFormatter
     {
         ArgumentException.ThrowIfNullOrEmpty(nameof(csv));
         if (string.IsNullOrEmpty(csv))
+        {
             return new List<T>();
+        }
 
         var dictionaries = FromCsv(csv);
         var properties = typeof(T).GetProperties();
@@ -139,7 +149,9 @@ public sealed class CsvFormatter
     {
         ArgumentNullException.ThrowIfNull(items);
         if (string.IsNullOrEmpty(filePath))
+        {
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+        }
 
         var csv = ToCsv(items);
         await File.WriteAllTextAsync(filePath, csv, Encoding.UTF8).ConfigureAwait(false);
@@ -153,7 +165,9 @@ public sealed class CsvFormatter
         ArgumentException.ThrowIfNullOrEmpty(nameof(filePath));
 
         if (!File.Exists(filePath))
+        {
             throw new FileNotFoundException($"File not found: {filePath}");
+        }
 
         var csv = await File.ReadAllTextAsync(filePath, Encoding.UTF8).ConfigureAwait(false);
         return FromCsv(csv);
@@ -176,7 +190,9 @@ public sealed class CsvFormatter
     public string DictsToCsv(IEnumerable<Dictionary<string, string>> data)
     {
         if (data is null || !data.Any())
+        {
             return string.Empty;
+        }
 
         var sb = new StringBuilder();
         var dictList = data.ToList();
@@ -223,7 +239,9 @@ public sealed class CsvFormatter
         for (int i = 1; i < lines.Length; i++)
         {
             if (string.IsNullOrWhiteSpace(lines[i]))
+            {
                 continue;
+            }
 
             var valueCount = ParseCsvLine(lines[i]).Count;
             if (valueCount != headerCount)
@@ -241,7 +259,9 @@ public sealed class CsvFormatter
     private string EscapeCsvField(string field)
     {
         if (string.IsNullOrEmpty(field))
+        {
             return string.Empty;
+        }
 
         // Check if field needs quoting
         if (field.Contains(_options.Delimiter) || field.Contains("\"") || field.Contains("\n") || field.Contains("\r"))

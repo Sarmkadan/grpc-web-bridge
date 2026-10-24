@@ -4,11 +4,11 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Text.Json;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace GrpcWebBridge.Services;
 
@@ -47,10 +47,14 @@ public sealed class ProtocolTranslationService
     public GrpcRequest TranslateHttpToGrpc(string serviceName, string methodName, byte[] httpBody, SerializationFormat format)
     {
         if (string.IsNullOrWhiteSpace(serviceName))
+        {
             throw new ProtocolException("Service name cannot be empty");
+        }
 
         if (string.IsNullOrWhiteSpace(methodName))
+        {
             throw new ProtocolException("Method name cannot be empty");
+        }
 
         ArgumentNullException.ThrowIfNull(httpBody);
 
@@ -128,7 +132,9 @@ public sealed class ProtocolTranslationService
             _logger.LogDebug("Converting Protobuf to JSON: {DataSize} bytes", protobufData.Length);
 
             if (protobufData.Length == 0)
+            {
                 return EmptyJsonObject.AsBytes();
+            }
 
             var json = JsonSerializer.Serialize(
                 new { data = Convert.ToBase64String(protobufData) },
@@ -155,7 +161,9 @@ public sealed class ProtocolTranslationService
             _logger.LogDebug("Converting JSON to Protobuf: {DataSize} bytes", jsonData.Length);
 
             if (jsonData.Length == 0)
+            {
                 return [];
+            }
 
             using var document = JsonDocument.Parse(jsonData.AsMemory());
 
@@ -163,7 +171,9 @@ public sealed class ProtocolTranslationService
             {
                 var base64Data = element.GetString();
                 if (!string.IsNullOrEmpty(base64Data))
+                {
                     return Convert.FromBase64String(base64Data);
+                }
             }
 
             return jsonData;
@@ -198,14 +208,18 @@ public sealed class ProtocolTranslationService
     public Dictionary<string, string> TranslateMetadata(Dictionary<string, string> sourceMetadata)
     {
         if (sourceMetadata is null)
+        {
             return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
 
         var translated = new Dictionary<string, string>(sourceMetadata.Count, StringComparer.Ordinal);
 
         foreach (var kvp in sourceMetadata)
         {
             if (string.IsNullOrWhiteSpace(kvp.Key))
+            {
                 continue;
+            }
 
             // Lowercase the key without an intermediate string allocation
             var lowered = string.Create(kvp.Key.Length, kvp.Key, static (span, key) =>
@@ -213,7 +227,9 @@ public sealed class ProtocolTranslationService
 
             // Hotfix: Fix deadline propagation in nested gRPC calls causing premature timeouts
             if (lowered == GrpcTimeoutMetadataKey)
+            {
                 continue;
+            }
 
             translated[lowered] = kvp.Value ?? string.Empty;
         }
@@ -241,7 +257,9 @@ public sealed class ProtocolTranslationService
 
             var outboundMetadata = TranslateMetadata(request.Metadata);
             if (authContext?.IsAuthenticated == true)
+            {
                 outboundMetadata[BridgeUserMetadataKey] = authContext.UserId;
+            }
 
             await Task.Yield();
 

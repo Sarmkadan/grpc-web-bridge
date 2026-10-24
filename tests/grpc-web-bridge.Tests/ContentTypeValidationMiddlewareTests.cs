@@ -4,12 +4,12 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using GrpcWebBridge.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
-using System.Text;
-using System.Text.Json;
 using Xunit;
 
 /// <summary>
@@ -39,7 +39,10 @@ public sealed class ContentTypeValidationMiddlewareTests
         context.Request.Method = HttpMethods.Post;
         context.Request.Path = path;
         if (contentType is not null)
+        {
             context.Request.ContentType = contentType;
+        }
+
         context.Response.Body = new MemoryStream();
         return context;
     }

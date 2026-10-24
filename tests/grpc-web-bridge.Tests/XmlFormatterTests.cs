@@ -1,9 +1,9 @@
 #nullable enable
 
-using FluentAssertions;
-using GrpcWebBridge.Formatters;
 using System.IO;
 using System.Threading.Tasks;
+using FluentAssertions;
+using GrpcWebBridge.Formatters;
 using Xunit;
 
 namespace GrpcWebBridge.Tests;

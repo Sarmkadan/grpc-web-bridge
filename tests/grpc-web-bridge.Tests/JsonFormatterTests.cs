@@ -1,6 +1,6 @@
-using Xunit;
 using FluentAssertions;
 using GrpcWebBridge.Formatters;
+using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
@@ -39,7 +39,7 @@ public class JsonFormatterTests
     {
         var obj = new { B = 2, A = 1 };
         var json = _formatter.FormatWithSortedKeys(obj);
-        
+
         // Ensure "a" comes before "b"
         json.IndexOf("a").Should().BeLessThan(json.IndexOf("b"));
     }

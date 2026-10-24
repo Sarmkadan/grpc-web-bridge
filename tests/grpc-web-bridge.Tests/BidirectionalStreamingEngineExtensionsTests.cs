@@ -32,7 +32,7 @@ public sealed class BidirectionalStreamingEngineExtensionsTests
     public async Task GetStreamMetrics_EngineNull_ThrowsArgumentNullException()
     {
         BidirectionalStreamingEngine? engine = null;
-        
+
         Action act = () => engine!.GetStreamMetrics("test-stream");
 
         act.Should().Throw<ArgumentNullException>();

@@ -220,7 +220,9 @@ public sealed class StreamDiagnosticsService : BackgroundService
 
         // Remove tracking entries for streams that closed between passes.
         foreach (var staleKey in _prevMessageCounts.Keys.Except(allMetrics.Keys).ToList())
+        {
             _prevMessageCounts.TryRemove(staleKey, out _);
+        }
 
         _logger.LogInformation(
             "Streaming diagnostics — activeStreams={Active}, zeroActivity={ZeroActivity}, " +

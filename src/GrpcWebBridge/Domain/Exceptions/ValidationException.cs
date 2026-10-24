@@ -76,13 +76,19 @@ public class ValidationException : GrpcWebBridgeException
     {
         var result = base.ToString();
         if (!string.IsNullOrEmpty(FieldName))
+        {
             result += $" | Field: {FieldName}";
+        }
 
         if (InvalidValue != null)
+        {
             result += $" | Value: {InvalidValue}";
+        }
 
         if (!string.IsNullOrEmpty(ValidationRule))
+        {
             result += $" | Rule: {ValidationRule}";
+        }
 
         return result;
     }

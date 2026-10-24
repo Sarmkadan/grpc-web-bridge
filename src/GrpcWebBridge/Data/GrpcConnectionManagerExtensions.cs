@@ -376,7 +376,9 @@ public static class GrpcConnectionManagerExtensions
         ArgumentNullException.ThrowIfNull(manager);
 
         if (string.IsNullOrWhiteSpace(serviceFullName))
+        {
             return false;
+        }
 
         lock (manager.GetLock())
         {
@@ -397,9 +399,11 @@ public static class GrpcConnectionManagerExtensions
         ArgumentNullException.ThrowIfNull(manager);
 
         if (string.IsNullOrWhiteSpace(serviceFullName))
+        {
             return null;
+        }
 
-            return manager.GetChannel(serviceFullName);
+        return manager.GetChannel(serviceFullName);
     }
 
     // Helper method to access the private _metrics dictionary through reflection

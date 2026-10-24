@@ -1,12 +1,12 @@
 #nullable enable
 
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 using FluentAssertions;
 using GrpcWebBridge.BackgroundWorkers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Reflection;
 using Xunit;
 
 namespace GrpcWebBridge.Tests;

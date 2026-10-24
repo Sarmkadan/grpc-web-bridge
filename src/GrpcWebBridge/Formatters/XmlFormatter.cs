@@ -30,7 +30,9 @@ public sealed class XmlFormatter
     public string ToXml<T>(T obj) where T : class
     {
         if (obj is null)
+        {
             throw new ArgumentNullException(nameof(obj));
+        }
 
         try
         {
@@ -71,7 +73,9 @@ public sealed class XmlFormatter
     public T? FromXml<T>(string xml) where T : class
     {
         if (string.IsNullOrEmpty(xml))
+        {
             throw new ArgumentException("XML string cannot be null or empty", nameof(xml));
+        }
 
         try
         {
@@ -93,7 +97,9 @@ public sealed class XmlFormatter
     public string FormatXml(string xml)
     {
         if (string.IsNullOrEmpty(xml))
+        {
             return xml;
+        }
 
         try
         {
@@ -112,7 +118,9 @@ public sealed class XmlFormatter
     public static string MinifyXml(string xml)
     {
         if (string.IsNullOrEmpty(xml))
+        {
             return xml;
+        }
 
         try
         {
@@ -156,7 +164,9 @@ public sealed class XmlFormatter
     public string? GetElementValueByXPath(string xml, string xpathExpression)
     {
         if (string.IsNullOrEmpty(xml) || string.IsNullOrEmpty(xpathExpression))
+        {
             return null;
+        }
 
         try
         {
@@ -176,7 +186,9 @@ public sealed class XmlFormatter
     public async Task ExportToFileAsync<T>(T obj, string filePath) where T : class
     {
         if (string.IsNullOrEmpty(filePath))
+        {
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+        }
 
         var xml = ToXml(obj);
         await File.WriteAllTextAsync(filePath, xml, _options.Encoding).ConfigureAwait(false);
@@ -188,10 +200,14 @@ public sealed class XmlFormatter
     public async Task<T?> ImportFromFileAsync<T>(string filePath) where T : class
     {
         if (string.IsNullOrEmpty(filePath))
+        {
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+        }
 
         if (!File.Exists(filePath))
+        {
             throw new FileNotFoundException($"File not found: {filePath}");
+        }
 
         var xml = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
         return FromXml<T>(xml);
@@ -203,10 +219,14 @@ public sealed class XmlFormatter
     public string MergeXml(string xml1, string xml2)
     {
         if (string.IsNullOrEmpty(xml1))
+        {
             return xml2 ?? string.Empty;
+        }
 
         if (string.IsNullOrEmpty(xml2))
+        {
             return xml1;
+        }
 
         try
         {
@@ -239,7 +259,9 @@ public sealed class XmlFormatter
         ArgumentNullException.ThrowIfNull(xml);
 
         if (string.IsNullOrEmpty(xml))
+        {
             return string.Empty;
+        }
 
         try
         {
@@ -261,7 +283,9 @@ public sealed class XmlFormatter
         ArgumentNullException.ThrowIfNull(xml);
 
         if (string.IsNullOrEmpty(xml))
+        {
             return new Dictionary<string, object?>();
+        }
 
         try
         {

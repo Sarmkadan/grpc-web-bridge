@@ -171,7 +171,9 @@ public sealed class StreamingWorkerSupervisor : BackgroundService
 
             // If no streams are active, consider it healthy (idle state)
             if (!hasStreams)
+            {
                 return true;
+            }
 
             // If we have streams but are below capacity, consider it healthy
             return isWithinCapacity;
@@ -189,7 +191,9 @@ public sealed class StreamingWorkerSupervisor : BackgroundService
     private bool HasHeartbeatTimeout()
     {
         if (!_lastHeartbeatTime.HasValue)
+        {
             return false;
+        }
 
         var timeoutThreshold = DateTime.UtcNow.AddSeconds(-_options.HeartbeatTimeoutSeconds);
         return _lastHeartbeatTime.Value < timeoutThreshold;

@@ -77,10 +77,14 @@ public class ConfigurationException : GrpcWebBridgeException
     {
         var result = base.ToString();
         if (!string.IsNullOrEmpty(ConfigurationKey))
+        {
             result += $" | ConfigKey: {ConfigurationKey}";
+        }
 
         if (!string.IsNullOrEmpty(ConfigurationValue))
+        {
             result += $" | ConfigValue: {ConfigurationValue}";
+        }
 
         return result;
     }

@@ -4,11 +4,11 @@
 // CTO & Software Architect
 // =============================================================================
 
-using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
-using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GrpcWebBridge.Controllers;
 
@@ -65,7 +65,9 @@ public sealed class BridgeController : ControllerBase
     public async Task<IActionResult> InvokeMethod([FromBody] BridgeRequest request)
     {
         if (request is null)
+        {
             return BadRequest(new { error = "Request body is required" });
+        }
 
         var sw = Stopwatch.StartNew();
         try
@@ -77,12 +79,16 @@ public sealed class BridgeController : ControllerBase
                 .FirstOrDefault(s => s.Id == request.ServiceId || s.Name == request.ServiceId);
 
             if (service is null)
+            {
                 return NotFound(new { error = $"Service '{request.ServiceId}' not found" });
+            }
 
             // Locate method in service
             var method = service.Methods.FirstOrDefault(m => m.Name == request.MethodName);
             if (method is null)
+            {
                 return NotFound(new { error = $"Method '{request.MethodName}' not found in service" });
+            }
 
             // Build gRPC request and invoke
             var grpcRequest = new GrpcRequest
@@ -236,7 +242,9 @@ public sealed class BridgeController : ControllerBase
     public async Task<IActionResult> BatchInvoke([FromBody] BatchRequest batchRequest)
     {
         if (batchRequest?.Operations is null || !batchRequest.Operations.Any())
+        {
             return BadRequest(new { error = "At least one operation is required" });
+        }
 
         try
         {
@@ -324,7 +332,11 @@ public sealed class BridgeController : ControllerBase
     {
         var authHeader = Request.Headers["Authorization"].FirstOrDefault();
         var token = _authService.ExtractBearerToken(authHeader);
-        if (token is null) return null;
+        if (token is null)
+        {
+            return null;
+        }
+
         try { return _authService.AuthenticateBearer(token); }
         catch { return null; }
     }

@@ -33,7 +33,9 @@ public sealed class CorrelationIdManager
     public string GetOrCreateCorrelationId()
     {
         if (!string.IsNullOrEmpty(_correlationId.Value))
+        {
             return _correlationId.Value;
+        }
 
         var id = Guid.NewGuid().ToString();
         _correlationId.Value = id;
@@ -45,12 +47,15 @@ public sealed class CorrelationIdManager
     /// Sets the correlation ID.
     /// </summary>
     public void SetCorrelationId(string? correlationId)
+    {
+        if (string.IsNullOrEmpty(correlationId))
         {
-            if (string.IsNullOrEmpty(correlationId))
-                throw new ArgumentException("Correlation ID cannot be null or empty", nameof(correlationId));
-            _correlationId.Value = correlationId;
-            _logger.LogInformation("Set correlation ID {CorrelationId}", correlationId);
+            throw new ArgumentException("Correlation ID cannot be null or empty", nameof(correlationId));
         }
+
+        _correlationId.Value = correlationId;
+        _logger.LogInformation("Set correlation ID {CorrelationId}", correlationId);
+    }
 
     /// <summary>
     /// Gets the current correlation ID without creating a new one.
@@ -96,7 +101,9 @@ public sealed class CorrelationIdManager
     public void CompleteTrace(string traceId, bool success = true, string? errorMessage = null)
     {
         if (string.IsNullOrEmpty(traceId))
+        {
             return;
+        }
 
         if (_traces.TryGetValue(traceId, out var trace))
         {
@@ -118,11 +125,16 @@ public sealed class CorrelationIdManager
     public CorrelationTrace? GetTrace(string traceId)
     {
         if (string.IsNullOrEmpty(traceId))
+        {
             return null;
+        }
 
         _traces.TryGetValue(traceId, out var trace);
         if (trace is null)
+        {
             _logger.LogWarning("Trace {TraceId} not found", traceId);
+        }
+
         return trace;
     }
 
@@ -132,7 +144,9 @@ public sealed class CorrelationIdManager
     public List<CorrelationTrace> GetTracesForCorrelation(string correlationId)
     {
         if (string.IsNullOrEmpty(correlationId))
+        {
             return new List<CorrelationTrace>();
+        }
 
         return _traces.Values
             .Where(t => t.CorrelationId == correlationId)
@@ -146,7 +160,9 @@ public sealed class CorrelationIdManager
     public void AddTraceMetadata(string traceId, string key, string value)
     {
         if (string.IsNullOrEmpty(traceId) || string.IsNullOrEmpty(key))
+        {
             return;
+        }
 
         if (_traces.TryGetValue(traceId, out var trace))
         {

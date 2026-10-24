@@ -4,10 +4,10 @@
 // CTO & Software Architect
 // =============================================================================
 
-using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Services;
-using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GrpcWebBridge.Controllers;
 
@@ -202,7 +202,9 @@ public sealed class MetricsController : ControllerBase
         lock (_methodCallCounts)
         {
             if (!_methodCallCounts.ContainsKey(methodName))
+            {
                 _methodCallCounts[methodName] = 0;
+            }
 
             _methodCallCounts[methodName]++;
         }
@@ -218,7 +220,9 @@ public sealed class MetricsController : ControllerBase
         lock (_methodErrorCounts)
         {
             if (!_methodErrorCounts.ContainsKey(methodName))
+            {
                 _methodErrorCounts[methodName] = 0;
+            }
 
             _methodErrorCounts[methodName]++;
         }

@@ -68,7 +68,10 @@ public sealed class RequestLoggingMiddleware
 
                 // Reset captured stream position then forward to the original stream
                 if (responseBody.CanSeek)
+                {
                     responseBody.Seek(0, SeekOrigin.Begin);
+                }
+
                 await responseBody.CopyToAsync(originalBodyStream);
             }
         }
@@ -90,7 +93,9 @@ public sealed class RequestLoggingMiddleware
 
         // Skip logging for excluded paths (health checks, swagger, etc.)
         if (_excludedPaths.Any(p => logPath.StartsWith(p)))
+        {
             return;
+        }
 
         var requestBodyContent = "";
         if (request.ContentLength > 0 && IsContentTypeLoggable(request.ContentType))
@@ -135,7 +140,9 @@ public sealed class RequestLoggingMiddleware
 
         // Skip logging for excluded paths
         if (_excludedPaths.Any(p => logPath.StartsWith(p)))
+        {
             return;
+        }
 
         var responseBodyContent = "";
         if (response.Body.CanSeek && response.ContentLength > 0 && IsContentTypeLoggable(response.ContentType))
@@ -187,7 +194,9 @@ public sealed class RequestLoggingMiddleware
     private static bool IsContentTypeLoggable(string? contentType)
     {
         if (string.IsNullOrEmpty(contentType))
+        {
             return false;
+        }
 
         var loggableTypes = new[] { "application/json", "application/xml", "text/" };
         return loggableTypes.Any(type => contentType.Contains(type, StringComparison.OrdinalIgnoreCase));

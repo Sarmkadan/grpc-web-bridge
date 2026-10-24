@@ -55,7 +55,9 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
     public GrpcChannel GetOrCreateChannel(GrpcService service)
     {
         if (service is null)
+        {
             throw new ArgumentNullException(nameof(service));
+        }
 
         var connectionKey = GetConnectionKey(service);
 
@@ -108,7 +110,9 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
     public GrpcChannel? GetChannel(string serviceFullName)
     {
         if (string.IsNullOrWhiteSpace(serviceFullName))
+        {
             return null;
+        }
 
         lock (_lock)
         {
@@ -123,7 +127,9 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
     public async Task CloseChannelAsync(GrpcService service)
     {
         if (service is null)
+        {
             throw new ArgumentNullException(nameof(service));
+        }
 
         var connectionKey = GetConnectionKey(service);
 
@@ -171,7 +177,9 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
     public ConnectionMetrics? GetMetrics(string serviceFullName)
     {
         if (string.IsNullOrWhiteSpace(serviceFullName))
+        {
             return null;
+        }
 
         lock (_lock)
         {
@@ -186,7 +194,9 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
     public async Task<bool> TestConnectionAsync(GrpcService service)
     {
         if (service is null)
+        {
             throw new ArgumentNullException(nameof(service));
+        }
 
         try
         {
@@ -231,14 +241,18 @@ public sealed class GrpcConnectionManager : IAsyncDisposable
             metrics.RequestCount++;
 
             if (isNewConnection)
+            {
                 metrics.CreatedAt = DateTime.UtcNow;
+            }
         }
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_disposed)
+        {
             return;
+        }
 
         await CloseAllChannelsAsync().ConfigureAwait(false);
         _disposed = true;

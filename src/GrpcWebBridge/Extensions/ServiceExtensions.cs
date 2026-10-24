@@ -4,11 +4,11 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System;
 using GrpcWebBridge.Data;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
-using System;
 
 namespace GrpcWebBridge.Extensions;
 

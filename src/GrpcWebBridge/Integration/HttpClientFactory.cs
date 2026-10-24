@@ -118,10 +118,14 @@ public sealed class HttpClientFactory : IDisposable
     public HttpClient GetClient(string name = "default")
     {
         if (string.IsNullOrEmpty(name))
+        {
             throw new ConfigurationException(nameof(name), "Client name cannot be null or empty");
+        }
 
         if (_disposed)
+        {
             throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has been disposed and cannot create new clients.");
+        }
 
         // Check if handlers need rotation based on connection lifetime
         CheckHandlerRotation();
@@ -171,7 +175,9 @@ public sealed class HttpClientFactory : IDisposable
     private void CheckHandlerRotation()
     {
         if (_options.PooledConnectionLifetimeMs <= 0)
+        {
             return;
+        }
 
         var lifetime = TimeSpan.FromMilliseconds(_options.PooledConnectionLifetimeMs);
         var now = DateTime.UtcNow;
@@ -220,7 +226,9 @@ public sealed class HttpClientFactory : IDisposable
         ArgumentNullException.ThrowIfNull(client);
 
         if (_disposed)
+        {
             throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has been disposed and cannot register new clients.");
+        }
 
         _clients.AddOrUpdate(name, client, (_, old) =>
         {
@@ -240,7 +248,9 @@ public sealed class HttpClientFactory : IDisposable
     public HttpClient GetClientForUri(string baseUri)
     {
         if (string.IsNullOrEmpty(baseUri))
+        {
             throw new ConfigurationException(nameof(baseUri), "Base URI cannot be null or empty");
+        }
 
         try
         {
@@ -272,7 +282,9 @@ public sealed class HttpClientFactory : IDisposable
     public async Task<string> GetAsync(string uri, string? clientName = null)
     {
         if (string.IsNullOrEmpty(uri))
+        {
             throw new ConfigurationException(nameof(uri), "URI cannot be null or empty");
+        }
 
         var client = GetClient(clientName ?? "default");
         try
@@ -308,10 +320,14 @@ public sealed class HttpClientFactory : IDisposable
     public async Task<string> PostJsonAsync(string uri, object payload, string? clientName = null)
     {
         if (string.IsNullOrEmpty(uri))
+        {
             throw new ConfigurationException(nameof(uri), "URI cannot be null or empty");
+        }
 
         if (payload is null)
+        {
             throw new ConfigurationException(nameof(payload), "Payload cannot be null");
+        }
 
         var client = GetClient(clientName ?? "default");
         try
@@ -357,10 +373,14 @@ public sealed class HttpClientFactory : IDisposable
         string? clientName = null)
     {
         if (string.IsNullOrEmpty(uri))
+        {
             throw new ConfigurationException(nameof(uri), "URI cannot be null or empty");
+        }
 
         if (method is null)
+        {
             throw new ConfigurationException(nameof(method), "HTTP method cannot be null");
+        }
 
         var client = GetClient(clientName ?? "default");
         try
@@ -407,7 +427,9 @@ public sealed class HttpClientFactory : IDisposable
         ArgumentNullException.ThrowIfNull(name);
 
         if (_disposed)
+        {
             throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has been disposed and cannot remove clients.");
+        }
 
         if (_clients.TryRemove(name, out var client))
         {
@@ -443,7 +465,9 @@ public sealed class HttpClientFactory : IDisposable
     public void Dispose()
     {
         if (_disposed)
+        {
             throw new ObjectDisposedException(nameof(HttpClientFactory), "The factory has already been disposed.");
+        }
 
         _disposed = true;
 
@@ -509,7 +533,9 @@ public sealed class HttpClientFactory : IDisposable
         public void Dispose()
         {
             if (_disposed)
+            {
                 return;
+            }
 
             _disposed = true;
             Handler.Dispose();

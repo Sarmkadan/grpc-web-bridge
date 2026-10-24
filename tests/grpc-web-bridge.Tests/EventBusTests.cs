@@ -41,7 +41,9 @@ public sealed class EventBusTests : IDisposable
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
 
         _eventBus.Dispose();
         _disposed = true;

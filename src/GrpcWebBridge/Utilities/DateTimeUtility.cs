@@ -31,7 +31,9 @@ public static class DateTimeUtility
         ArgumentException.ThrowIfNullOrEmpty(iso8601String);
 
         if (string.IsNullOrEmpty(iso8601String))
+        {
             return null;
+        }
 
         if (DateTime.TryParseExact(
             iso8601String,
@@ -57,7 +59,7 @@ public static class DateTimeUtility
     /// </summary>
     public static long ToUnixTimestamp(DateTime dateTime)
     {
-        return (long)(dateTime.ToUniversalTime() - UnixEpoch).TotalSeconds;
+        return (long)(dateTime.ToUniversalTime() - _unixEpoch).TotalSeconds;
     }
 
     /// <summary>
@@ -65,7 +67,7 @@ public static class DateTimeUtility
     /// </summary>
     public static DateTime FromUnixTimestamp(long unixTimestamp)
     {
-        return UnixEpoch.AddSeconds(unixTimestamp);
+        return _unixEpoch.AddSeconds(unixTimestamp);
     }
 
     /// <summary>
@@ -77,22 +79,34 @@ public static class DateTimeUtility
         var diff = reference - dateTime.ToUniversalTime();
 
         if (diff.TotalSeconds < 60)
+        {
             return "just now";
+        }
 
         if (diff.TotalMinutes < 60)
+        {
             return $"{(int)diff.TotalMinutes} minute{((int)diff.TotalMinutes != 1 ? "s" : "")} ago";
+        }
 
         if (diff.TotalHours < 24)
+        {
             return $"{(int)diff.TotalHours} hour{((int)diff.TotalHours != 1 ? "s" : "")} ago";
+        }
 
         if (diff.TotalDays < 7)
+        {
             return $"{(int)diff.TotalDays} day{((int)diff.TotalDays != 1 ? "s" : "")} ago";
+        }
 
         if (diff.TotalDays < 30)
+        {
             return $"{(int)(diff.TotalDays / 7)} week{((int)(diff.TotalDays / 7) != 1 ? "s" : "")} ago";
+        }
 
         if (diff.TotalDays < 365)
+        {
             return $"{(int)(diff.TotalDays / 30)} month{((int)(diff.TotalDays / 30) != 1 ? "s" : "")} ago";
+        }
 
         return $"{(int)(diff.TotalDays / 365)} year{((int)(diff.TotalDays / 365) != 1 ? "s" : "")} ago";
     }
@@ -177,7 +191,9 @@ public static class DateTimeUtility
         var age = reference.Year - birthDate.Year;
 
         if (birthDate.Date > reference.AddYears(-age))
+        {
             age--;
+        }
 
         return age;
     }
@@ -222,7 +238,9 @@ public static class DateTimeUtility
     public static DateTime RoundTo(DateTime dateTime, TimeSpan interval)
     {
         if (interval <= TimeSpan.Zero)
+        {
             throw new ArgumentException("Interval must be positive", nameof(interval));
+        }
 
         var ticks = (dateTime.Ticks + interval.Ticks / 2) / interval.Ticks;
         return new DateTime(ticks * interval.Ticks);
@@ -246,18 +264,24 @@ public static class DateTimeUtility
         var duration = endDate - startDate;
 
         if (duration.TotalSeconds < 60)
+        {
             return $"{(int)duration.TotalSeconds}s";
+        }
 
         if (duration.TotalMinutes < 60)
+        {
             return $"{(int)duration.TotalMinutes}m {(int)duration.Seconds}s";
+        }
 
         if (duration.TotalHours < 24)
+        {
             return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        }
 
         return $"{(int)duration.TotalDays}d {duration.Hours}h";
     }
 
-    private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 }
 
 /// <summary>

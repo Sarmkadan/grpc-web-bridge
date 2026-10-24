@@ -4,12 +4,12 @@
 // CTO & Software Architect
 // =============================================================================
 
-using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 using GrpcWebBridge.Configuration;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Services;
-using System.Globalization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GrpcWebBridge.Controllers;
 
@@ -98,7 +98,9 @@ public class ConfigurationController : ControllerBase
     public IActionResult UpdateConfiguration([FromBody] ConfigurationUpdateRequest request)
     {
         if (request?.Settings is null || request.Settings.Count == 0)
+        {
             return BadRequest(new { error = "No settings provided to update" });
+        }
 
         try
         {
@@ -110,12 +112,18 @@ public class ConfigurationController : ControllerBase
                 {
                     case "compressresponses":
                         if (bool.TryParse(setting.Value?.ToString(), out var compress))
+                        {
                             updates["CompressResponses"] = compress;
+                        }
+
                         break;
 
                     case "compressionlevel":
                         if (int.TryParse(setting.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var level) && level >= 0 && level <= 9)
+                        {
                             updates["CompressionLevel"] = level;
+                        }
+
                         break;
 
                     case "requestspersecond":
@@ -128,7 +136,10 @@ public class ConfigurationController : ControllerBase
 
                     case "streamidletimeoutseconds":
                         if (int.TryParse(setting.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var timeout) && timeout > 0)
+                        {
                             updates["StreamIdleTimeoutSeconds"] = timeout;
+                        }
+
                         break;
 
                     default:

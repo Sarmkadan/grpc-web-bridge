@@ -33,7 +33,8 @@ public class StreamCleanupWorkerTests
 
         // Assert
         stats.Should().NotBeNull();
-        var expected = new {
+        var expected = new
+        {
             totalCleanupsRun = 0,
             totalStreamsRemoved = 0,
             averageStreamsPerCleanup = 0.0,
@@ -64,7 +65,8 @@ public class StreamCleanupWorkerTests
 
         // Assert
         stats.Should().NotBeNull();
-        var expected = new {
+        var expected = new
+        {
             totalCleanupsRun = 0,
             totalStreamsRemoved = 0,
             averageStreamsPerCleanup = 0.0,
@@ -86,7 +88,8 @@ public class StreamCleanupWorkerTests
 
         // Assert
         stats.Should().NotBeNull();
-        var expected = new {
+        var expected = new
+        {
             totalCleanupsRun = 0,
             totalStreamsRemoved = 0,
             averageStreamsPerCleanup = 0.0,
@@ -116,7 +119,8 @@ public class StreamCleanupWorkerTests
 
         // Assert
         stats.Should().NotBeNull();
-        var expected = new {
+        var expected = new
+        {
             totalCleanupsRun = 0,
             totalStreamsRemoved = 0,
             averageStreamsPerCleanup = 0.0,

@@ -4,12 +4,12 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System;
+using System.Collections.Generic;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 
 namespace GrpcWebBridge.Services;
 
@@ -54,10 +54,14 @@ public sealed class ServiceRegistry
         lock (_servicesLock)
         {
             if (_services.ContainsKey(service.FullName))
+            {
                 throw new ServiceRegistrationException(service.Name, "Service already registered");
+            }
 
             if (RegisteredServiceCount >= Constants.ServiceRegistry.MaxCachedServices)
+            {
                 throw new ServiceRegistrationException(service.Name, "Service registry is full");
+            }
 
             _services[service.FullName] = service;
             _serviceRegistrationTimestamps[service.FullName] = DateTime.UtcNow;
@@ -74,7 +78,9 @@ public sealed class ServiceRegistry
     public GrpcService? GetService(string fullName)
     {
         if (string.IsNullOrWhiteSpace(fullName))
+        {
             return null;
+        }
 
         lock (_servicesLock)
         {
@@ -89,7 +95,9 @@ public sealed class ServiceRegistry
     {
         // Fix: handle null inputs to prevent invalid full name creation
         if (string.IsNullOrWhiteSpace(serviceName) || string.IsNullOrWhiteSpace(packageName))
+        {
             return null;
+        }
 
         var fullName = $"{packageName}.{serviceName}";
         return GetService(fullName);
@@ -101,7 +109,9 @@ public sealed class ServiceRegistry
     public bool UnregisterService(string fullName)
     {
         if (string.IsNullOrWhiteSpace(fullName))
+        {
             return false;
+        }
 
         lock (_servicesLock)
         {
@@ -133,7 +143,9 @@ public sealed class ServiceRegistry
     public IEnumerable<GrpcService> ListServicesByPackage(string packageName)
     {
         if (string.IsNullOrWhiteSpace(packageName))
+        {
             return new List<GrpcService>();
+        }
 
         lock (_servicesLock)
         {
@@ -149,7 +161,9 @@ public sealed class ServiceRegistry
     public bool ServiceExists(string fullName)
     {
         if (string.IsNullOrWhiteSpace(fullName))
+        {
             return false;
+        }
 
         lock (_servicesLock)
         {
@@ -167,7 +181,9 @@ public sealed class ServiceRegistry
 
         var service = GetService(fullName);
         if (service is null)
+        {
             throw new ServiceRegistrationException(fullName, "Service not found");
+        }
 
         service.Status = status;
         service.UpdatedAt = DateTime.UtcNow;
@@ -208,7 +224,9 @@ public sealed class ServiceRegistry
             if (_metadata.TryGetValue(fullName, out var metadata))
             {
                 if (metadata.ExpiresAt > DateTime.UtcNow)
+                {
                     return metadata;
+                }
 
                 _metadata.Remove(fullName);
             }
@@ -227,7 +245,9 @@ public sealed class ServiceRegistry
 
         var service = GetService(fullName);
         if (service is null)
+        {
             return ServiceHealthStatus.Unknown;
+        }
 
         return service.Status switch
         {

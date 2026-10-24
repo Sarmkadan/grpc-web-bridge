@@ -16,7 +16,7 @@ namespace GrpcWebBridge.Utilities;
 /// </summary>
 public static class JsonUtility
 {
-    private static readonly JsonSerializerOptions DefaultOptions = CreateDefaultOptions();
+    private static readonly JsonSerializerOptions _defaultOptions = CreateDefaultOptions();
 
     /// <summary>
     /// Creates default JSON serialization options.
@@ -43,9 +43,11 @@ public static class JsonUtility
     public static string Serialize<T>(T obj, bool indented = false)
     {
         if (obj is null)
+        {
             return "null";
+        }
 
-        var options = indented ? CreateIndentedOptions() : DefaultOptions;
+        var options = indented ? CreateIndentedOptions() : _defaultOptions;
         return JsonSerializer.Serialize(obj, options);
     }
 
@@ -66,11 +68,13 @@ public static class JsonUtility
     {
         ArgumentNullException.ThrowIfNull(json);
         if (string.IsNullOrWhiteSpace(json))
+        {
             return default;
+        }
 
         try
         {
-            return JsonSerializer.Deserialize<T>(json, DefaultOptions);
+            return JsonSerializer.Deserialize<T>(json, _defaultOptions);
         }
         catch (JsonException ex)
         {
@@ -86,11 +90,13 @@ public static class JsonUtility
     {
         ArgumentNullException.ThrowIfNull(json);
         if (string.IsNullOrWhiteSpace(json))
+        {
             return null;
+        }
 
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, object>>(json, DefaultOptions);
+            return JsonSerializer.Deserialize<Dictionary<string, object>>(json, _defaultOptions);
         }
         catch (JsonException ex)
         {
@@ -115,7 +121,7 @@ public static class JsonUtility
 
         try
         {
-            result = JsonSerializer.Deserialize<T>(json, DefaultOptions);
+            result = JsonSerializer.Deserialize<T>(json, _defaultOptions);
             return true;
         }
         catch (JsonException ex)
@@ -167,7 +173,9 @@ public static class JsonUtility
             foreach (var part in parts)
             {
                 if (!jsonElement.TryGetProperty(part, out var nextElement))
+                {
                     return null;
+                }
 
                 jsonElement = nextElement;
             }
@@ -222,13 +230,17 @@ public static class JsonUtility
     {
         ArgumentNullException.ThrowIfNull(requiredProperties);
         if (string.IsNullOrWhiteSpace(json))
+        {
             return false;
+        }
 
         try
         {
             var dict = DeserializeToDictionary(json);
             if (dict is null)
+            {
                 return false;
+            }
 
             return requiredProperties.All(p => dict.ContainsKey(p) && dict[p] is not null);
         }

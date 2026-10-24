@@ -89,7 +89,9 @@ public sealed class GrpcRequest
     public void AddMetadata(string key, string value)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Metadata key cannot be empty", nameof(key));
+        }
 
         Metadata[key] = value;
     }
@@ -120,7 +122,9 @@ public sealed class GrpcRequest
     public void SetPayload(byte[] payload, SerializationFormat format = SerializationFormat.Protobuf)
     {
         if (payload is null)
+        {
             throw new ArgumentNullException(nameof(payload));
+        }
 
         Payload = payload;
         PayloadFormat = format;
@@ -133,18 +137,26 @@ public sealed class GrpcRequest
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(ServiceName))
+        {
             throw new ArgumentException("Service name cannot be empty", nameof(ServiceName));
+        }
 
         if (string.IsNullOrWhiteSpace(MethodName))
+        {
             throw new ArgumentException("Method name cannot be empty", nameof(MethodName));
+        }
 
         if (Payload.Length > Constants.Grpc.MaxMessageSize)
+        {
             throw new ArgumentException(
                 $"Payload exceeds maximum size of {Constants.Grpc.MaxMessageSize} bytes",
                 nameof(Payload));
+        }
 
         if (TimeoutMilliseconds <= 0)
+        {
             throw new ArgumentException("Timeout must be greater than 0", nameof(TimeoutMilliseconds));
+        }
     }
 
     /// <summary>
@@ -167,14 +179,20 @@ public sealed class GrpcRequest
     private static string ValidateServiceName(string serviceName)
     {
         if (string.IsNullOrWhiteSpace(serviceName))
+        {
             throw new ArgumentException("Service name cannot be empty", nameof(serviceName));
+        }
+
         return serviceName.Trim();
     }
 
     private static string ValidateMethodName(string methodName)
     {
         if (string.IsNullOrWhiteSpace(methodName))
+        {
             throw new ArgumentException("Method name cannot be empty", nameof(methodName));
+        }
+
         return methodName.Trim();
     }
 
@@ -192,7 +210,9 @@ public sealed class GrpcRequest
     public override bool Equals(object? obj)
     {
         if (obj is not GrpcRequest other)
+        {
             return false;
+        }
 
         return Id == other.Id;
     }

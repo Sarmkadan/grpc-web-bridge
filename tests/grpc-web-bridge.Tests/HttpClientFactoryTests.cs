@@ -685,7 +685,7 @@ public sealed class HttpClientFactoryTests : IDisposable
         client1.Should().NotBeNull();
 
         // Wait for lifetime to expire
-        await Task.Delay(150).ConfigureAwait(false);
+        await Task.Delay(150);
 
         // Get another client with the same name - rotation replaces the expired handler and its clients
         var client2 = factory.GetClient("rotation-test");

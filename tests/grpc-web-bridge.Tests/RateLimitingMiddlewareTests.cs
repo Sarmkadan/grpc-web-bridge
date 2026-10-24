@@ -4,11 +4,11 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Net;
 using FluentAssertions;
 using GrpcWebBridge.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
-using System.Net;
 using Xunit;
 
 namespace GrpcWebBridge.Tests;
@@ -21,8 +21,8 @@ public sealed class RateLimitingMiddlewareTests
     private static RateLimitingMiddleware CreateMiddleware(RequestDelegate next, RateLimitingOptions? options = null)
     {
         return new RateLimitingMiddleware(
-            next, 
-            NullLogger<RateLimitingMiddleware>.Instance, 
+            next,
+            NullLogger<RateLimitingMiddleware>.Instance,
             options ?? new RateLimitingOptions { RequestsPerSecond = 1, WindowSizeSeconds = 1, RetryAfterSeconds = 10 });
     }
 
@@ -31,17 +31,17 @@ public sealed class RateLimitingMiddlewareTests
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
         context.Request.Path = path;
-        
+
         if (ipAddress != null)
         {
             context.Connection.RemoteIpAddress = IPAddress.Parse(ipAddress);
         }
-        
+
         if (forwardedFor != null)
         {
             context.Request.Headers["X-Forwarded-For"] = forwardedFor;
         }
-        
+
         return context;
     }
 
@@ -82,7 +82,7 @@ public sealed class RateLimitingMiddlewareTests
         var options = new RateLimitingOptions { RequestsPerSecond = 1, WindowSizeSeconds = 1, RetryAfterSeconds = 30 };
         var middleware = CreateMiddleware(_ => Task.CompletedTask, options);
         var context1 = CreateContext(ipAddress: "10.0.0.1");
-        
+
         await middleware.InvokeAsync(context1);
         context1.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
 
@@ -105,7 +105,7 @@ public sealed class RateLimitingMiddlewareTests
     {
         var options = new RateLimitingOptions { RequestsPerSecond = 1, WindowSizeSeconds = 1 };
         var middleware = CreateMiddleware(_ => Task.CompletedTask, options);
-        
+
         var contextClient1 = CreateContext(ipAddress: "1.1.1.1");
         var contextClient2 = CreateContext(ipAddress: "2.2.2.2");
 

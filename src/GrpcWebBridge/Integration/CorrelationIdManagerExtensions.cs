@@ -35,7 +35,9 @@ public static class CorrelationIdManagerExtensions
         ArgumentNullException.ThrowIfNull(manager);
 
         if (string.IsNullOrEmpty(traceId))
+        {
             return null;
+        }
 
         var trace = manager.GetTrace(traceId);
         return trace?.GetDuration();
@@ -53,7 +55,9 @@ public static class CorrelationIdManagerExtensions
         ArgumentNullException.ThrowIfNull(manager);
 
         if (string.IsNullOrEmpty(traceId))
+        {
             return false;
+        }
 
         var trace = manager.GetTrace(traceId);
         return trace?.Success == true;
@@ -71,7 +75,9 @@ public static class CorrelationIdManagerExtensions
         ArgumentNullException.ThrowIfNull(manager);
 
         if (string.IsNullOrEmpty(traceId))
+        {
             return null;
+        }
 
         var trace = manager.GetTrace(traceId);
         return trace?.Success == false ? trace.ErrorMessage : null;
@@ -153,7 +159,9 @@ public static class CorrelationIdManagerExtensions
 
         var correlationId = manager.GetCorrelationId();
         if (string.IsNullOrEmpty(correlationId))
+        {
             return [];
+        }
 
         return manager.GetTracesForCorrelation(correlationId);
     }
@@ -170,7 +178,9 @@ public static class CorrelationIdManagerExtensions
 
         var correlationId = manager.GetCorrelationId();
         if (string.IsNullOrEmpty(correlationId))
+        {
             return false;
+        }
 
         return manager.GetTracesForCorrelation(correlationId).Count > 0;
     }
@@ -187,7 +197,9 @@ public static class CorrelationIdManagerExtensions
 
         var correlationId = manager.GetCorrelationId();
         if (string.IsNullOrEmpty(correlationId))
+        {
             return null;
+        }
 
         var traces = manager.GetTracesForCorrelation(correlationId);
         return traces.OrderByDescending(t => t.StartTime).FirstOrDefault();

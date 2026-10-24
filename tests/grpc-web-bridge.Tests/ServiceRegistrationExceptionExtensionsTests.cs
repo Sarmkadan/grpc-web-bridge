@@ -3,11 +3,11 @@
 // Author: Automated Generation
 // =====================================================================
 
-using FluentAssertions;
-using GrpcWebBridge.Domain.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
+using GrpcWebBridge.Domain.Exceptions;
 using Xunit;
 
 namespace GrpcWebBridge.Tests;

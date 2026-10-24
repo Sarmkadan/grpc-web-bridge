@@ -4,6 +4,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Collections.Generic;
 using FluentAssertions;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
@@ -12,7 +13,6 @@ using GrpcWebBridge.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
-using System.Collections.Generic;
 
 namespace GrpcWebBridge.Tests;
 

@@ -99,7 +99,9 @@ public sealed class TracingService
             BridgeActivitySource.ProtocolTranslation, ActivityKind.Internal);
 
         if (activity is null)
+        {
             return null;
+        }
 
         activity
             .SetTag("bridge.source_protocol", sourceProtocol)
@@ -124,7 +126,9 @@ public sealed class TracingService
             BridgeActivitySource.Authentication, ActivityKind.Internal);
 
         if (activity is null)
+        {
             return null;
+        }
 
         activity
             .SetTag("auth.scheme", scheme)
@@ -149,13 +153,17 @@ public sealed class TracingService
         ArgumentNullException.ThrowIfNull(exception);
 
         if (activity is null)
+        {
             return;
+        }
 
         activity.SetStatus(ActivityStatusCode.Error, exception.Message);
         activity.AddException(exception);
 
         if (!string.IsNullOrWhiteSpace(grpcStatus))
+        {
             activity.SetTag(BridgeActivitySource.TagGrpcStatus, grpcStatus);
+        }
     }
 
     /// <summary>
@@ -171,13 +179,19 @@ public sealed class TracingService
         ArgumentException.ThrowIfNullOrEmpty(grpcStatus);
 
         if (activity is null)
+        {
             return;
+        }
 
         activity.SetTag(BridgeActivitySource.TagGrpcStatus, grpcStatus);
 
         if (grpcStatus != "OK")
+        {
             activity.SetStatus(ActivityStatusCode.Error, $"gRPC status: {grpcStatus}");
+        }
         else
+        {
             activity.SetStatus(ActivityStatusCode.Ok);
+        }
     }
 }

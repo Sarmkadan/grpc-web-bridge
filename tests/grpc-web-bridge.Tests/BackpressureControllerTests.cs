@@ -660,7 +660,7 @@ public sealed class BackpressureControllerTests
     }
 
     [Fact]
-    public void ConcurrentTryConsume_ThreadSafeOperations()
+    public async Task ConcurrentTryConsume_ThreadSafeOperations()
     {
         // Arrange
         var controller = CreateController(options: new FlowControlOptions
@@ -704,7 +704,7 @@ public sealed class BackpressureControllerTests
             }));
         }
 
-        Task.WhenAll(tasks).Wait();
+        await Task.WhenAll(tasks);
 
         // Assert
         errors.Should().Be(0);

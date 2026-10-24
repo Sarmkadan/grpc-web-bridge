@@ -36,15 +36,21 @@ public sealed class StreamingService
     public Stream CreateStream(string streamId, MethodType methodType)
     {
         if (string.IsNullOrWhiteSpace(streamId))
+        {
             throw new ArgumentException("Stream ID cannot be empty", nameof(streamId));
+        }
 
         lock (_streamsLock)
         {
             if (ActiveStreamCount >= Constants.Streaming.MaxStreamCount)
+            {
                 throw new StreamingException($"Maximum stream count ({Constants.Streaming.MaxStreamCount}) reached");
+            }
 
             if (_streams.ContainsKey(streamId))
+            {
                 throw new StreamingException(streamId, "Stream already exists");
+            }
 
             var stream = new Stream(streamId, methodType);
             _streams[streamId] = stream;
@@ -76,16 +82,22 @@ public sealed class StreamingService
     public void EnqueueMessage(string streamId, StreamMessage message)
     {
         if (string.IsNullOrWhiteSpace(streamId))
+        {
             throw new ArgumentException("Stream ID cannot be empty", nameof(streamId));
+        }
 
         if (message is null)
+        {
             throw new ArgumentNullException(nameof(message));
+        }
 
         message.Validate();
 
         var stream = GetStream(streamId);
         if (stream is null)
+        {
             throw new StreamingException(streamId, "Stream not found");
+        }
 
         stream.EnqueueMessage(message);
         _logger.LogDebug("Message enqueued to stream {StreamId}: seq {Sequence}", streamId, message.SequenceNumber);
@@ -100,7 +112,9 @@ public sealed class StreamingService
     {
         var stream = GetStream(streamId);
         if (stream is null)
+        {
             return null;
+        }
 
         return stream.DequeueMessage();
     }
@@ -114,7 +128,9 @@ public sealed class StreamingService
     public void CloseStream(string streamId, GrpcStatusCode? statusCode = null, string? message = null)
     {
         if (string.IsNullOrWhiteSpace(streamId))
+        {
             throw new ArgumentException("Stream ID cannot be empty", nameof(streamId));
+        }
 
         lock (_streamsLock)
         {
@@ -133,7 +149,9 @@ public sealed class StreamingService
     {
         var stream = GetStream(streamId);
         if (stream is null)
+        {
             throw new StreamingException(streamId, "Stream not found");
+        }
 
         var heartbeat = new StreamMessage(streamId, stream.MessageCount, StreamMessageType.Heartbeat);
 
@@ -154,7 +172,9 @@ public sealed class StreamingService
             foreach (var kvp in _streams)
             {
                 if (kvp.Value.LastActivityTime < timeoutThreshold)
+                {
                     streamsToClose.Add(kvp.Key);
+                }
             }
         }
 
@@ -164,7 +184,9 @@ public sealed class StreamingService
         }
 
         if (streamsToClose.Count > 0)
+        {
             _logger.LogInformation("Cleaned up {Count} idle streams", streamsToClose.Count);
+        }
     }
 
     /// <summary>
@@ -185,7 +207,9 @@ public sealed class StreamingService
     {
         var stream = GetStream(streamId);
         if (stream is null)
+        {
             throw new StreamingException(streamId, "Stream not found");
+        }
 
         return new StreamStatistics
         {

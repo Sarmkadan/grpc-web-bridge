@@ -19,8 +19,8 @@ public sealed class StreamMessageTests
 {
     private const string TestStreamId = "test-stream-123";
     private const int TestSequenceNumber = 42;
-    private static readonly byte[] TestData = [0x01, 0x02, 0x03, 0x04];
-    private static readonly Dictionary<string, string> TestHeaders = new() { { "key1", "value1" }, { "key2", "value2" } };
+    private static readonly byte[] _testData = [0x01, 0x02, 0x03, 0x04];
+    private static readonly Dictionary<string, string> _testHeaders = new() { { "key1", "value1" }, { "key2", "value2" } };
 
     /// <summary>
     /// Verifies that the default constructor initializes properties correctly.
@@ -54,14 +54,14 @@ public sealed class StreamMessageTests
     public void Constructor_WithStreamIdSequenceNumberData_InitializesCorrectly()
     {
         // Act
-        var message = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
+        var message = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
 
         // Assert
         message.Id.Should().NotBeNullOrEmpty();
         message.StreamId.Should().Be(TestStreamId);
         message.MessageType.Should().Be(StreamMessageType.Data);
         message.SequenceNumber.Should().Be(TestSequenceNumber);
-        message.Data.Should().BeEquivalentTo(TestData);
+        message.Data.Should().BeEquivalentTo(_testData);
         message.Format.Should().Be(SerializationFormat.Protobuf);
         message.Headers.Should().BeNull();
         message.Status.Should().BeNull();
@@ -97,10 +97,10 @@ public sealed class StreamMessageTests
         var message = new StreamMessage(TestStreamId, TestSequenceNumber, []);
 
         // Act
-        message.SetData(TestData, SerializationFormat.Json);
+        message.SetData(_testData, SerializationFormat.Json);
 
         // Assert
-        message.Data.Should().BeEquivalentTo(TestData);
+        message.Data.Should().BeEquivalentTo(_testData);
         message.Format.Should().Be(SerializationFormat.Json);
         message.MessageType.Should().Be(StreamMessageType.Data);
     }
@@ -128,7 +128,7 @@ public sealed class StreamMessageTests
         var message = new StreamMessage(TestStreamId, TestSequenceNumber, []);
 
         // Act
-        message.SetMetadata(TestHeaders);
+        message.SetMetadata(_testHeaders);
 
         // Assert
         message.Headers.Should().NotBeNull();
@@ -214,7 +214,7 @@ public sealed class StreamMessageTests
     public void SetHeartbeat_UpdatesMessageType()
     {
         // Arrange
-        var message = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
+        var message = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
 
         // Act
         message.SetHeartbeat();
@@ -366,7 +366,7 @@ public sealed class StreamMessageTests
     public void Validate_WithValidMessage_Succeeds()
     {
         // Arrange
-        var message = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
+        var message = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
 
         // Act
         var act = () => message.Validate();
@@ -382,15 +382,15 @@ public sealed class StreamMessageTests
     public void GetDataCopy_ReturnsCopyOfData()
     {
         // Arrange
-        var message = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
+        var message = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
 
         // Act
         var dataCopy = message.GetDataCopy();
 
         // Assert
-        dataCopy.Should().BeEquivalentTo(TestData);
-        dataCopy.Should().NotBeSameAs(TestData);
-        ReferenceEquals(dataCopy, TestData).Should().BeFalse();
+        dataCopy.Should().BeEquivalentTo(_testData);
+        dataCopy.Should().NotBeSameAs(_testData);
+        ReferenceEquals(dataCopy, _testData).Should().BeFalse();
     }
 
     /// <summary>
@@ -416,7 +416,7 @@ public sealed class StreamMessageTests
     public void ToString_ReturnsExpectedFormat()
     {
         // Arrange
-        var message = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
+        var message = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
 
         // Act
         var result = message.ToString();
@@ -435,8 +435,8 @@ public sealed class StreamMessageTests
     public void Equals_ReturnsTrueForSameIdStreamIdSequenceNumber()
     {
         // Arrange
-        var message1 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
-        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData) { Id = message1.Id };
+        var message1 = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
+        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, _testData) { Id = message1.Id };
 
         // Act
         var result = message1.Equals(message2);
@@ -452,8 +452,8 @@ public sealed class StreamMessageTests
     public void Equals_ReturnsFalseForDifferentId()
     {
         // Arrange
-        var message1 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
-        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
+        var message1 = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
+        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
 
         // Change Id of message2
         message2.Id = Guid.NewGuid().ToString("N");
@@ -472,8 +472,8 @@ public sealed class StreamMessageTests
     public void GetHashCode_ReturnsSameValueForSameIdStreamIdSequenceNumber()
     {
         // Arrange
-        var message1 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData);
-        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, TestData) { Id = message1.Id };
+        var message1 = new StreamMessage(TestStreamId, TestSequenceNumber, _testData);
+        var message2 = new StreamMessage(TestStreamId, TestSequenceNumber, _testData) { Id = message1.Id };
 
         // Act
         var hash1 = message1.GetHashCode();
@@ -494,7 +494,7 @@ public sealed class StreamMessageTests
     public void Constructor_ValidatesStreamId(string? streamId)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => new StreamMessage(streamId!, TestSequenceNumber, TestData));
+        Assert.Throws<ArgumentException>(() => new StreamMessage(streamId!, TestSequenceNumber, _testData));
     }
 
     /// <summary>
@@ -504,7 +504,7 @@ public sealed class StreamMessageTests
     public void Constructor_ValidatesSequenceNumber()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => new StreamMessage(TestStreamId, -1, TestData));
+        Assert.Throws<ArgumentException>(() => new StreamMessage(TestStreamId, -1, _testData));
     }
 
     /// <summary>

@@ -39,7 +39,9 @@ public sealed class ClientRateLimitTests
 
         // Fill up to the maximum allowed
         for (int i = 0; i < 10; i++)
+        {
             limit.AllowRequest(10, 1);
+        }
 
         // The next request should be rejected
         limit.AllowRequest(10, 1).Should().BeFalse("limit is exactly exhausted");
@@ -52,7 +54,9 @@ public sealed class ClientRateLimitTests
 
         // 100 req/sec over a 5-second window → 500 total allowed
         for (int i = 0; i < 500; i++)
+        {
             limit.AllowRequest(100, 5).Should().BeTrue();
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -115,7 +119,9 @@ public sealed class ClientRateLimitTests
         Parallel.For(0, 200, _ =>
         {
             if (limit.AllowRequest(1000, 60))
+            {
                 Interlocked.Increment(ref allowed);
+            }
         });
 
         allowed.Should().BeLessThanOrEqualTo(1000);

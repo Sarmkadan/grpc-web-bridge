@@ -5,14 +5,14 @@
 // CTO & Software Architect
 // ====================================================================
 
+using System.Collections.Concurrent;
+using System.Threading;
+using GrpcWebBridge.BackgroundWorkers;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Services;
-using GrpcWebBridge.BackgroundWorkers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Collections.Concurrent;
-using System.Threading;
 
 namespace GrpcWebBridge.Endpoints;
 
@@ -281,16 +281,22 @@ public static class HealthEndpoints
         var serviceList = services ?? registry.ListServices().ToList();
 
         if (serviceList.Count == 0)
+        {
             return "no_services";
+        }
 
         var healthyCount = serviceList.Count(s => s.Status == ServiceStatus.Serving);
         var unhealthyCount = serviceList.Count(s => s.Status == ServiceStatus.NotServing);
 
         if (unhealthyCount == 0 && healthyCount > 0)
+        {
             return "healthy";
+        }
 
         if (unhealthyCount > 0 && healthyCount == 0)
+        {
             return "unhealthy";
+        }
 
         return "degraded";
     }

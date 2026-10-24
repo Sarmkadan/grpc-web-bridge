@@ -84,7 +84,9 @@ public static class ServiceRegistryExtensions
         foreach (var service in registry.ListServices())
         {
             if (string.IsNullOrWhiteSpace(service.PackageName))
+            {
                 continue;
+            }
 
             if (!result.TryGetValue(service.PackageName, out var services))
             {

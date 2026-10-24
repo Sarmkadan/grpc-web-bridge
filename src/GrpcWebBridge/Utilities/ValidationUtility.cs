@@ -16,19 +16,19 @@ namespace GrpcWebBridge.Utilities;
 public static class ValidationUtility
 {
     // Common regex patterns
-    private static readonly Regex EmailRegex = new(
+    private static readonly Regex _emailRegex = new(
         @"^[^\s@]+@[^\s@]+\.[^\s@]+$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private static readonly Regex UrlRegex = new(
+    private static readonly Regex _urlRegex = new(
         @"^https?://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]$",
         RegexOptions.Compiled);
 
-    private static readonly Regex GrpcMethodNameRegex = new(
+    private static readonly Regex _grpcMethodNameRegex = new(
         @"^[a-zA-Z][a-zA-Z0-9_]*$",
         RegexOptions.Compiled);
 
-    private static readonly Regex ServiceIdRegex = new(
+    private static readonly Regex _serviceIdRegex = new(
         @"^[a-zA-Z0-9_\-\.]+$",
         RegexOptions.Compiled);
 
@@ -39,7 +39,9 @@ public static class ValidationUtility
     public static (bool Valid, string? Error) ValidateNotEmpty(string? value, string fieldName)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
             return (false, $"{fieldName} cannot be null or empty");
+        }
 
         return (true, null);
     }
@@ -54,13 +56,19 @@ public static class ValidationUtility
         int maxLength = int.MaxValue)
     {
         if (string.IsNullOrEmpty(value))
+        {
             return (false, $"{fieldName} cannot be null or empty");
+        }
 
         if (value.Length < minLength)
+        {
             return (false, $"{fieldName} must be at least {minLength} characters long");
+        }
 
         if (value.Length > maxLength)
+        {
             return (false, $"{fieldName} cannot exceed {maxLength} characters");
+        }
 
         return (true, null);
     }
@@ -72,13 +80,19 @@ public static class ValidationUtility
     public static (bool Valid, string? Error) ValidateEmail(string? email)
     {
         if (string.IsNullOrWhiteSpace(email))
+        {
             return (false, "Email cannot be null or empty");
+        }
 
-        if (!EmailRegex.IsMatch(email))
+        if (!_emailRegex.IsMatch(email))
+        {
             return (false, "Email format is invalid");
+        }
 
         if (email.Length > 254) // RFC 5321
+        {
             return (false, "Email is too long");
+        }
 
         return (true, null);
     }
@@ -89,13 +103,19 @@ public static class ValidationUtility
     public static (bool Valid, string? Error) ValidateUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
+        {
             return (false, "URL cannot be null or empty");
+        }
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
             return (false, "URL format is invalid");
+        }
 
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        {
             return (false, "URL must use HTTP or HTTPS scheme");
+        }
 
         return (true, null);
     }
@@ -106,10 +126,14 @@ public static class ValidationUtility
     public static (bool Valid, string? Error) ValidateIpAddress(string? ipAddress)
     {
         if (string.IsNullOrWhiteSpace(ipAddress))
+        {
             return (false, "IP address cannot be null or empty");
+        }
 
         if (!IPAddress.TryParse(ipAddress, out _))
+        {
             return (false, "IP address format is invalid");
+        }
 
         return (true, null);
     }
@@ -121,13 +145,19 @@ public static class ValidationUtility
     public static (bool Valid, string? Error) ValidateServiceId(string? serviceId)
     {
         if (string.IsNullOrWhiteSpace(serviceId))
+        {
             return (false, "Service ID cannot be null or empty");
+        }
 
         if (serviceId.Length > 255)
+        {
             return (false, "Service ID cannot exceed 255 characters");
+        }
 
-        if (!ServiceIdRegex.IsMatch(serviceId))
+        if (!_serviceIdRegex.IsMatch(serviceId))
+        {
             return (false, "Service ID contains invalid characters");
+        }
 
         return (true, null);
     }
@@ -139,13 +169,19 @@ public static class ValidationUtility
     public static (bool Valid, string? Error) ValidateMethodName(string? methodName)
     {
         if (string.IsNullOrWhiteSpace(methodName))
+        {
             return (false, "Method name cannot be null or empty");
+        }
 
         if (methodName.Length > 255)
+        {
             return (false, "Method name cannot exceed 255 characters");
+        }
 
-        if (!GrpcMethodNameRegex.IsMatch(methodName))
+        if (!_grpcMethodNameRegex.IsMatch(methodName))
+        {
             return (false, "Method name must start with a letter and contain only alphanumeric characters and underscores");
+        }
 
         return (true, null);
     }
@@ -160,10 +196,14 @@ public static class ValidationUtility
         int maxValue = int.MaxValue)
     {
         if (value < minValue)
+        {
             return (false, $"{fieldName} cannot be less than {minValue}");
+        }
 
         if (value > maxValue)
+        {
             return (false, $"{fieldName} cannot exceed {maxValue}");
+        }
 
         return (true, null);
     }
@@ -178,7 +218,9 @@ public static class ValidationUtility
     public static (bool Valid, string? Error) ValidatePort(int port, string fieldName = "Port")
     {
         if (port < 1 || port > 65535)
+        {
             return (false, $"{fieldName} must be between 1 and 65535, got {port}");
+        }
 
         return (true, null);
     }
@@ -191,7 +233,9 @@ public static class ValidationUtility
         string fieldName)
     {
         if (collection is null || !collection.Any())
+        {
             return (false, $"{fieldName} cannot be null or empty");
+        }
 
         return (true, null);
     }
@@ -205,11 +249,15 @@ public static class ValidationUtility
         params string[] requiredKeys)
     {
         if (dict is null)
+        {
             return (false, $"{fieldName} cannot be null");
+        }
 
         var missingKeys = requiredKeys.Where(k => !dict.ContainsKey(k)).ToList();
         if (missingKeys.Any())
+        {
             return (false, $"{fieldName} is missing required keys: {string.Join(", ", missingKeys)}");
+        }
 
         return (true, null);
     }
@@ -224,7 +272,9 @@ public static class ValidationUtility
         string patternDescription = "")
     {
         if (string.IsNullOrEmpty(value))
+        {
             return (false, $"{fieldName} cannot be null or empty");
+        }
 
         if (!pattern.IsMatch(value))
         {
@@ -242,11 +292,15 @@ public static class ValidationUtility
     public static (bool Valid, string? Error) ValidateJwtFormat(string? token)
     {
         if (string.IsNullOrWhiteSpace(token))
+        {
             return (false, "JWT token cannot be null or empty");
+        }
 
         var parts = token.Split('.');
         if (parts.Length != 3)
+        {
             return (false, "JWT token must contain exactly three parts separated by dots");
+        }
 
         // Basic Base64 validation
         try
@@ -273,7 +327,9 @@ public static class ValidationUtility
     public static string SanitizeInput(string? input)
     {
         if (string.IsNullOrEmpty(input))
+        {
             return string.Empty;
+        }
 
         return input
             .Replace("&", "&amp;")

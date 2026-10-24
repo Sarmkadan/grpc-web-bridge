@@ -76,10 +76,14 @@ public class ServiceRegistrationException : GrpcWebBridgeException
     {
         var result = base.ToString();
         if (!string.IsNullOrEmpty(ServiceName))
+        {
             result += $" | Service: {ServiceName}";
+        }
 
         if (!string.IsNullOrEmpty(ServiceEndpoint))
+        {
             result += $" | Endpoint: {ServiceEndpoint}";
+        }
 
         return result;
     }

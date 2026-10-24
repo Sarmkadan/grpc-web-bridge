@@ -39,7 +39,9 @@ public sealed class RequestContextManager : IDisposable
     private string? SanitizeMetadataKey(string key)
     {
         if (string.IsNullOrEmpty(key))
+        {
             return null;
+        }
 
         // Remove control characters (0x00-0x1F, 0x7F-0x9F)
         var sanitized = new char[key.Length];
@@ -76,7 +78,9 @@ public sealed class RequestContextManager : IDisposable
     {
         truncated = false;
         if (string.IsNullOrEmpty(value))
+        {
             return value;
+        }
 
         // Remove control characters and newlines to prevent log injection
         var sanitized = new char[value.Length];
@@ -151,7 +155,9 @@ public sealed class RequestContextManager : IDisposable
             foreach (var kvp in metadata)
             {
                 if (string.IsNullOrEmpty(kvp.Key))
+                {
                     continue;
+                }
 
                 var sanitizedKey = SanitizeMetadataKey(kvp.Key);
                 if (sanitizedKey is null)
@@ -305,7 +311,9 @@ public sealed class RequestContextManager : IDisposable
     {
         ArgumentNullException.ThrowIfNull(key);
         if (_context.Value is null)
+        {
             return null;
+        }
 
         return _context.Value.Metadata.TryGetValue(key, out var value) ? value : null;
     }
@@ -317,7 +325,9 @@ public sealed class RequestContextManager : IDisposable
     public void RecordElapsedTime()
     {
         if (_context.Value is null)
+        {
             return;
+        }
 
         _context.Value.EndTime = DateTime.UtcNow;
         _logger.LogInformation(
