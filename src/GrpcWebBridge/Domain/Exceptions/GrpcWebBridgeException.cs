@@ -83,7 +83,9 @@ public class GrpcWebBridgeException : Exception
     public void AddContext(string key, object value)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Context key cannot be empty", nameof(key));
+        }
 
         ArgumentNullException.ThrowIfNull(value);
         Context[key] = value;
@@ -105,10 +107,14 @@ public class GrpcWebBridgeException : Exception
     {
         var message = base.ToString();
         if (!string.IsNullOrEmpty(ErrorCode))
+        {
             message += $" [ErrorCode: {ErrorCode}]";
+        }
 
         if (GrpcStatus.HasValue)
+        {
             message += $" [GrpcStatus: {GrpcStatus}]";
+        }
 
         return message;
     }

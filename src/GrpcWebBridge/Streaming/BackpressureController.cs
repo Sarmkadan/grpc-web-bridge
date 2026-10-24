@@ -66,7 +66,9 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
         EventBus? eventBus = null)
     {
         if (string.IsNullOrWhiteSpace(streamId))
+        {
             throw new ArgumentException("Stream ID cannot be empty.", nameof(streamId));
+        }
 
         StreamId = streamId;
         _options = options ?? throw new ArgumentNullException(nameof(options));
@@ -83,7 +85,9 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
         ObjectDisposedException.ThrowIf(_disposed == 1, this);
 
         if (_options.Mode == FlowControlMode.Disabled)
+        {
             return true;
+        }
 
         if (_creditSemaphore.CurrentCount < count)
         {
@@ -98,7 +102,11 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
             if (!_creditSemaphore.Wait(0))
             {
                 // Partial acquisition — return any already-acquired credits and signal backpressure.
-                if (acquired > 0) _creditSemaphore.Release(acquired);
+                if (acquired > 0)
+                {
+                    _creditSemaphore.Release(acquired);
+                }
+
                 ApplyThrottle();
                 return false;
             }
@@ -115,7 +123,9 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
         ObjectDisposedException.ThrowIf(_disposed == 1, this);
 
         if (_options.Mode == FlowControlMode.Disabled)
+        {
             return;
+        }
 
         if (_creditSemaphore.CurrentCount < count)
         {
@@ -140,7 +150,9 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
         try
         {
             for (int i = 0; i < count; i++)
+            {
                 await _creditSemaphore.WaitAsync(effectiveToken);
+            }
         }
         finally
         {
@@ -149,7 +161,9 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
 
         long waitedMs = Environment.TickCount64 - waitStart;
         if (waitedMs > 0)
+        {
             _logger.LogDebug("Stream {StreamId}: credit wait resolved in {Ms}ms.", StreamId, waitedMs);
+        }
 
         _window.TryConsume(count);
         ConsiderLiftingThrottle();
@@ -159,13 +173,17 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
     public void ReleaseCredit(int count = 1)
     {
         if (_disposed == 1 || _options.Mode == FlowControlMode.Disabled)
+        {
             return;
+        }
 
         // Guard against releasing more than the semaphore's max count allows.
         int headroom = _options.MaxWindowSize - _creditSemaphore.CurrentCount;
         int toRelease = Math.Max(0, Math.Min(count, headroom));
         if (toRelease == 0)
+        {
             return;
+        }
 
         _window.Release(count);
         _creditSemaphore.Release(toRelease);
@@ -184,7 +202,9 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
 
         int deficit = _options.InitialWindowSize - _creditSemaphore.CurrentCount;
         if (deficit > 0)
+        {
             _creditSemaphore.Release(deficit);
+        }
 
         _window.Reset(_options.InitialWindowSize);
 
@@ -209,7 +229,9 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
     {
         // Only emit once per throttle episode (CAS from 0 → 1).
         if (Interlocked.CompareExchange(ref _throttledFlag, 1, 0) != 0)
+        {
             return;
+        }
 
         _logger.LogWarning(
             "Stream {StreamId}: backpressure applied. Utilisation: {Utilization:P0}. Available: {Credits}.",
@@ -231,14 +253,20 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
     private void ConsiderLiftingThrottle()
     {
         if (Volatile.Read(ref _throttledFlag) == 0)
+        {
             return;
+        }
 
         if (_window.Utilization > _options.BackpressureThreshold)
+        {
             return;
+        }
 
         // Only emit once per lift (CAS from 1 → 0).
         if (Interlocked.CompareExchange(ref _throttledFlag, 0, 1) != 1)
+        {
             return;
+        }
 
         _logger.LogInformation(
             "Stream {StreamId}: backpressure lifted. Utilisation: {Utilization:P0}. Available: {Credits}.",
@@ -261,7 +289,9 @@ public sealed class BackpressureController : IBackpressureController, IDisposabl
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
             return;
+        }
 
         _creditSemaphore.Dispose();
     }

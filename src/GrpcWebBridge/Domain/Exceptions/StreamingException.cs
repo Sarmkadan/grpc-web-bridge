@@ -68,13 +68,19 @@ public class StreamingException : GrpcWebBridgeException
     {
         var result = base.ToString();
         if (!string.IsNullOrEmpty(StreamId))
+        {
             result += $" | Stream: {StreamId}";
+        }
 
         if (SequenceNumber.HasValue)
+        {
             result += $" | Seq: {SequenceNumber}";
+        }
 
         if (LastStreamState.HasValue)
+        {
             result += $" | State: {LastStreamState}";
+        }
 
         return result;
     }

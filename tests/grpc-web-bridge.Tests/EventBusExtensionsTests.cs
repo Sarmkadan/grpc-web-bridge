@@ -39,7 +39,9 @@ public sealed class EventBusExtensionsTests : IDisposable
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
 
         _mockLogger.LogInformation("Disposing EventBusExtensionsTests.");
         _eventBus.Dispose();
@@ -70,7 +72,7 @@ public sealed class EventBusExtensionsTests : IDisposable
     {
         _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(HasSubscribers_WithSingleSubscriber_ReturnsTrue));
         // Arrange
-        Action<ServiceRegisteredEvent> handler = _ => {};
+        Action<ServiceRegisteredEvent> handler = _ => { };
         _eventBus.Subscribe(handler);
 
         // Act
@@ -89,8 +91,8 @@ public sealed class EventBusExtensionsTests : IDisposable
     {
         _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(HasSubscribers_WithMultipleSubscribers_ReturnsTrue));
         // Arrange
-        Action<ServiceRegisteredEvent> handler1 = _ => {};
-        Action<ServiceRegisteredEvent> handler2 = _ => {};
+        Action<ServiceRegisteredEvent> handler1 = _ => { };
+        Action<ServiceRegisteredEvent> handler2 = _ => { };
         _eventBus.Subscribe(handler1);
         _eventBus.Subscribe(handler2);
 
@@ -110,7 +112,7 @@ public sealed class EventBusExtensionsTests : IDisposable
     {
         _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(HasSubscribers_WithDifferentEventType_ReturnsFalse));
         // Arrange
-        Action<ServiceRegisteredEvent> handler = _ => {};
+        Action<ServiceRegisteredEvent> handler = _ => { };
         _eventBus.Subscribe(handler);
 
         // Act
@@ -360,7 +362,7 @@ public sealed class EventBusExtensionsTests : IDisposable
     {
         _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(Reset_WithSubscribers_ClearsSubscribers));
         // Arrange
-        Action<ServiceRegisteredEvent> handler = _ => {};
+        Action<ServiceRegisteredEvent> handler = _ => { };
         _eventBus.Subscribe(handler);
 
         // Verify subscribers exist
@@ -382,9 +384,9 @@ public sealed class EventBusExtensionsTests : IDisposable
     {
         _mockLogger.LogInformation("Beginning test {TestMethod}", nameof(Reset_WithMultipleEventTypes_ClearsAllSubscribers));
         // Arrange
-        Action<ServiceRegisteredEvent> handler1 = _ => {};
-        Action<ServiceUnregisteredEvent> handler2 = _ => {};
-        Action<MethodInvokedEvent> handler3 = _ => {};
+        Action<ServiceRegisteredEvent> handler1 = _ => { };
+        Action<ServiceUnregisteredEvent> handler2 = _ => { };
+        Action<MethodInvokedEvent> handler3 = _ => { };
         _eventBus.Subscribe(handler1);
         _eventBus.Subscribe(handler2);
         _eventBus.Subscribe(handler3);

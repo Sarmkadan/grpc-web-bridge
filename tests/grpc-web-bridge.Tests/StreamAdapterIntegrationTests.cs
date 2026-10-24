@@ -205,7 +205,9 @@ public sealed class StreamAdapterIntegrationTests
         {
             var payload = await _adapter.DeframeMessageAsync(ms, CancellationToken.None);
             if (payload is not null)
+            {
                 receivedFrames.Add(payload);
+            }
         }
 
         // Should have received 2 data frames (trailer returns null and is skipped)

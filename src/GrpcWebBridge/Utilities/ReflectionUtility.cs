@@ -23,12 +23,16 @@ public static class ReflectionUtility
         Func<MethodInfo, bool>? filter = null)
     {
         if (type is null)
+        {
             throw new ArgumentNullException(nameof(type));
+        }
 
         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance);
 
         if (filter is not null)
+        {
             methods = methods.Where(filter).ToArray();
+        }
 
         return methods.ToList();
     }
@@ -40,7 +44,9 @@ public static class ReflectionUtility
     public static List<PropertyInfo> GetPublicProperties(Type type)
     {
         if (type is null)
+        {
             throw new ArgumentNullException(nameof(type));
+        }
 
         return type.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToList();
     }
@@ -80,18 +86,24 @@ public static class ReflectionUtility
         params object?[]? parameters)
     {
         if (instance is null)
+        {
             throw new ArgumentNullException(nameof(instance));
+        }
 
         ArgumentNullException.ThrowIfNull(methodName);
 
         if (string.IsNullOrEmpty(methodName))
+        {
             throw new ArgumentException("Method name cannot be null or empty", nameof(methodName));
+        }
 
         var type = instance.GetType();
         var method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
 
         if (method is null)
+        {
             throw new MethodAccessException($"Method not found: {methodName}");
+        }
 
         return method.Invoke(instance, parameters);
     }
@@ -104,18 +116,24 @@ public static class ReflectionUtility
     public static object? GetPropertyValue(object instance, string propertyName)
     {
         if (instance is null)
+        {
             throw new ArgumentNullException(nameof(instance));
+        }
 
         ArgumentNullException.ThrowIfNull(propertyName);
 
         if (string.IsNullOrEmpty(propertyName))
+        {
             throw new ArgumentException("Property name cannot be null or empty", nameof(propertyName));
+        }
 
         var type = instance.GetType();
         var property = type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
         if (property is null)
+        {
             return null;
+        }
 
         return property.GetValue(instance);
     }
@@ -129,21 +147,29 @@ public static class ReflectionUtility
     public static void SetPropertyValue(object instance, string propertyName, object? value)
     {
         if (instance is null)
+        {
             throw new ArgumentNullException(nameof(instance));
+        }
 
         ArgumentNullException.ThrowIfNull(propertyName);
 
         if (string.IsNullOrEmpty(propertyName))
+        {
             throw new ArgumentException("Property name cannot be null or empty", nameof(propertyName));
+        }
 
         var type = instance.GetType();
         var property = type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
         if (property is null)
+        {
             throw new PropertyAccessException($"Property not found: {propertyName}");
+        }
 
         if (!property.CanWrite)
+        {
             throw new PropertyAccessException($"Property is read-only: {propertyName}");
+        }
 
         property.SetValue(instance, value);
     }
@@ -182,7 +208,9 @@ public static class ReflectionUtility
     public static object? CreateInstance(Type type, params object?[]? constructorParams)
     {
         if (type is null)
+        {
             throw new ArgumentNullException(nameof(type));
+        }
 
         try
         {
@@ -200,7 +228,9 @@ public static class ReflectionUtility
     public static List<T> GetCustomAttributes<T>(MemberInfo member) where T : Attribute
     {
         if (member is null)
+        {
             return new List<T>();
+        }
 
         return member.GetCustomAttributes(typeof(T), true)
             .Cast<T>()
@@ -252,19 +282,25 @@ public static class ReflectionUtility
         ArgumentNullException.ThrowIfNull(typeName);
 
         if (string.IsNullOrEmpty(typeName))
+        {
             return null;
+        }
 
         // Try built-in types first
         var type = Type.GetType(typeName);
         if (type is not null)
+        {
             return type;
+        }
 
         // Search in loaded assemblies
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
             type = assembly.GetType(typeName);
             if (type is not null)
+            {
                 return type;
+            }
         }
 
         return null;

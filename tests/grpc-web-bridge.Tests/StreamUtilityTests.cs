@@ -4,10 +4,10 @@
 // CTO & Software Architect
 // =============================================================================
 
-using FluentAssertions;
-using GrpcWebBridge.Utilities;
 using System.Security.Cryptography;
 using System.Text;
+using FluentAssertions;
+using GrpcWebBridge.Utilities;
 using Xunit;
 
 namespace GrpcWebBridge.Tests;

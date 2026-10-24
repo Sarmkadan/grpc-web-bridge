@@ -31,24 +31,34 @@ public sealed class GrpcWebBridgeOptionsValidator : IValidateOptions<GrpcWebBrid
         var failures = new List<string>();
 
         if (config.MaxMessageSize <= 0)
+        {
             failures.Add(Failure(nameof(BridgeConfiguration.MaxMessageSize), $"must be greater than 0 (was {config.MaxMessageSize})"));
+        }
 
         ValidateOrigins(config, failures);
 
         if (config.StreamIdleTimeoutSeconds <= 0)
+        {
             failures.Add(Failure(nameof(BridgeConfiguration.StreamIdleTimeoutSeconds), $"must be greater than 0 (was {config.StreamIdleTimeoutSeconds})"));
+        }
 
         if (config.StreamHeartbeatIntervalSeconds <= 0)
+        {
             failures.Add(Failure(nameof(BridgeConfiguration.StreamHeartbeatIntervalSeconds), $"must be greater than 0 (was {config.StreamHeartbeatIntervalSeconds})"));
+        }
 
         if (config.DefaultTimeoutMilliseconds <= 0)
+        {
             failures.Add(Failure(nameof(BridgeConfiguration.DefaultTimeoutMilliseconds), $"must be greater than 0 (was {config.DefaultTimeoutMilliseconds})"));
+        }
 
         // CORS cannot be both switched off and given origins to allow.
         if (!config.EnableCors && config.AllowedOrigins is { Count: > 0 })
+        {
             failures.Add(Failure(nameof(BridgeConfiguration.EnableCors),
                 $"is false but {nameof(BridgeConfiguration.AllowedOrigins)} lists {config.AllowedOrigins.Count} origin(s); " +
                 "mutually exclusive: disable CORS or clear AllowedOrigins"));
+        }
 
         return failures.Count == 0
             ? ValidateOptionsResult.Success
@@ -70,10 +80,14 @@ public sealed class GrpcWebBridgeOptionsValidator : IValidateOptions<GrpcWebBrid
             var origin = config.AllowedOrigins[i];
 
             if (string.IsNullOrWhiteSpace(origin))
+            {
                 failures.Add(Failure($"{property}[{i}]", "must not be empty or whitespace"));
+            }
             else if (origin != "*" && !IsValidOrigin(origin))
+            {
                 failures.Add(Failure($"{property}[{i}]",
                     $"'{origin}' is not a valid origin; expected '*' or scheme://host[:port] using http or https"));
+            }
         }
     }
 
@@ -83,7 +97,9 @@ public sealed class GrpcWebBridgeOptionsValidator : IValidateOptions<GrpcWebBrid
     private static bool IsValidOrigin(string origin)
     {
         if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+        {
             return false;
+        }
 
         return string.Equals(origin, $"{uri.Scheme}://{uri.Authority}", StringComparison.OrdinalIgnoreCase);
     }

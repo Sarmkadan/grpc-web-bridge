@@ -21,33 +21,37 @@ public sealed class ServiceRepository : IServiceRepository
     private readonly object _lock = new();
 
     /// <summary>
-/// Initializes a new instance of the <see cref="ServiceRepository"/> class.
-/// </summary>
-/// <param name="logger">The logger instance for logging repository operations.</param>
-/// <exception cref="ArgumentNullException">Thrown when logger is null.</exception>
-public ServiceRepository(ILogger<ServiceRepository> logger)
+    /// Initializes a new instance of the <see cref="ServiceRepository"/> class.
+    /// </summary>
+    /// <param name="logger">The logger instance for logging repository operations.</param>
+    /// <exception cref="ArgumentNullException">Thrown when logger is null.</exception>
+    public ServiceRepository(ILogger<ServiceRepository> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
-/// Adds a new service to the in-memory repository.
-/// </summary>
-/// <param name="service">The service to add.</param>
-/// <param name="cancellationToken">The cancellation token.</param>
-/// <returns>True if the service was added, false if a service with the same ID already exists.</returns>
-/// <exception cref="ArgumentNullException">Thrown when service is null.</exception>
-public async Task<bool> AddAsync(GrpcService service, CancellationToken cancellationToken = default)
+    /// Adds a new service to the in-memory repository.
+    /// </summary>
+    /// <param name="service">The service to add.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the service was added, false if a service with the same ID already exists.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when service is null.</exception>
+    public async Task<bool> AddAsync(GrpcService service, CancellationToken cancellationToken = default)
     {
         if (service is null)
+        {
             throw new ArgumentNullException(nameof(service));
+        }
 
         service.Validate();
 
         lock (_lock)
         {
             if (_services.ContainsKey(service.Id))
+            {
                 return false;
+            }
 
             _services[service.Id] = service;
             _logger.LogInformation("Service added to repository: {ServiceId} ({ServiceName})", service.Id, service.FullName);
@@ -57,10 +61,12 @@ public async Task<bool> AddAsync(GrpcService service, CancellationToken cancella
     }
 
     /// <inheritdoc/>
-public async Task<GrpcService?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
+    public async Task<GrpcService?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
+        {
             return null;
+        }
 
         lock (_lock)
         {
@@ -69,10 +75,12 @@ public async Task<GrpcService?> GetByIdAsync(string id, CancellationToken cancel
     }
 
     /// <inheritdoc/>
-public async Task<GrpcService?> GetByFullNameAsync(string fullName, CancellationToken cancellationToken = default)
+    public async Task<GrpcService?> GetByFullNameAsync(string fullName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(fullName))
+        {
             return null;
+        }
 
         lock (_lock)
         {
@@ -81,7 +89,7 @@ public async Task<GrpcService?> GetByFullNameAsync(string fullName, Cancellation
     }
 
     /// <inheritdoc/>
-public async Task<IEnumerable<GrpcService>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<GrpcService>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         lock (_lock)
         {
@@ -90,10 +98,12 @@ public async Task<IEnumerable<GrpcService>> GetAllAsync(CancellationToken cancel
     }
 
     /// <inheritdoc/>
-public async Task<IEnumerable<GrpcService>> GetByPackageAsync(string packageName, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<GrpcService>> GetByPackageAsync(string packageName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(packageName))
+        {
             return [];
+        }
 
         lock (_lock)
         {
@@ -104,17 +114,21 @@ public async Task<IEnumerable<GrpcService>> GetByPackageAsync(string packageName
     }
 
     /// <inheritdoc/>
-public async Task<bool> UpdateAsync(GrpcService service, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateAsync(GrpcService service, CancellationToken cancellationToken = default)
     {
         if (service is null)
+        {
             throw new ArgumentNullException(nameof(service));
+        }
 
         service.Validate();
 
         lock (_lock)
         {
             if (!_services.ContainsKey(service.Id))
+            {
                 return false;
+            }
 
             _services[service.Id] = service;
             service.UpdatedAt = DateTime.UtcNow;
@@ -125,10 +139,12 @@ public async Task<bool> UpdateAsync(GrpcService service, CancellationToken cance
     }
 
     /// <inheritdoc/>
-public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
+        {
             return false;
+        }
 
         lock (_lock)
         {
@@ -143,10 +159,12 @@ public async Task<bool> DeleteAsync(string id, CancellationToken cancellationTok
     }
 
     /// <inheritdoc/>
-public async Task<bool> ExistsAsync(string fullName, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync(string fullName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(fullName))
+        {
             return false;
+        }
 
         lock (_lock)
         {
@@ -155,7 +173,7 @@ public async Task<bool> ExistsAsync(string fullName, CancellationToken cancellat
     }
 
     /// <inheritdoc/>
-public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
     {
         lock (_lock)
         {
@@ -164,12 +182,14 @@ public async Task<int> CountAsync(CancellationToken cancellationToken = default)
     }
 
     /// <inheritdoc/>
-public async Task<IEnumerable<GrpcService>> SearchAsync(
-        Func<GrpcService, bool> predicate,
-        CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<GrpcService>> SearchAsync(
+            Func<GrpcService, bool> predicate,
+            CancellationToken cancellationToken = default)
     {
         if (predicate is null)
+        {
             throw new ArgumentNullException(nameof(predicate));
+        }
 
         lock (_lock)
         {
@@ -178,16 +198,20 @@ public async Task<IEnumerable<GrpcService>> SearchAsync(
     }
 
     /// <inheritdoc/>
-public async Task<(IEnumerable<GrpcService> Items, int Total)> GetPagedAsync(
-        int pageNumber,
-        int pageSize,
-        CancellationToken cancellationToken = default)
+    public async Task<(IEnumerable<GrpcService> Items, int Total)> GetPagedAsync(
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1)
+        {
             pageNumber = 1;
+        }
 
         if (pageSize < 1)
+        {
             pageSize = 10;
+        }
 
         lock (_lock)
         {
@@ -203,23 +227,27 @@ public async Task<(IEnumerable<GrpcService> Items, int Total)> GetPagedAsync(
     }
 
     /// <summary>
-/// Adds a new request record to the in-memory repository.
-/// </summary>
-/// <param name="request">The request to add.</param>
-/// <param name="cancellationToken">The cancellation token.</param>
-/// <returns>True if the request was added, false if a request with the same ID already exists.</returns>
-/// <exception cref="ArgumentNullException">Thrown when request is null.</exception>
-public async Task<bool> AddRequestAsync(GrpcRequest request, CancellationToken cancellationToken = default)
+    /// Adds a new request record to the in-memory repository.
+    /// </summary>
+    /// <param name="request">The request to add.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the request was added, false if a request with the same ID already exists.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when request is null.</exception>
+    public async Task<bool> AddRequestAsync(GrpcRequest request, CancellationToken cancellationToken = default)
     {
         if (request is null)
+        {
             throw new ArgumentNullException(nameof(request));
+        }
 
         request.Validate();
 
         lock (_lock)
         {
             if (_requests.ContainsKey(request.Id))
+            {
                 return false;
+            }
 
             _requests[request.Id] = request;
             _logger.LogDebug("Request stored: {RequestId} ({MethodName})", request.Id, request.FullMethodName);
@@ -229,10 +257,12 @@ public async Task<bool> AddRequestAsync(GrpcRequest request, CancellationToken c
     }
 
     /// <inheritdoc/>
-public async Task<GrpcRequest?> GetRequestAsync(string requestId, CancellationToken cancellationToken = default)
+    public async Task<GrpcRequest?> GetRequestAsync(string requestId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(requestId))
+        {
             return null;
+        }
 
         lock (_lock)
         {
@@ -241,23 +271,27 @@ public async Task<GrpcRequest?> GetRequestAsync(string requestId, CancellationTo
     }
 
     /// <summary>
-/// Adds a new response record to the in-memory repository.
-/// </summary>
-/// <param name="response">The response to add.</param>
-/// <param name="cancellationToken">The cancellation token.</param>
-/// <returns>True if the response was added, false if a response with the same ID already exists.</returns>
-/// <exception cref="ArgumentNullException">Thrown when response is null.</exception>
-public async Task<bool> AddResponseAsync(GrpcResponse response, CancellationToken cancellationToken = default)
+    /// Adds a new response record to the in-memory repository.
+    /// </summary>
+    /// <param name="response">The response to add.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the response was added, false if a response with the same ID already exists.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when response is null.</exception>
+    public async Task<bool> AddResponseAsync(GrpcResponse response, CancellationToken cancellationToken = default)
     {
         if (response is null)
+        {
             throw new ArgumentNullException(nameof(response));
+        }
 
         response.Validate();
 
         lock (_lock)
         {
             if (_responses.ContainsKey(response.Id))
+            {
                 return false;
+            }
 
             _responses[response.Id] = response;
             _logger.LogDebug("Response stored: {ResponseId} ({Status})", response.Id, response.Status);
@@ -267,10 +301,12 @@ public async Task<bool> AddResponseAsync(GrpcResponse response, CancellationToke
     }
 
     /// <inheritdoc/>
-public async Task<GrpcResponse?> GetResponseAsync(string responseId, CancellationToken cancellationToken = default)
+    public async Task<GrpcResponse?> GetResponseAsync(string responseId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(responseId))
+        {
             return null;
+        }
 
         lock (_lock)
         {

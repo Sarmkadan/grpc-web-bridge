@@ -141,7 +141,9 @@ public sealed class StartupConfiguration
     public void ValidateConfiguration(GrpcWebBridgeOptions options)
     {
         if (options is null)
+        {
             throw new ArgumentNullException(nameof(options));
+        }
 
         try
         {

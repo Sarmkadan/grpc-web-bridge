@@ -144,7 +144,11 @@ public sealed class GrpcWebBridgeService : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
         _streamAdapter.Dispose();
     }

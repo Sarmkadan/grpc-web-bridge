@@ -5,11 +5,10 @@
 // CTO & Software Architect
 // =====================================================================
 
+using System.Diagnostics.CodeAnalysis;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
-
-using System.Diagnostics.CodeAnalysis;
 
 namespace GrpcWebBridge.Formatters;
 

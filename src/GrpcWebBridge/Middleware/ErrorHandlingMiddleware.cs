@@ -4,9 +4,9 @@
 // CTO & Software Architect
 // =====================================================================
 
-using GrpcWebBridge.Domain.Exceptions;
 using System.Net;
 using System.Text.Json;
+using GrpcWebBridge.Domain.Exceptions;
 
 namespace GrpcWebBridge.Middleware;
 

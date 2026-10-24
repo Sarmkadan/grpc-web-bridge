@@ -132,7 +132,9 @@ public sealed class GrpcResponse
         ArgumentException.ThrowIfNullOrEmpty(message);
 
         if (statusCode == GrpcStatusCode.Ok)
+        {
             throw new ArgumentException("Cannot set error status to Ok", nameof(statusCode));
+        }
 
         Status = statusCode;
         StatusMessage = message;
@@ -149,7 +151,10 @@ public sealed class GrpcResponse
     public void AddMetadata(string key, string value)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Metadata key cannot be empty", nameof(key));
+        }
+
         ArgumentException.ThrowIfNullOrEmpty(value);
 
         Metadata[key] = value;
@@ -164,7 +169,10 @@ public sealed class GrpcResponse
     public void AddTrailingMetadata(string key, string value)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Metadata key cannot be empty", nameof(key));
+        }
+
         ArgumentException.ThrowIfNullOrEmpty(value);
 
         TrailingMetadata[key] = value;
@@ -199,18 +207,26 @@ public sealed class GrpcResponse
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(RequestId))
+        {
             throw new ArgumentException("Request ID cannot be empty", nameof(RequestId));
+        }
 
         if (!IsSuccess && string.IsNullOrWhiteSpace(StatusMessage))
+        {
             throw new ArgumentException("Status message is required for error responses", nameof(StatusMessage));
+        }
 
         if (Payload.Length > Constants.Grpc.MaxMessageSize)
+        {
             throw new ArgumentException(
                 $"Payload exceeds maximum size of {Constants.Grpc.MaxMessageSize} bytes",
                 nameof(Payload));
+        }
 
         if (DurationMilliseconds < 0)
+        {
             throw new ArgumentException("Duration cannot be negative", nameof(DurationMilliseconds));
+        }
     }
 
     /// <summary>
@@ -244,7 +260,9 @@ public sealed class GrpcResponse
     public override bool Equals(object? obj)
     {
         if (obj is not GrpcResponse other)
+        {
             return false;
+        }
 
         return Id == other.Id;
     }
@@ -264,7 +282,10 @@ public sealed class GrpcResponse
     private static string ValidateRequestId(string requestId)
     {
         if (string.IsNullOrWhiteSpace(requestId))
+        {
             throw new ArgumentException("Request ID cannot be empty", nameof(requestId));
+        }
+
         return requestId.Trim();
     }
 }

@@ -114,7 +114,8 @@ public sealed class RequestContextAsyncFlowTests
 
         // Act - child async flow
         RequestContext? childContext = null;
-        await Task.Run(async () => {
+        await Task.Run(async () =>
+        {
             await Task.Yield();
             childContext = manager.GetContext();
         });
@@ -179,7 +180,8 @@ public sealed class RequestContextAsyncFlowTests
         string? context2Metadata = null;
 
         // Act - create contexts concurrently
-        var task1 = Task.Run(() => {
+        var task1 = Task.Run(() =>
+        {
             manager.CreateContext(requestId1);
             manager.SetMetadata("request", "first");
             context1 = manager.GetContext();
@@ -188,7 +190,8 @@ public sealed class RequestContextAsyncFlowTests
             Task.Delay(10).Wait();
         });
 
-        var task2 = Task.Run(() => {
+        var task2 = Task.Run(() =>
+        {
             manager.CreateContext(requestId2);
             manager.SetMetadata("request", "second");
             context2 = manager.GetContext();
@@ -260,7 +263,8 @@ public sealed class RequestContextAsyncFlowTests
         RequestContext? capturedInTask = null;
 
         // Act
-        await Task.Run(() => {
+        await Task.Run(() =>
+        {
             // Context should flow into Task.Run
             capturedInTask = _manager.GetContext();
         });

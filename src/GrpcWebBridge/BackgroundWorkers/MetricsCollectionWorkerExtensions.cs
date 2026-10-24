@@ -26,7 +26,9 @@ public static class MetricsCollectionWorkerExtensions
         ArgumentNullException.ThrowIfNull(worker);
 
         if (startTime > endTime)
+        {
             throw new ArgumentOutOfRangeException(nameof(startTime), "Start time must be before or equal to end time.");
+        }
 
         var history = worker.GetSnapshotHistory();
         return history
@@ -48,7 +50,9 @@ public static class MetricsCollectionWorkerExtensions
         var history = worker.GetSnapshotHistory();
 
         if (history.Count == 0)
+        {
             return new { message = "No snapshot history available" };
+        }
 
         var peakCpu = history.MaxBy(s => s.CpuUsagePercent);
         var peakMemory = history.MaxBy(s => s.MemoryUsageMb);
@@ -93,7 +97,9 @@ public static class MetricsCollectionWorkerExtensions
         ArgumentNullException.ThrowIfNull(worker);
 
         if (minutes <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(minutes), "Minutes must be positive.");
+        }
 
         var cutoffTime = DateTime.UtcNow.AddMinutes(-minutes);
         var recentHistory = worker.GetSnapshotHistory()
@@ -102,7 +108,9 @@ public static class MetricsCollectionWorkerExtensions
             .ToList();
 
         if (recentHistory.Count < 2)
+        {
             return new { message = "Insufficient data for trend analysis" };
+        }
 
         // Calculate linear regression slopes
         var cpuValues = recentHistory.Select((s, i) => (X: (double)i, Y: s.CpuUsagePercent)).ToList();
@@ -157,7 +165,9 @@ public static class MetricsCollectionWorkerExtensions
         ArgumentNullException.ThrowIfNull(worker);
 
         if (lookbackMinutes <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(lookbackMinutes), "Lookback minutes must be positive.");
+        }
 
         var cutoffTime = DateTime.UtcNow.AddMinutes(-lookbackMinutes);
         var history = worker.GetSnapshotHistory()
@@ -243,7 +253,9 @@ public static class MetricsCollectionWorkerExtensions
         var categoryProperty = metrics.GetType().GetProperty(categoryName);
         var categoryValue = categoryProperty?.GetValue(metrics);
         if (categoryValue is null)
+        {
             return null;
+        }
 
         var averageProperty = categoryValue.GetType().GetProperty("average");
         var averageValue = averageProperty?.GetValue(categoryValue);
@@ -266,7 +278,9 @@ internal static class LinearRegressionHelper
     public static double CalculateSlope(List<(double X, double Y)> dataPoints)
     {
         if (dataPoints.Count < 2)
+        {
             return 0;
+        }
 
         double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
         int n = dataPoints.Count;

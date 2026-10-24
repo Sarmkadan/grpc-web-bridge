@@ -28,7 +28,7 @@ public sealed class ContentTypeValidationMiddleware
     /// These correspond to infrastructure and REST API endpoints that are not
     /// gRPC-Web proxy paths.
     /// </summary>
-    private static readonly string[] ExcludedPathPrefixes =
+    private static readonly string[] _excludedPathPrefixes =
     [
         "/api",
         "/swagger",
@@ -99,14 +99,18 @@ public sealed class ContentTypeValidationMiddleware
     {
         // Only POST requests carry a body subject to gRPC-Web protocol rules.
         if (!HttpMethods.IsPost(context.Request.Method))
+        {
             return false;
+        }
 
         var path = context.GetGrpcMethodPath();
 
-        foreach (var prefix in ExcludedPathPrefixes)
+        foreach (var prefix in _excludedPathPrefixes)
         {
             if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
                 return false;
+            }
         }
 
         return true;

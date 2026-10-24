@@ -164,7 +164,11 @@ public sealed class StreamAdapter : IDisposable
         while (totalRead < buffer.Length)
         {
             var read = await stream.ReadAsync(buffer.AsMemory(totalRead), ct);
-            if (read == 0) break;
+            if (read == 0)
+            {
+                break;
+            }
+
             totalRead += read;
         }
         return totalRead;

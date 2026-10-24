@@ -238,10 +238,14 @@ public sealed class StreamingSessionManager : IStreamingSessionManager
         ArgumentException.ThrowIfNullOrEmpty(streamId);
 
         if (!_streamToSession.TryRemove(streamId, out var sessionId))
+        {
             return;
+        }
 
         if (_sessions.TryGetValue(sessionId, out var session))
+        {
             session.RemoveStream(streamId);
+        }
 
         _logger.LogDebug(
             "Stream {StreamId} disassociated from session {SessionId}.",

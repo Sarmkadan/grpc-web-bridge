@@ -20,15 +20,15 @@ namespace GrpcWebBridge.Services;
 /// </summary>
 public sealed class BridgePrometheusMetrics
 {
-    private static readonly string[] RequestLabels = ["service", "method", "grpc_status"];
-    private static readonly string[] DurationLabels = ["service", "method"];
-    private static readonly string[] ErrorLabels = ["service", "method"];
+    private static readonly string[] _requestLabels = ["service", "method", "grpc_status"];
+    private static readonly string[] _durationLabels = ["service", "method"];
+    private static readonly string[] _errorLabels = ["service", "method"];
 
     /// <summary>Total number of bridged RPC calls, labelled by service, method, and gRPC status.</summary>
     public static readonly Counter RequestsTotal = Metrics.CreateCounter(
         "grpcweb_bridge_requests_total",
         "Total number of gRPC-Web bridge requests.",
-        new CounterConfiguration { LabelNames = RequestLabels });
+        new CounterConfiguration { LabelNames = _requestLabels });
 
     /// <summary>Histogram of end-to-end latency (seconds) per bridged RPC call.</summary>
     public static readonly Histogram RequestDuration = Metrics.CreateHistogram(
@@ -36,7 +36,7 @@ public sealed class BridgePrometheusMetrics
         "Duration of gRPC-Web bridge requests in seconds.",
         new HistogramConfiguration
         {
-            LabelNames = DurationLabels,
+            LabelNames = _durationLabels,
             Buckets = [.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10]
         });
 
@@ -49,7 +49,7 @@ public sealed class BridgePrometheusMetrics
     public static readonly Counter StreamErrorsTotal = Metrics.CreateCounter(
         "grpcweb_bridge_stream_errors_total",
         "Total number of gRPC-Web bridge stream errors.",
-        new CounterConfiguration { LabelNames = ErrorLabels });
+        new CounterConfiguration { LabelNames = _errorLabels });
 
     /// <summary>
     /// Records a completed RPC call.

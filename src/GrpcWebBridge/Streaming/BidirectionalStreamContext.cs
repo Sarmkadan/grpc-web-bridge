@@ -71,7 +71,9 @@ public sealed class BidirectionalStreamContext : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
             return;
+        }
 
         await LifetimeCts.CancelAsync().ConfigureAwait(false);
         LifetimeCts.Dispose();
@@ -141,7 +143,11 @@ public sealed class FlowControlWindow
         do
         {
             current = Volatile.Read(ref _availableCredits);
-            if (current < count) return false;
+            if (current < count)
+            {
+                return false;
+            }
+
             updated = current - count;
         }
         while (Interlocked.CompareExchange(ref _availableCredits, updated, current) != current);

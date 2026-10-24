@@ -5,13 +5,13 @@
 
 #nullable enable
 
+using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using GrpcWebBridge.Domain;
 using GrpcWebBridge.Domain.Exceptions;
 using GrpcWebBridge.Domain.Models;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 
 namespace GrpcWebBridge.Services;
 
@@ -39,7 +39,9 @@ public sealed class AuthenticationService
     public AuthenticationContext AuthenticateBearer(string token, string? userId = null)
     {
         if (string.IsNullOrWhiteSpace(token))
+        {
             throw new GrpcWebBridgeException("Token cannot be empty", "INVALID_TOKEN");
+        }
 
         try
         {
@@ -47,14 +49,20 @@ public sealed class AuthenticationService
 
             var handler = new JwtSecurityTokenHandler();
             if (!handler.CanReadToken(token))
+            {
                 throw new GrpcWebBridgeException("Invalid token format", "INVALID_TOKEN");
+            }
 
             var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
             if (jwtToken is null)
+            {
                 throw new GrpcWebBridgeException("Failed to parse token", "TOKEN_PARSE_ERROR");
+            }
 
             if (jwtToken.ValidTo < DateTime.UtcNow)
+            {
                 throw new GrpcWebBridgeException("Token has expired", "TOKEN_EXPIRED");
+            }
 
             var context = new AuthenticationContext(
                 userId ?? jwtToken.Subject ?? "unknown",
@@ -65,13 +73,19 @@ public sealed class AuthenticationService
             foreach (var claim in jwtToken.Claims)
             {
                 if (claim.Type == ClaimTypes.Role)
+                {
                     context.AddRole(claim.Value);
+                }
                 else
+                {
                     context.AddClaim(claim.Type, claim.Value);
+                }
             }
 
             if (jwtToken.ValidTo > DateTime.UtcNow)
+            {
                 context.SetExpiration(jwtToken.ValidTo);
+            }
 
             context.Validate();
             _logger.LogInformation("Bearer authentication successful: {UserId}", context.UserId);
@@ -96,10 +110,14 @@ public sealed class AuthenticationService
     public AuthenticationContext AuthenticateApiKey(string apiKey, string userId)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
+        {
             throw new GrpcWebBridgeException("API key cannot be empty", "INVALID_API_KEY");
+        }
 
         if (string.IsNullOrWhiteSpace(userId))
+        {
             throw new GrpcWebBridgeException("User ID cannot be empty", "INVALID_USER_ID");
+        }
 
         _logger.LogInformation("AuthenticateApiKey called with {ApiKey} and {UserId}", apiKey, userId);
 
@@ -118,17 +136,23 @@ public sealed class AuthenticationService
     public AuthenticationContext AuthenticateCustom(string userId, Dictionary<string, string> credentials)
     {
         if (string.IsNullOrWhiteSpace(userId))
+        {
             throw new GrpcWebBridgeException("User ID cannot be empty", "INVALID_USER_ID");
+        }
 
         if (credentials is null || credentials.Count == 0)
+        {
             throw new GrpcWebBridgeException("Credentials cannot be empty", "INVALID_CREDENTIALS");
+        }
 
         _logger.LogInformation("Authenticating custom credentials for user: {UserId}", userId);
 
         var context = new AuthenticationContext(userId, AuthenticationScheme.Custom);
 
         foreach (var kvp in credentials)
+        {
             context.AddClaim(kvp.Key, kvp.Value);
+        }
 
         context.SetExpiration(Constants.Authentication.JwtExpirationMinutes);
         _logger.LogInformation("Custom authentication successful: {UserId}", userId);
@@ -145,7 +169,9 @@ public sealed class AuthenticationService
         try
         {
             if (context is null)
+            {
                 return false;
+            }
 
             context.Validate();
 
@@ -170,7 +196,9 @@ public sealed class AuthenticationService
     public bool AuthorizeRole(AuthenticationContext context, string requiredRole)
     {
         if (!ValidateContext(context))
+        {
             return false;
+        }
 
         return context.HasRole(requiredRole);
     }
@@ -181,7 +209,9 @@ public sealed class AuthenticationService
     public bool AuthorizeAnyRole(AuthenticationContext context, params string[] requiredRoles)
     {
         if (!ValidateContext(context))
+        {
             return false;
+        }
 
         return context.HasAnyRole(requiredRoles);
     }
@@ -217,12 +247,16 @@ public sealed class AuthenticationService
     public string? ExtractBearerToken(string? authHeader)
     {
         if (string.IsNullOrWhiteSpace(authHeader))
+        {
             return null;
+        }
 
         const string bearerPrefix = "Bearer ";
         var span = authHeader.AsSpan();
         if (!span.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+        {
             return null;
+        }
 
         var token = span[bearerPrefix.Length..].Trim();
         return token.Length > 0 ? token.ToString() : null;

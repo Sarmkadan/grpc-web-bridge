@@ -98,15 +98,21 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
         ArgumentNullException.ThrowIfNull(streamId);
 
         if (string.IsNullOrWhiteSpace(streamId))
+        {
             throw new ArgumentException("Stream ID must be a non-empty string.", nameof(streamId));
+        }
 
         if (_streams.Count >= _maxStreams)
+        {
             throw new InvalidOperationException(
                 $"Global stream ceiling of {_maxStreams} concurrent streams has been reached.");
+        }
 
         if (_streams.ContainsKey(streamId))
+        {
             throw new InvalidOperationException(
                 $"A stream with ID '{streamId}' is already registered.");
+        }
 
         var inbound = Channel.CreateBounded<StreamMessage>(new BoundedChannelOptions(_options.InboundChannelCapacity)
         {
@@ -277,7 +283,9 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
         var snapshot = new Dictionary<string, StreamThroughputMetrics>(_streams.Count);
 
         foreach (var (id, entry) in _streams)
+        {
             snapshot[id] = entry.Stream.Metrics;
+        }
 
         return snapshot;
     }
@@ -290,7 +298,9 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
             return;
+        }
 
         var ids = _streams.Keys.ToArray();
 
@@ -307,7 +317,11 @@ public sealed class BidirectionalStreamingEngine : IBidirectionalStreamingEngine
 
     private void Publish<TEvent>(TEvent @event) where TEvent : EventBase
     {
-        if (_eventBus is null) return;
+        if (_eventBus is null)
+        {
+            return;
+        }
+
         _ = _eventBus.PublishAsync(@event);
     }
 }

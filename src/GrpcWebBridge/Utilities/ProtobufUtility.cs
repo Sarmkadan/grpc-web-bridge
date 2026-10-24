@@ -4,8 +4,8 @@
 // CTO & Software Architect
 // =============================================================================
 
-using Google.Protobuf;
 using System.Text.Json;
+using Google.Protobuf;
 
 namespace GrpcWebBridge.Utilities;
 
@@ -23,7 +23,9 @@ public static class ProtobufUtility
     public static string ToJson(IMessage message)
     {
         if (message is null)
+        {
             throw new ArgumentNullException(nameof(message));
+        }
 
         var formatter = new JsonFormatter(JsonFormatter.Settings.Default);
         return formatter.Format(message);
@@ -36,7 +38,9 @@ public static class ProtobufUtility
     public static T? FromJson<T>(string json) where T : IMessage, new()
     {
         if (string.IsNullOrEmpty(json))
+        {
             throw new ArgumentException("JSON string cannot be null or empty", nameof(json));
+        }
 
         try
         {
@@ -56,7 +60,9 @@ public static class ProtobufUtility
     public static byte[] ToBytes(IMessage message)
     {
         if (message is null)
+        {
             throw new ArgumentNullException(nameof(message));
+        }
 
         return message.ToByteArray();
     }
@@ -67,7 +73,9 @@ public static class ProtobufUtility
     public static T? FromBytes<T>(byte[] data) where T : IMessage, new()
     {
         if (data is null || data.Length == 0)
+        {
             throw new ArgumentException("Data cannot be null or empty", nameof(data));
+        }
 
         try
         {
@@ -87,7 +95,9 @@ public static class ProtobufUtility
     public static int GetMessageSize(IMessage message)
     {
         if (message is null)
+        {
             throw new ArgumentNullException(nameof(message));
+        }
 
         return message.CalculateSize();
     }
@@ -99,7 +109,9 @@ public static class ProtobufUtility
     public static Dictionary<string, object?> ToDict(IMessage message)
     {
         if (message is null)
+        {
             throw new ArgumentNullException(nameof(message));
+        }
 
         var json = ToJson(message);
         var dict = JsonUtility.DeserializeToDictionary(json);
@@ -113,7 +125,9 @@ public static class ProtobufUtility
     public static T Clone<T>(T message) where T : IMessage, new()
     {
         if (message is null)
+        {
             throw new ArgumentNullException(nameof(message));
+        }
 
         var clone = new T();
         clone.MergeFrom(message.ToByteArray());
@@ -127,13 +141,17 @@ public static class ProtobufUtility
     public static T Merge<T>(params T[] messages) where T : IMessage, new()
     {
         if (messages is null || messages.Length == 0)
+        {
             throw new ArgumentException("At least one message is required", nameof(messages));
+        }
 
         var result = new T();
         foreach (var message in messages)
         {
             if (message is not null)
+            {
                 result.MergeFrom(message.ToByteArray());
+            }
         }
 
         return result;
@@ -146,10 +164,14 @@ public static class ProtobufUtility
     public static bool AreEqual<T>(T message1, T message2) where T : IMessage
     {
         if (message1 is null && message2 is null)
+        {
             return true;
+        }
 
         if (message1 is null || message2 is null)
+        {
             return false;
+        }
 
         return message1.Equals(message2);
     }
@@ -198,7 +220,9 @@ public static class ProtobufUtility
     public static string CompressMessage(IMessage message)
     {
         if (message is null)
+        {
             throw new ArgumentNullException(nameof(message));
+        }
 
         var messageBytes = message.ToByteArray();
         using (var output = new MemoryStream())
@@ -218,7 +242,9 @@ public static class ProtobufUtility
     public static T? DecompressMessage<T>(string compressedBase64) where T : IMessage, new()
     {
         if (string.IsNullOrEmpty(compressedBase64))
+        {
             throw new ArgumentException("Compressed data cannot be null or empty", nameof(compressedBase64));
+        }
 
         try
         {

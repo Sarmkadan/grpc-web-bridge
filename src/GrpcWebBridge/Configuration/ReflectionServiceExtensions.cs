@@ -19,7 +19,7 @@ public static class ReflectionServiceExtensions
     /// <summary>
     /// Seals the class to prevent inheritance, as this is a pure utility class with extension methods.
     /// </summary>
-    static ReflectionServiceExtensions() {}
+    static ReflectionServiceExtensions() { }
 
     /// <summary>
     /// Registers <see cref="ReflectionService"/> as a singleton in the service container.

@@ -4,8 +4,8 @@
 // CTO & Software Architect
 // =============================================================================
 
-using GrpcWebBridge.Domain;
 using System.Diagnostics.CodeAnalysis;
+using GrpcWebBridge.Domain;
 
 namespace GrpcWebBridge.Domain.Exceptions;
 
@@ -145,19 +145,29 @@ public static class StreamingExceptionExtensions
         : new Dictionary<string, object>(exception.Context);
 
         if (!string.IsNullOrEmpty(exception.StreamId))
+        {
             context["StreamId"] = exception.StreamId!;
+        }
 
         if (exception.LastStreamState.HasValue)
+        {
             context["StreamState"] = exception.LastStreamState.Value;
+        }
 
         if (exception.SequenceNumber.HasValue)
+        {
             context["SequenceNumber"] = exception.SequenceNumber.Value;
+        }
 
         if (!string.IsNullOrEmpty(exception.ErrorCode))
+        {
             context["ErrorCode"] = exception.ErrorCode!;
+        }
 
         if (exception.GrpcStatus.HasValue)
+        {
             context["GrpcStatus"] = exception.GrpcStatus.Value;
+        }
 
         return context.AsReadOnly();
     }

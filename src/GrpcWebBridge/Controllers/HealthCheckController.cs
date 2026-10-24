@@ -4,11 +4,11 @@
 // CTO & Software Architect
 // =============================================================================
 
-using Microsoft.AspNetCore.Mvc;
-using GrpcWebBridge.Domain;
-using GrpcWebBridge.Services;
-using GrpcWebBridge.Formatters;
 using System.Runtime.InteropServices;
+using GrpcWebBridge.Domain;
+using GrpcWebBridge.Formatters;
+using GrpcWebBridge.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GrpcWebBridge.Controllers;
 

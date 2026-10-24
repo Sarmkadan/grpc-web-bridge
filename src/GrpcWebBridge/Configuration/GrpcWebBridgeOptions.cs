@@ -76,7 +76,9 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions WithMaxStreamCount(int maxCount)
     {
         if (maxCount <= 0)
+        {
             throw new ArgumentException("Max stream count must be greater than 0", nameof(maxCount));
+        }
 
         Configuration.MaxStreamCount = maxCount;
         return this;
@@ -88,7 +90,9 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions WithStreamIdleTimeout(int secondsTimeout)
     {
         if (secondsTimeout <= 0)
+        {
             throw new ArgumentException("Timeout must be greater than 0", nameof(secondsTimeout));
+        }
 
         Configuration.StreamIdleTimeoutSeconds = secondsTimeout;
         return this;
@@ -100,7 +104,9 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions WithMaxMessageSize(int sizeBytes)
     {
         if (sizeBytes <= 0)
+        {
             throw new ArgumentException("Max message size must be greater than 0", nameof(sizeBytes));
+        }
 
         Configuration.MaxMessageSize = sizeBytes;
         return this;
@@ -112,7 +118,9 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions WithDefaultTimeout(int millisecondsTimeout)
     {
         if (millisecondsTimeout <= 0)
+        {
             throw new ArgumentException("Timeout must be greater than 0", nameof(millisecondsTimeout));
+        }
 
         Configuration.DefaultTimeoutMilliseconds = millisecondsTimeout;
         return this;
@@ -124,7 +132,9 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions WithCompression(bool enable, int compressionLevel = 6)
     {
         if (compressionLevel < 0 || compressionLevel > 9)
+        {
             throw new ArgumentException("Compression level must be between 0 and 9", nameof(compressionLevel));
+        }
 
         Configuration.CompressResponses = enable;
         Configuration.CompressionLevel = compressionLevel;
@@ -191,7 +201,9 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions AddAllowedOrigin(string origin)
     {
         if (string.IsNullOrWhiteSpace(origin))
+        {
             throw new ArgumentException("Origin cannot be empty", nameof(origin));
+        }
 
         Configuration.AddAllowedOrigin(origin);
         return this;
@@ -203,10 +215,14 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions AddAllowedOrigins(params string[] origins)
     {
         if (origins is null || origins.Length == 0)
+        {
             throw new ArgumentException("Origins cannot be null or empty", nameof(origins));
+        }
 
         foreach (var origin in origins.Where(o => !string.IsNullOrWhiteSpace(o)))
+        {
             Configuration.AddAllowedOrigin(origin);
+        }
 
         return this;
     }
@@ -217,7 +233,9 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions AddCustomHeader(string key, string value)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Header key cannot be empty", nameof(key));
+        }
 
         Configuration.AddCustomHeader(key, value);
         return this;
@@ -229,7 +247,9 @@ public sealed class GrpcWebBridgeOptions
     public GrpcWebBridgeOptions WithInstanceName(string instanceName)
     {
         if (string.IsNullOrWhiteSpace(instanceName))
+        {
             throw new ArgumentException("Instance name cannot be empty", nameof(instanceName));
+        }
 
         Configuration.InstanceName = instanceName;
         return this;

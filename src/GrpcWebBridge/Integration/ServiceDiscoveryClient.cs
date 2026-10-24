@@ -47,7 +47,9 @@ public sealed class ServiceDiscoveryClient : IDisposable
     public async Task<bool> RegisterServiceAsync(ServiceInstance instance)
     {
         if (instance is null)
+        {
             throw new ArgumentNullException(nameof(instance));
+        }
 
         try
         {
@@ -77,7 +79,9 @@ public sealed class ServiceDiscoveryClient : IDisposable
     public async Task<bool> DeregisterServiceAsync(string serviceId)
     {
         if (string.IsNullOrEmpty(serviceId))
+        {
             throw new ArgumentException("Service ID cannot be null or empty", nameof(serviceId));
+        }
 
         try
         {
@@ -107,7 +111,9 @@ public sealed class ServiceDiscoveryClient : IDisposable
     public async Task<List<ServiceInstance>> DiscoverServicesAsync(string serviceName)
     {
         if (string.IsNullOrEmpty(serviceName))
+        {
             throw new ArgumentException("Service name cannot be null or empty", nameof(serviceName));
+        }
 
         try
         {
@@ -156,7 +162,9 @@ public sealed class ServiceDiscoveryClient : IDisposable
     public async Task<bool> SendHeartbeatAsync(string serviceId)
     {
         if (string.IsNullOrEmpty(serviceId))
+        {
             throw new ArgumentException("Service ID cannot be null or empty", nameof(serviceId));
+        }
 
         try
         {
@@ -179,7 +187,9 @@ public sealed class ServiceDiscoveryClient : IDisposable
     public void StartAutoRefresh(TimeSpan interval)
     {
         if (_refreshTimer is not null)
+        {
             return;
+        }
 
         _refreshTimer = new Timer(_ => RefreshServices(), null, interval, interval);
         _logger.LogInformation("Auto-refresh started with interval: {IntervalSeconds}s", interval.TotalSeconds);

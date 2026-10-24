@@ -32,7 +32,9 @@ public static class BidirectionalStreamingEngineExtensions
         ArgumentNullException.ThrowIfNull(engine);
 
         if (string.IsNullOrWhiteSpace(streamId))
+        {
             throw new ArgumentException("Stream ID must be a non-empty string.", nameof(streamId));
+        }
 
         var stream = engine.GetStream(streamId);
         return stream?.Metrics;

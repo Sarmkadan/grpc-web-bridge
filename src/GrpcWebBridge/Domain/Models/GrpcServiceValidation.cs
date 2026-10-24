@@ -184,8 +184,7 @@ public static class GrpcServiceValidation
         if (problems.Count > 0)
         {
             throw new ArgumentException(
-                $"GrpcService is invalid:{Environment.NewLine}- {
-                string.Join($"{Environment.NewLine}- ", problems)}");
+                $"GrpcService is invalid:{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", problems)}");
         }
     }
 
@@ -197,19 +196,27 @@ public static class GrpcServiceValidation
     private static bool IsValidPackageName(string packageName)
     {
         if (string.IsNullOrWhiteSpace(packageName))
+        {
             return false;
+        }
 
         // .NET package names are alphanumeric with dots and dashes
         if (!packageName.All(c => char.IsLetterOrDigit(c) || c == '.' || c == '-'))
+        {
             return false;
+        }
 
         // Cannot start or end with dot or dash
         if (packageName.StartsWith('.') || packageName.StartsWith('-') || packageName.EndsWith('.') || packageName.EndsWith('-'))
+        {
             return false;
+        }
 
         // Cannot have consecutive dots or dashes
         if (packageName.Contains("..") || packageName.Contains("--"))
+        {
             return false;
+        }
 
         return true;
     }
@@ -222,11 +229,15 @@ public static class GrpcServiceValidation
     private static bool IsValidEndpoint(string endpoint)
     {
         if (string.IsNullOrWhiteSpace(endpoint))
+        {
             return false;
+        }
 
         // Check if it's a valid IPv4 address
         if (IsValidIpAddress(endpoint))
+        {
             return true;
+        }
 
         // Check if it's a valid hostname
         return IsValidHostname(endpoint);
@@ -240,11 +251,15 @@ public static class GrpcServiceValidation
     private static bool IsValidIpAddress(string ip)
     {
         if (string.IsNullOrWhiteSpace(ip))
+        {
             return false;
+        }
 
         var parts = ip.Split('.', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 4)
+        {
             return false;
+        }
 
         return parts.All(part => int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var num) && num >= 0 && num <= 255);
     }
@@ -257,14 +272,18 @@ public static class GrpcServiceValidation
     private static bool IsValidHostname(string hostname)
     {
         if (string.IsNullOrWhiteSpace(hostname) || hostname.Length > 253)
+        {
             return false;
+        }
 
         // Hostname can contain letters, digits, hyphens, and dots
         // Cannot start or end with hyphen or dot
         // Each label (between dots) must be 1-63 characters
         var labels = hostname.Split('.');
         if (labels.Length == 0 || labels.Any(string.IsNullOrWhiteSpace))
+        {
             return false;
+        }
 
         return labels.All(label => label.Length > 0 && label.Length <= 63 &&
             !label.StartsWith('-') && !label.EndsWith('-') &&

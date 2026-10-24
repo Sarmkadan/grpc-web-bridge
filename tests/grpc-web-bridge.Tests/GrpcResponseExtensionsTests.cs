@@ -1,8 +1,8 @@
 #nullable enable
 
 using FluentAssertions;
-using GrpcWebBridge.Domain.Models;
 using GrpcWebBridge.Domain;
+using GrpcWebBridge.Domain.Models;
 using Xunit;
 
 namespace GrpcWebBridge.Tests;

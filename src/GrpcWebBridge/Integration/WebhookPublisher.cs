@@ -4,10 +4,10 @@
 // CTO & Software Architect
 // =============================================================================
 
-using GrpcWebBridge.Events;
-using GrpcWebBridge.Utilities;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using GrpcWebBridge.Events;
+using GrpcWebBridge.Utilities;
 
 namespace GrpcWebBridge.Integration;
 
@@ -57,11 +57,15 @@ public sealed class WebhookPublisher : IDisposable
         bool retryOnFailure = true)
     {
         if (string.IsNullOrEmpty(webhookUrl))
+        {
             throw new ArgumentException("Webhook URL cannot be null or empty", nameof(webhookUrl));
+        }
 
         // Validate URL
         if (!Uri.TryCreate(webhookUrl, UriKind.Absolute, out var uri))
+        {
             throw new InvalidOperationException($"Invalid webhook URL: {webhookUrl}");
+        }
 
         var subscriptionId = Guid.NewGuid().ToString();
         var subscription = new WebhookSubscription
@@ -104,7 +108,9 @@ public sealed class WebhookPublisher : IDisposable
     public async Task PublishEventAsync(EventBase @event)
     {
         if (@event is null)
+        {
             throw new ArgumentNullException(nameof(@event));
+        }
 
         var eventType = @event.GetType().Name;
         var matchingSubscriptions = _subscriptions.Values

@@ -78,7 +78,9 @@ services.AddGrpcWebBridgeTracing(
     {
         // Console exporter is useful for development; replace with OTLP/Zipkin in production.
         if (builder.Environment.IsDevelopment())
+        {
             tracing.AddConsoleExporter();
+        }
     });
 
 // Add controllers for REST endpoints
@@ -169,7 +171,9 @@ app.MapGet("/api/services/{serviceId}", async (string serviceId, ServiceRegistry
 {
     var service = registry.ListServices().FirstOrDefault(s => s.Id == serviceId);
     if (service is null)
+    {
         return Results.NotFound(new { error = "Service not found" });
+    }
 
     var details = new
     {

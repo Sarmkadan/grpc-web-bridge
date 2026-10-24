@@ -108,10 +108,14 @@ public sealed class AuthenticationContext
     {
         ArgumentException.ThrowIfNullOrEmpty(role);
         if (string.IsNullOrWhiteSpace(role))
+        {
             throw new ArgumentException("Role cannot be empty", nameof(role));
+        }
 
         if (!Roles.Contains(role))
+        {
             Roles.Add(role);
+        }
     }
 
     /// <summary>
@@ -122,7 +126,9 @@ public sealed class AuthenticationContext
     public bool HasRole(string role)
     {
         if (string.IsNullOrWhiteSpace(role))
+        {
             return false;
+        }
 
         return Roles.Contains(role);
     }
@@ -137,7 +143,9 @@ public sealed class AuthenticationContext
     {
         ArgumentNullException.ThrowIfNull(roles);
         if (roles.Length == 0)
+        {
             return false;
+        }
 
         return roles.Any(HasRole);
     }
@@ -152,7 +160,9 @@ public sealed class AuthenticationContext
     {
         ArgumentNullException.ThrowIfNull(roles);
         if (roles.Length == 0)
+        {
             return false;
+        }
 
         return roles.All(HasRole);
     }
@@ -168,7 +178,9 @@ public sealed class AuthenticationContext
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentException.ThrowIfNullOrEmpty(value);
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Claim key cannot be empty", nameof(key));
+        }
 
         Claims[key] = value;
     }
@@ -205,7 +217,9 @@ public sealed class AuthenticationContext
     public void SetExpiration(int minutesFromNow)
     {
         if (minutesFromNow <= 0)
+        {
             throw new ArgumentException("Minutes must be greater than 0", nameof(minutesFromNow));
+        }
 
         ExpiresAt = DateTime.UtcNow.AddMinutes(minutesFromNow);
     }
@@ -218,7 +232,9 @@ public sealed class AuthenticationContext
     public void SetExpiration(DateTime expirationTime)
     {
         if (expirationTime <= DateTime.UtcNow)
+        {
             throw new ArgumentException("Expiration time must be in the future", nameof(expirationTime));
+        }
 
         ExpiresAt = expirationTime;
     }
@@ -233,10 +249,14 @@ public sealed class AuthenticationContext
     public TimeSpan GetRemainingTime()
     {
         if (IsExpired)
+        {
             return TimeSpan.Zero;
+        }
 
         if (!ExpiresAt.HasValue)
+        {
             return TimeSpan.MaxValue;
+        }
 
         return ExpiresAt.Value - DateTime.UtcNow;
     }
@@ -253,7 +273,9 @@ public sealed class AuthenticationContext
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentNullException.ThrowIfNull(value);
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Key cannot be empty", nameof(key));
+        }
 
         CustomData[key] = value;
     }
@@ -280,20 +302,29 @@ public sealed class AuthenticationContext
         if (!IsAuthenticated)
         {
             if (string.IsNullOrWhiteSpace(UserId))
+            {
                 throw new ArgumentException("User ID is required for authenticated context", nameof(UserId));
+            }
 
             if (string.IsNullOrWhiteSpace(Token) && Scheme != AuthenticationScheme.None)
+            {
                 throw new ArgumentException("Token is required for bearer authentication", nameof(Token));
+            }
         }
 
         if (IsExpired)
+        {
             throw new InvalidOperationException("Authentication context has expired");
+        }
     }
 
     private static string ValidateUserId(string userId)
     {
         if (string.IsNullOrWhiteSpace(userId))
+        {
             throw new ArgumentException("User ID cannot be empty", nameof(userId));
+        }
+
         return userId.Trim();
     }
 
@@ -311,7 +342,9 @@ public sealed class AuthenticationContext
     public override bool Equals(object? obj)
     {
         if (obj is not AuthenticationContext other)
+        {
             return false;
+        }
 
         return Id == other.Id;
     }

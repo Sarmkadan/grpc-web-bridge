@@ -4,11 +4,11 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Text;
 using FluentAssertions;
 using GrpcWebBridge.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
-using System.Text;
 using Xunit;
 
 /// <summary>

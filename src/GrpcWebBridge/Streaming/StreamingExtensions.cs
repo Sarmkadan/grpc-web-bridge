@@ -54,7 +54,7 @@ public static class StreamingExtensions
         this IServiceCollection services,
         FlowControlOptions? options = null)
     {
-    ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(services);
 
         options ??= new FlowControlOptions();
         options.Validate();
@@ -74,7 +74,9 @@ public static class StreamingExtensions
         services.TryAddSingleton<IStreamingSessionManager, StreamingSessionManager>();
 
         if (options.Mode == FlowControlMode.Adaptive)
-                    services.AddHostedService<AdaptiveFlowController>();
+        {
+            services.AddHostedService<AdaptiveFlowController>();
+        }
 
         return services;
     }
@@ -107,9 +109,9 @@ public static class StreamingExtensions
         this IServiceCollection services,
         Func<FlowControlOptions, FlowControlOptions> configure)
     {
-    ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(services);
 
-    ArgumentNullException.ThrowIfNull(configure);
+        ArgumentNullException.ThrowIfNull(configure);
         var options = configure(new FlowControlOptions());
         return AddBidirectionalStreaming(services, options);
     }
@@ -138,7 +140,7 @@ public static class StreamingExtensions
         TimeSpan? staleThreshold = null,
         double backpressureWarnThreshold = 0.10)
     {
-    ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddSingleton(new StreamDiagnosticsOptions
         {
@@ -161,11 +163,11 @@ public static class StreamingExtensions
     public static IServiceCollection AddHighThroughputBidirectionalStreaming(
         this IServiceCollection services)
     {
-    ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(services);
 
-            return services
-                .AddBidirectionalStreaming(FlowControlOptions.HighThroughput)
-                .AddStreamingDiagnostics();
+        return services
+            .AddBidirectionalStreaming(FlowControlOptions.HighThroughput)
+            .AddStreamingDiagnostics();
     }
 
     /// <summary>
@@ -177,10 +179,10 @@ public static class StreamingExtensions
     public static IServiceCollection AddLowLatencyBidirectionalStreaming(
         this IServiceCollection services)
     {
-    ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(services);
 
-            return services
-                .AddBidirectionalStreaming(FlowControlOptions.LowLatency)
-                .AddStreamingDiagnostics(diagnosticsInterval: TimeSpan.FromSeconds(30));
+        return services
+            .AddBidirectionalStreaming(FlowControlOptions.LowLatency)
+            .AddStreamingDiagnostics(diagnosticsInterval: TimeSpan.FromSeconds(30));
     }
 }

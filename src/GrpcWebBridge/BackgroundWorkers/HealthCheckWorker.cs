@@ -5,8 +5,8 @@
 // =============================================================================
 
 using GrpcWebBridge.Domain;
-using GrpcWebBridge.Services;
 using GrpcWebBridge.Events;
+using GrpcWebBridge.Services;
 
 namespace GrpcWebBridge.BackgroundWorkers;
 
@@ -45,31 +45,31 @@ public sealed class HealthCheckWorker : BackgroundService
     }
 
     public override string ToString()
-{
-    string serviceId = "N/A";
-    string serviceName = "N/A";
-    bool isHealthy = false;
-
-    try
     {
-        var services = _serviceRegistry.ListServices().ToList();
-        if (services.Any())
+        string serviceId = "N/A";
+        string serviceName = "N/A";
+        bool isHealthy = false;
+
+        try
         {
-            var firstService = services.First();
-            serviceId = firstService.Id ?? "N/A";
-            serviceName = firstService.Name ?? "N/A";
-            isHealthy = firstService.Status == ServiceStatus.Serving;
+            var services = _serviceRegistry.ListServices().ToList();
+            if (services.Any())
+            {
+                var firstService = services.First();
+                serviceId = firstService.Id ?? "N/A";
+                serviceName = firstService.Name ?? "N/A";
+                isHealthy = firstService.Status == ServiceStatus.Serving;
+            }
         }
-    }
-    catch
-    {
-        // If we can't get services, keep defaults
+        catch
+        {
+            // If we can't get services, keep defaults
+        }
+
+        return $"HealthCheckWorker {{ CheckIntervalSeconds = {_options.CheckIntervalSeconds}, CheckTimeoutMs = {_options.CheckTimeoutMs}, InitialDelaySeconds = {_options.InitialDelaySeconds}, ServiceId = {serviceId}, ServiceName = {serviceName}, IsHealthy = {isHealthy} }}";
     }
 
-    return $"HealthCheckWorker {{ CheckIntervalSeconds = {_options.CheckIntervalSeconds}, CheckTimeoutMs = {_options.CheckTimeoutMs}, InitialDelaySeconds = {_options.InitialDelaySeconds}, ServiceId = {serviceId}, ServiceName = {serviceName}, IsHealthy = {isHealthy} }}";
-}
-
-protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Health check worker started with interval {IntervalSeconds}s", _options.CheckIntervalSeconds);
 

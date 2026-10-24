@@ -32,10 +32,14 @@ public static class BackpressureControllerExtensions
         ArgumentNullException.ThrowIfNull(controller);
 
         if (count <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive.");
+        }
 
         if (count == 1)
+        {
             return controller.TryConsumeCredit();
+        }
 
         // Use the public TryConsumeCredit in a loop to consume multiple credits
         // This is the only public API available for consuming credits
@@ -73,7 +77,9 @@ public static class BackpressureControllerExtensions
         ArgumentNullException.ThrowIfNull(controller);
 
         if (count <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive.");
+        }
 
         if (count == 1)
         {
@@ -100,7 +106,9 @@ public static class BackpressureControllerExtensions
         ArgumentNullException.ThrowIfNull(controller);
 
         if (count <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive.");
+        }
 
         if (count == 1)
         {

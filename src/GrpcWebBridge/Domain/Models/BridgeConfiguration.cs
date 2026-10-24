@@ -147,7 +147,9 @@ public sealed class BridgeConfiguration
     public void SetServiceDefault(string serviceName, object defaultValue)
     {
         if (string.IsNullOrWhiteSpace(serviceName))
+        {
             throw new ArgumentException("Service name cannot be empty", nameof(serviceName));
+        }
 
         ServiceDefaults[serviceName] = defaultValue;
         UpdatedAt = DateTime.UtcNow;
@@ -171,10 +173,14 @@ public sealed class BridgeConfiguration
     public void AddAllowedOrigin(string origin)
     {
         if (string.IsNullOrWhiteSpace(origin))
+        {
             throw new ArgumentException("Origin cannot be empty", nameof(origin));
+        }
 
         if (!AllowedOrigins.Contains(origin))
+        {
             AllowedOrigins.Add(origin);
+        }
 
         UpdatedAt = DateTime.UtcNow;
     }
@@ -186,7 +192,9 @@ public sealed class BridgeConfiguration
     public void RemoveAllowedOrigin(string origin)
     {
         if (AllowedOrigins.Remove(origin))
+        {
             UpdatedAt = DateTime.UtcNow;
+        }
     }
 
     /// <summary>
@@ -198,7 +206,9 @@ public sealed class BridgeConfiguration
     public void AddCustomHeader(string key, string value)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Header key cannot be empty", nameof(key));
+        }
 
         CustomHeaders[key] = value;
         UpdatedAt = DateTime.UtcNow;
@@ -221,34 +231,53 @@ public sealed class BridgeConfiguration
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Environment))
+        {
             throw new ArgumentException("Environment cannot be empty", nameof(Environment));
+        }
 
         if (MaxStreamCount <= 0)
+        {
             throw new ArgumentException("Max stream count must be greater than 0", nameof(MaxStreamCount));
+        }
 
         if (StreamIdleTimeoutSeconds <= 0)
+        {
             throw new ArgumentException("Stream idle timeout must be greater than 0", nameof(StreamIdleTimeoutSeconds));
+        }
 
         if (MaxMessageSize <= 0)
+        {
             throw new ArgumentException("Max message size must be greater than 0", nameof(MaxMessageSize));
+        }
 
         if (DefaultTimeoutMilliseconds <= 0)
+        {
             throw new ArgumentException("Default timeout must be greater than 0", nameof(DefaultTimeoutMilliseconds));
+        }
 
         if (CompressionLevel < 0 || CompressionLevel > 9)
+        {
             throw new ArgumentException("Compression level must be between 0 and 9", nameof(CompressionLevel));
+        }
 
         if (AllowedOrigins.Count == 0)
+        {
             throw new ArgumentException("At least one allowed origin must be specified", nameof(AllowedOrigins));
+        }
 
         if (AllowedMethods.Count == 0)
+        {
             throw new ArgumentException("At least one allowed method must be specified", nameof(AllowedMethods));
+        }
     }
 
     private static string ValidateEnvironment(string environment)
     {
         if (string.IsNullOrWhiteSpace(environment))
+        {
             throw new ArgumentException("Environment cannot be empty", nameof(environment));
+        }
+
         return environment.Trim();
     }
 
@@ -262,7 +291,9 @@ public sealed class BridgeConfiguration
     public override bool Equals(object? obj)
     {
         if (obj is not BridgeConfiguration other)
+        {
             return false;
+        }
 
         return InstanceId == other.InstanceId;
     }

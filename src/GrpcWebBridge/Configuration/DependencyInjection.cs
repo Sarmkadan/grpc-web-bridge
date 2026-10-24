@@ -30,7 +30,9 @@ public static class DependencyInjection
         GrpcWebBridgeOptions? options = null)
     {
         if (services is null)
+        {
             throw new ArgumentNullException(nameof(services));
+        }
 
         // Register configuration
         options ??= new GrpcWebBridgeOptions();
@@ -54,8 +56,8 @@ public static class DependencyInjection
         services.AddSingleton<AuthenticationService>();
         services.AddSingleton<ServiceRegistry>();
 
-// Register correlation ID management
-services.AddCorrelationIdManager();
+        // Register correlation ID management
+        services.AddCorrelationIdManager();
 
         // Register data access
         services.AddSingleton<IServiceRepository, ServiceRepository>();
@@ -63,7 +65,7 @@ services.AddCorrelationIdManager();
 
         // Register hosted services for background tasks
         services.AddHostedService<StreamCleanupService>();
-services.AddHostedService<StreamingWorkerSupervisor>();
+        services.AddHostedService<StreamingWorkerSupervisor>();
 
         return services;
     }
@@ -76,10 +78,14 @@ services.AddHostedService<StreamingWorkerSupervisor>();
         Action<GrpcWebBridgeOptions> configureOptions)
     {
         if (services is null)
+        {
             throw new ArgumentNullException(nameof(services));
+        }
 
         if (configureOptions is null)
+        {
             throw new ArgumentNullException(nameof(configureOptions));
+        }
 
         var options = new GrpcWebBridgeOptions();
         configureOptions(options);
@@ -96,7 +102,9 @@ services.AddHostedService<StreamingWorkerSupervisor>();
         string version = "1.0.0")
     {
         if (services is null)
+        {
             throw new ArgumentNullException(nameof(services));
+        }
 
         services.AddOpenApi();
 
@@ -111,7 +119,9 @@ services.AddHostedService<StreamingWorkerSupervisor>();
         GrpcWebBridgeOptions? options = null)
     {
         if (services is null)
+        {
             throw new ArgumentNullException(nameof(services));
+        }
 
         options ??= new GrpcWebBridgeOptions();
 
@@ -154,7 +164,9 @@ services.AddHostedService<StreamingWorkerSupervisor>();
         Action<JwtBearerOptions>? configureJwtBearer = null)
     {
         if (services is null)
+        {
             throw new ArgumentNullException(nameof(services));
+        }
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
@@ -187,7 +199,9 @@ services.AddHostedService<StreamingWorkerSupervisor>();
         this IServiceCollection services)
     {
         if (services is null)
+        {
             throw new ArgumentNullException(nameof(services));
+        }
 
         // Trigger static field initialisation so the metrics are registered with the
         // default Prometheus registry before any request arrives.
@@ -224,7 +238,9 @@ services.AddHostedService<StreamingWorkerSupervisor>();
         Action<TracerProviderBuilder>? configureBuilder = null)
     {
         if (services is null)
+        {
             throw new ArgumentNullException(nameof(services));
+        }
 
         var resolvedInstance = string.IsNullOrWhiteSpace(instanceName) ? "default" : instanceName;
 

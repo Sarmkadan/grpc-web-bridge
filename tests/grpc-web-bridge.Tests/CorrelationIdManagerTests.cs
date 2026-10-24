@@ -42,13 +42,17 @@ public sealed class CorrelationIdManagerTests
             {
                 var callArgs = call.GetArguments();
                 if ((LogLevel)callArgs[0]! != level)
+                {
                     return false;
+                }
 
                 // LoggerExtensions passes a FormattedLogValues state: its values, then {OriginalFormat}
                 var values = (IReadOnlyList<KeyValuePair<string, object?>>)callArgs[2]!;
                 var originalFormat = values.FirstOrDefault(kv => kv.Key == "{OriginalFormat}").Value as string;
                 if (originalFormat != template)
+                {
                     return false;
+                }
 
                 return args is null || values.Where(kv => kv.Key != "{OriginalFormat}").Select(kv => kv.Value).SequenceEqual(args);
             });

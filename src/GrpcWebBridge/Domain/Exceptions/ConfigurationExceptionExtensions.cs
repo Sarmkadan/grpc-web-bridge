@@ -116,7 +116,9 @@ public static class ConfigurationExceptionExtensions
         ArgumentNullException.ThrowIfNull(exception);
 
         if (string.IsNullOrEmpty(key))
+        {
             return true;
+        }
 
         return string.Equals(exception.ConfigurationKey, key, StringComparison.OrdinalIgnoreCase);
     }
@@ -157,7 +159,9 @@ public static class ConfigurationExceptionExtensions
     private static string GetInnerMessage(ConfigurationException exception)
     {
         if (exception is null)
+        {
             return string.Empty;
+        }
 
         return exception.InnerException?.Message ?? exception.Message;
     }

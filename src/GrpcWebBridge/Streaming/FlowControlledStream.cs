@@ -117,7 +117,9 @@ internal sealed class FlowControlledStream : IFlowControlledStream
 
         // Flush any remaining credits from the final partial batch.
         if (pendingRelease > 0)
+        {
             BackpressureController.ReleaseCredit(pendingRelease);
+        }
     }
 
     /// <inheritdoc/>
@@ -128,7 +130,9 @@ internal sealed class FlowControlledStream : IFlowControlledStream
         _context.OutboundChannel.Writer.TryComplete();
 
         if (_context.State == StreamState.Active)
+        {
             _context.State = StreamState.HalfClosed;
+        }
 
         _logger.LogInformation(
             "Stream {StreamId}: local write side completed — state={State}.",
@@ -161,10 +165,14 @@ internal sealed class FlowControlledStream : IFlowControlledStream
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
             return;
+        }
 
         if (BackpressureController is IDisposable disposable)
+        {
             disposable.Dispose();
+        }
 
         await _context.DisposeAsync().ConfigureAwait(false);
     }

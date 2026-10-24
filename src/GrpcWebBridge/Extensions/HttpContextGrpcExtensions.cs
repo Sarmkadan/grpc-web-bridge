@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Http;
 using System;
 using System.Linq;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Http;
 
 namespace GrpcWebBridge.Extensions;
 
@@ -10,7 +10,7 @@ namespace GrpcWebBridge.Extensions;
 /// </summary>
 public static class HttpContextGrpcExtensions
 {
-    private static readonly string[] ValidContentTypePrefixes =
+    private static readonly string[] _validContentTypePrefixes =
     [
         "application/grpc-web+proto",
         "application/grpc-web-text+proto",
@@ -38,7 +38,7 @@ public static class HttpContextGrpcExtensions
         if (MediaTypeHeaderValue.TryParse(contentType, out var header))
         {
             var mediaType = header.MediaType;
-            return ValidContentTypePrefixes.Any(v =>
+            return _validContentTypePrefixes.Any(v =>
                 string.Equals(mediaType, v, StringComparison.OrdinalIgnoreCase));
         }
 

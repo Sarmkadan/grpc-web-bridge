@@ -102,7 +102,9 @@ public sealed class StreamMessage
     public void SetData(byte[] data, SerializationFormat format = SerializationFormat.Protobuf)
     {
         if (data is null)
+        {
             throw new ArgumentNullException(nameof(data));
+        }
 
         Data = data;
         Format = format;
@@ -117,7 +119,9 @@ public sealed class StreamMessage
     public void SetMetadata(Dictionary<string, string> headers)
     {
         if (headers is null)
+        {
             throw new ArgumentNullException(nameof(headers));
+        }
 
         Headers = new Dictionary<string, string>(headers);
         MessageType = StreamMessageType.Metadata;
@@ -152,7 +156,9 @@ public sealed class StreamMessage
     public void SetError(GrpcResponse errorResponse)
     {
         if (errorResponse is null)
+        {
             throw new ArgumentNullException(nameof(errorResponse));
+        }
 
         ErrorResponse = errorResponse;
         MessageType = StreamMessageType.Error;
@@ -168,7 +174,9 @@ public sealed class StreamMessage
     public void EnableCompression(int level = 6)
     {
         if (level < 0 || level > 9)
+        {
             throw new ArgumentException("Compression level must be between 0 and 9", nameof(level));
+        }
 
         IsCompressed = true;
         CompressionLevel = level;
@@ -181,19 +189,29 @@ public sealed class StreamMessage
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(StreamId))
+        {
             throw new ArgumentException("Stream ID cannot be empty", nameof(StreamId));
+        }
 
         if (SequenceNumber < 0)
+        {
             throw new ArgumentException("Sequence number cannot be negative", nameof(SequenceNumber));
+        }
 
         if (MessageType == StreamMessageType.Data && Data.Length == 0)
+        {
             throw new ArgumentException("Data message must contain data", nameof(Data));
+        }
 
         if (MessageType == StreamMessageType.Error && ErrorResponse is null)
+        {
             throw new ArgumentException("Error message must have error response", nameof(ErrorResponse));
+        }
 
         if (Data.Length > Constants.Streaming.DefaultBufferSize * 2)
+        {
             throw new ArgumentException("Message data exceeds maximum size", nameof(Data));
+        }
     }
 
     /// <summary>
@@ -205,14 +223,20 @@ public sealed class StreamMessage
     private static string ValidateStreamId(string streamId)
     {
         if (string.IsNullOrWhiteSpace(streamId))
+        {
             throw new ArgumentException("Stream ID cannot be empty", nameof(streamId));
+        }
+
         return streamId.Trim();
     }
 
     private static int ValidateSequenceNumber(int sequenceNumber)
     {
         if (sequenceNumber < 0)
+        {
             throw new ArgumentException("Sequence number cannot be negative", nameof(sequenceNumber));
+        }
+
         return sequenceNumber;
     }
 
@@ -226,7 +250,9 @@ public sealed class StreamMessage
     public override bool Equals(object? obj)
     {
         if (obj is not StreamMessage other)
+        {
             return false;
+        }
 
         return Id == other.Id && StreamId == other.StreamId && SequenceNumber == other.SequenceNumber;
     }

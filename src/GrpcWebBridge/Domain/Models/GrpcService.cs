@@ -100,12 +100,16 @@ public sealed class GrpcService
     public void AddMethod(GrpcMethod method)
     {
         if (method is null)
+        {
             throw new ArgumentNullException(nameof(method));
+        }
 
         method.Validate();
 
         if (_methods.Any(m => m.FullName == method.FullName))
+        {
             throw new InvalidOperationException($"Method '{method.FullName}' already exists");
+        }
 
         _methods.Add(method);
         UpdatedAt = DateTime.UtcNow;
@@ -155,7 +159,9 @@ public sealed class GrpcService
     public void SetMetadata(string key, string value)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new ArgumentException("Metadata key cannot be empty", nameof(key));
+        }
 
         Metadata[key] = value;
         UpdatedAt = DateTime.UtcNow;
@@ -179,46 +185,68 @@ public sealed class GrpcService
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Name))
+        {
             throw new ArgumentException("Service name cannot be empty", nameof(Name));
+        }
 
         if (string.IsNullOrWhiteSpace(PackageName))
+        {
             throw new ArgumentException("Package name cannot be empty", nameof(PackageName));
+        }
 
         if (string.IsNullOrWhiteSpace(Endpoint))
+        {
             throw new ArgumentException("Endpoint cannot be empty", nameof(Endpoint));
+        }
 
         if (Port <= 0 || Port > 65535)
+        {
             throw new ArgumentException("Port must be between 1 and 65535", nameof(Port));
+        }
 
         if (_methods.Count == 0)
+        {
             throw new InvalidOperationException("Service must have at least one method");
+        }
     }
 
     private static string ValidateName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             throw new ArgumentException("Service name cannot be empty", nameof(name));
+        }
+
         return name.Trim();
     }
 
     private static string ValidatePackage(string package)
     {
         if (string.IsNullOrWhiteSpace(package))
+        {
             throw new ArgumentException("Package name cannot be empty", nameof(package));
+        }
+
         return package.Trim();
     }
 
     private static string ValidateEndpoint(string endpoint)
     {
         if (string.IsNullOrWhiteSpace(endpoint))
+        {
             throw new ArgumentException("Endpoint cannot be empty", nameof(endpoint));
+        }
+
         return endpoint.Trim();
     }
 
     private static int ValidatePort(int port)
     {
         if (port <= 0 || port > 65535)
+        {
             throw new ArgumentException("Port must be between 1 and 65535", nameof(port));
+        }
+
         return port;
     }
 
@@ -232,7 +260,9 @@ public sealed class GrpcService
     public override bool Equals(object? obj)
     {
         if (obj is not GrpcService other)
+        {
             return false;
+        }
 
         return Id == other.Id;
     }

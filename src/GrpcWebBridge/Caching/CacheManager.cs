@@ -49,10 +49,14 @@ public class CacheManager : IDisposable
     public void Set<T>(string key, T value, TimeSpan ttl)
     {
         if (string.IsNullOrEmpty(key))
+        {
             throw new ArgumentException("Cache key cannot be null or empty", nameof(key));
+        }
 
         if (value is null)
+        {
             throw new ArgumentNullException(nameof(value));
+        }
 
         var entry = new CacheEntry
         {
@@ -76,7 +80,9 @@ public class CacheManager : IDisposable
         value = default;
 
         if (string.IsNullOrEmpty(key))
+        {
             return false;
+        }
 
         if (!_cache.TryGetValue(key, out var entry))
         {
@@ -108,7 +114,9 @@ public class CacheManager : IDisposable
     public async Task<T> GetOrSetAsync<T>(string key, Func<Task<T>> factory, TimeSpan? ttl = null)
     {
         if (TryGet(key, out T? cachedValue) && cachedValue is not null)
+        {
             return cachedValue;
+        }
 
         var value = await factory().ConfigureAwait(false);
         Set(key, value, ttl ?? _options.DefaultTtl);
@@ -121,7 +129,9 @@ public class CacheManager : IDisposable
     public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? ttl = null)
     {
         if (TryGet(key, out T? cachedValue) && cachedValue is not null)
+        {
             return cachedValue;
+        }
 
         var value = factory();
         Set(key, value, ttl ?? _options.DefaultTtl);
@@ -134,11 +144,15 @@ public class CacheManager : IDisposable
     public bool Remove(string key)
     {
         if (string.IsNullOrEmpty(key))
+        {
             return false;
+        }
 
         var removed = _cache.TryRemove(key, out _);
         if (removed)
+        {
             _logger.LogDebug("Cache entry removed: Key={Key}", key);
+        }
 
         return removed;
     }
@@ -198,10 +212,14 @@ public class CacheManager : IDisposable
     public bool Contains(string key)
     {
         if (string.IsNullOrEmpty(key))
+        {
             return false;
+        }
 
         if (!_cache.TryGetValue(key, out var entry))
+        {
             return false;
+        }
 
         if (DateTime.UtcNow > entry.ExpiresAt)
         {
@@ -219,10 +237,14 @@ public class CacheManager : IDisposable
     {
         // Fix: handle null or empty key edge case
         if (string.IsNullOrEmpty(key))
+        {
             return false;
+        }
 
         if (!_cache.TryGetValue(key, out var entry))
+        {
             return false;
+        }
 
         entry.ExpiresAt = DateTime.UtcNow.Add(expiresIn);
         return true;
@@ -236,10 +258,14 @@ public class CacheManager : IDisposable
     {
         // Fix: handle null or empty key edge case
         if (string.IsNullOrEmpty(key))
+        {
             return null;
+        }
 
         if (!_cache.TryGetValue(key, out var entry))
+        {
             return null;
+        }
 
         var remaining = entry.ExpiresAt - DateTime.UtcNow;
         return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
@@ -273,7 +299,9 @@ public class CacheManager : IDisposable
     private static long EstimateAverageSizeInBytes(List<CacheEntry> entries)
     {
         if (entries.Count == 0)
+        {
             return 0;
+        }
 
         long totalSize = 0;
         foreach (var entry in entries)
@@ -368,11 +396,11 @@ public sealed class CacheStatistics
     public long AverageEntrySize { get; set; }
 
     public override string ToString()
-{
-    string oldestEntryStr = OldestEntry != null ? "present" : "null";
-    string mostAccessedEntryStr = MostAccessedEntry != null ? "present" : "null";
-    return $"CacheStatistics {{ EntryCount = {EntryCount}, TotalHits = {TotalHits}, AverageHitsPerEntry = {AverageHitsPerEntry}, OldestEntry = {oldestEntryStr}, MostAccessedEntry = {mostAccessedEntryStr} }}";
-}
+    {
+        string oldestEntryStr = OldestEntry != null ? "present" : "null";
+        string mostAccessedEntryStr = MostAccessedEntry != null ? "present" : "null";
+        return $"CacheStatistics {{ EntryCount = {EntryCount}, TotalHits = {TotalHits}, AverageHitsPerEntry = {AverageHitsPerEntry}, OldestEntry = {oldestEntryStr}, MostAccessedEntry = {mostAccessedEntryStr} }}";
+    }
 }
 
 /// <summary>

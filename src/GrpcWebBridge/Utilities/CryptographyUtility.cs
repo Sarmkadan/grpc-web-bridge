@@ -59,7 +59,9 @@ public static class CryptographyUtility
             if (components.Length == 3)
             {
                 if (!int.TryParse(components[0], out iterations) || iterations <= 0)
+                {
                     return false;
+                }
 
                 salt = Convert.FromBase64String(components[1]);
                 storedHash = Convert.FromBase64String(components[2]);
@@ -68,7 +70,9 @@ public static class CryptographyUtility
             {
                 var hashBytes = Convert.FromBase64String(hash);
                 if (hashBytes.Length != SaltSize + KeySize)
+                {
                     return false;
+                }
 
                 iterations = LegacyHashIterations;
                 salt = hashBytes[..SaltSize];
@@ -80,7 +84,9 @@ public static class CryptographyUtility
             }
 
             if (salt.Length != SaltSize || storedHash.Length != KeySize)
+            {
                 return false;
+            }
 
             var computedHash = Rfc2898DeriveBytes.Pbkdf2(
                 password,
@@ -103,7 +109,9 @@ public static class CryptographyUtility
     public static string GenerateToken(int length = 32)
     {
         if (length < 16)
+        {
             throw new ArgumentOutOfRangeException(nameof(length), length, "Token length must be at least 16 bytes");
+        }
 
         using (var rng = RandomNumberGenerator.Create())
         {
@@ -120,7 +128,9 @@ public static class CryptographyUtility
     public static string GenerateApiKey(int length = 32)
     {
         if (length < 16)
+        {
             throw new ArgumentOutOfRangeException(nameof(length), length, "API key length must be at least 16 characters");
+        }
 
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var key = new StringBuilder();
@@ -180,7 +190,9 @@ public static class CryptographyUtility
         ArgumentException.ThrowIfNullOrEmpty(key);
 
         if (key.Length < 32)
+        {
             throw new ArgumentException("Key must be at least 32 characters", nameof(key));
+        }
 
         try
         {
@@ -220,10 +232,14 @@ public static class CryptographyUtility
     public static string DecryptAes256(string ciphertext, string key)
     {
         if (string.IsNullOrEmpty(ciphertext))
+        {
             throw new ArgumentException("Ciphertext cannot be null or empty", nameof(ciphertext));
+        }
 
         if (string.IsNullOrEmpty(key) || key.Length < 32)
+        {
             throw new ArgumentException("Key must be at least 32 characters", nameof(key));
+        }
 
         try
         {
@@ -235,7 +251,9 @@ public static class CryptographyUtility
             var decryptedLength = result.Length - ivLength - tagLength;
 
             if (decryptedLength <= 0)
+            {
                 throw new InvalidOperationException("Invalid ciphertext format");
+            }
 
             var iv = new byte[ivLength];
             var encryptedData = new byte[decryptedLength];
