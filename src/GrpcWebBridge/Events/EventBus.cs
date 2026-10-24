@@ -6,6 +6,7 @@
 
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using GrpcWebBridge.Integration;
 
 namespace GrpcWebBridge.Events;
 
@@ -245,6 +246,7 @@ public sealed class EventBus : IDisposable
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         var eventName = typeof(TEvent).Name;
+        EnrichWithRequestContext(@event);
         RecordEvent(@event);
 
         if (!_subscribers.TryGetValue(eventName, out var handlers) || handlers.Count == 0)
@@ -260,6 +262,21 @@ public sealed class EventBus : IDisposable
         else
         {
             await PublishInlineAsync(@event, eventName, handlers).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Copies the correlation and user identifiers of the ambient request context onto the event.
+    /// Values already set by the publisher are kept. The context is read on the publishing thread,
+    /// so events dispatched asynchronously still carry the identifiers of the request that raised them.
+    /// </summary>
+    /// <param name="event">The event to enrich.</param>
+    private static void EnrichWithRequestContext(EventBase @event)
+    {
+        if (RequestContextManager.Current is { } requestContext)
+        {
+            @event.CorrelationId ??= requestContext.RequestId;
+            @event.UserId ??= requestContext.UserId;
         }
     }
 
@@ -593,6 +610,17 @@ public abstract class EventBase
     /// Optional metadata associated with the event.
     /// </summary>
     public Dictionary<string, object>? Metadata { get; set; }
+    /// <summary>
+    /// Gets or sets the correlation identifier of the request that was active when the event was published.
+    /// Equals <see cref="RequestContext.RequestId"/> and matches the <c>X-Request-ID</c> header and request logs.
+    /// Filled automatically by <see cref="EventBus.PublishAsync{TEvent}"/> when left null; stays null for events published outside a request.
+    /// </summary>
+    public string? CorrelationId { get; set; }
+    /// <summary>
+    /// Gets or sets the identifier of the user associated with the request that was active when the event was published.
+    /// Filled automatically by <see cref="EventBus.PublishAsync{TEvent}"/> when left null.
+    /// </summary>
+    public string? UserId { get; set; }
 }
 
 /// <summary>
@@ -798,11 +826,6 @@ public sealed class StreamEndedEvent : EventBase
 /// </summary>
 public sealed class AuthenticationFailedEvent : EventBase
 {
-    /// <summary>
-    /// Gets or sets the user identifier.
-    /// </summary>
-    public string? UserId { get; set; }
-
     /// <summary>
     /// Gets or sets the reason for authentication failure.
     /// </summary>
