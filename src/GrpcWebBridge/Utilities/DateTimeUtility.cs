@@ -14,6 +14,13 @@ namespace GrpcWebBridge.Utilities;
 /// </summary>
 public static class DateTimeUtility
 {
+    private const int SecondsPerMinute = 60;
+    private const int MinutesPerHour = 60;
+    private const int HoursPerDay = 24;
+    private const int DaysPerWeek = 7;
+    private const int DaysPerMonth = 30;
+    private const int DaysPerYear = 365;
+
     /// <summary>
     /// Converts a DateTime to ISO 8601 string.
     /// Uses UTC time with Z suffix.
@@ -78,37 +85,37 @@ public static class DateTimeUtility
         var reference = referenceTime ?? DateTime.UtcNow;
         var diff = reference - dateTime.ToUniversalTime();
 
-        if (diff.TotalSeconds < 60)
+        if (diff.TotalSeconds < SecondsPerMinute)
         {
             return "just now";
         }
 
-        if (diff.TotalMinutes < 60)
+        if (diff.TotalMinutes < MinutesPerHour)
         {
             return $"{(int)diff.TotalMinutes} minute{((int)diff.TotalMinutes != 1 ? "s" : "")} ago";
         }
 
-        if (diff.TotalHours < 24)
+        if (diff.TotalHours < HoursPerDay)
         {
             return $"{(int)diff.TotalHours} hour{((int)diff.TotalHours != 1 ? "s" : "")} ago";
         }
 
-        if (diff.TotalDays < 7)
+        if (diff.TotalDays < DaysPerWeek)
         {
             return $"{(int)diff.TotalDays} day{((int)diff.TotalDays != 1 ? "s" : "")} ago";
         }
 
-        if (diff.TotalDays < 30)
+        if (diff.TotalDays < DaysPerMonth)
         {
-            return $"{(int)(diff.TotalDays / 7)} week{((int)(diff.TotalDays / 7) != 1 ? "s" : "")} ago";
+            return $"{(int)(diff.TotalDays / DaysPerWeek)} week{((int)(diff.TotalDays / DaysPerWeek) != 1 ? "s" : "")} ago";
         }
 
-        if (diff.TotalDays < 365)
+        if (diff.TotalDays < DaysPerYear)
         {
-            return $"{(int)(diff.TotalDays / 30)} month{((int)(diff.TotalDays / 30) != 1 ? "s" : "")} ago";
+            return $"{(int)(diff.TotalDays / DaysPerMonth)} month{((int)(diff.TotalDays / DaysPerMonth) != 1 ? "s" : "")} ago";
         }
 
-        return $"{(int)(diff.TotalDays / 365)} year{((int)(diff.TotalDays / 365) != 1 ? "s" : "")} ago";
+        return $"{(int)(diff.TotalDays / DaysPerYear)} year{((int)(diff.TotalDays / DaysPerYear) != 1 ? "s" : "")} ago";
     }
 
     /// <summary>
@@ -153,7 +160,7 @@ public static class DateTimeUtility
         return period switch
         {
             DateTimePeriod.Day => start.AddDays(1).AddTicks(-1),
-            DateTimePeriod.Week => start.AddDays(7).AddTicks(-1),
+            DateTimePeriod.Week => start.AddDays(DaysPerWeek).AddTicks(-1),
             DateTimePeriod.Month => start.AddMonths(1).AddTicks(-1),
             DateTimePeriod.Year => start.AddYears(1).AddTicks(-1),
             _ => start
@@ -263,17 +270,17 @@ public static class DateTimeUtility
     {
         var duration = endDate - startDate;
 
-        if (duration.TotalSeconds < 60)
+        if (duration.TotalSeconds < SecondsPerMinute)
         {
             return $"{(int)duration.TotalSeconds}s";
         }
 
-        if (duration.TotalMinutes < 60)
+        if (duration.TotalMinutes < MinutesPerHour)
         {
             return $"{(int)duration.TotalMinutes}m {(int)duration.Seconds}s";
         }
 
-        if (duration.TotalHours < 24)
+        if (duration.TotalHours < HoursPerDay)
         {
             return $"{(int)duration.TotalHours}h {duration.Minutes}m";
         }
