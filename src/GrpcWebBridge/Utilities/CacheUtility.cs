@@ -15,6 +15,16 @@ namespace GrpcWebBridge.Utilities;
 public static class CacheUtility
 {
     /// <summary>
+    /// Maximum allowed length of a cache key accepted by <see cref="IsValidKey"/>.
+    /// </summary>
+    private const int MaxCacheKeyLength = 512;
+
+    /// <summary>
+    /// Key length above which <see cref="FormatKeyForDebug"/> truncates the key for display.
+    /// </summary>
+    private const int KeyHashThreshold = 100;
+
+    /// <summary>
     /// Generates a cache key from multiple components.
     /// Uses pipe separator for consistency.
     /// </summary>
@@ -319,7 +329,7 @@ public static class CacheUtility
             return false;
         }
 
-        if (key.Length > 512)
+        if (key.Length > MaxCacheKeyLength)
         {
             return false;
         }
@@ -338,7 +348,7 @@ public static class CacheUtility
             return "<empty>";
         }
 
-        if (key.Length > 100)
+        if (key.Length > KeyHashThreshold)
         {
             return key[..97] + "...";
         }
