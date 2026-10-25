@@ -50,6 +50,7 @@
 - [Response Formatters (JSON/XML/CSV)](#response-formatters-jsonxmlcsv)
 - [CryptographyUtility](#cryptographyutility)
 - [ValidationUtility](#validationutility)
+- [ProtobufUtility and ReflectionUtility](#protobufutility-and-reflectionutility)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3171,6 +3172,131 @@ The methods never throw for bad input. The exception is `ValidatePattern`, which
 | Method name | 255 characters | `ValidateMethodName` |
 | Port | 1 to 65535 | `ValidatePort` |
 | Other strings | none by default | `ValidateStringLength` with explicit `minLength` and `maxLength` |
+
+## ProtobufUtility and ReflectionUtility
+
+Two static helper classes in the `GrpcWebBridge.Utilities` namespace. Neither adds a NuGet dependency: `ProtobufUtility` uses the `Google.Protobuf` package the bridge already references, and `ReflectionUtility` uses only `System.Reflection`.
+
+- `ProtobufUtility` (`src/GrpcWebBridge/Utilities/ProtobufUtility.cs`) converts generated `IMessage` types to and from JSON, binary, dictionaries and gzip+Base64, and offers clone, merge, equality and introspection helpers.
+- `ReflectionUtility` (`src/GrpcWebBridge/Utilities/ReflectionUtility.cs`) inspects types and members, reads and writes properties and invokes methods by name, and finds types in loaded assemblies. It also defines `PropertyAccessException`, which `SetPropertyValue` throws.
+
+```csharp
+using GrpcWebBridge.Utilities;
+
+// Protobuf: JSON round trip
+var json = ProtobufUtility.ToJson(order);                 // standard proto3 JSON
+var copy = ProtobufUtility.FromJson<Order>(json);
+
+// Protobuf: binary round trip and size
+var bytes = ProtobufUtility.ToBytes(order);
+var fromBytes = ProtobufUtility.FromBytes<Order>(bytes);
+var size = ProtobufUtility.GetMessageSize(order);         // same as bytes.Length
+
+// Reflection: inspect and invoke
+var methods = ReflectionUtility.GetPublicMethods(typeof(OrderService), m => ReflectionUtility.IsAsyncMethod(m));
+var name = ReflectionUtility.GetPropertyValue(order, "customerId");   // case-insensitive lookup
+var type = ReflectionUtility.FindType("GrpcWebBridge.Domain.Models.GrpcService");
+```
+
+`order` in these examples is any message type generated from your `.proto`, such as `Order`.
+
+### ProtobufUtility
+
+| Method | Behaviour |
+|---|---|
+| `ToJson(IMessage message)` | Formats the message with `JsonFormatter` and `JsonFormatter.Settings.Default`. Field names use the proto3 lowerCamelCase JSON names. |
+| `FromJson<T>(string json)` | Parses JSON into a new `T` with `JsonParser` and `JsonParser.Settings.Default`. Unknown fields are rejected. |
+| `ToBytes(IMessage message)` | Binary encoding, same bytes as `message.ToByteArray()`. |
+| `FromBytes<T>(byte[] data)` | Merges the bytes into a new `T`. |
+| `GetMessageSize(IMessage message)` | Calls `CalculateSize()`. Use it to check size before sending or storing. |
+| `ToDict(IMessage message)` | Runs `ToJson` and then `JsonUtility.DeserializeToDictionary`. Returns an empty dictionary if that yields `null`. Values are JSON-derived objects, not typed protobuf values. |
+| `Clone<T>(T message)` | New `T` built from the binary encoding of `message`. Deep copy. |
+| `Merge<T>(params T[] messages)` | New `T` with each non-null message merged in order. Later messages override scalar fields; repeated fields are appended. Requires at least one argument. |
+| `AreEqual<T>(T message1, T message2)` | Both `null` gives `true`; one `null` gives `false`; otherwise `message1.Equals(message2)`, which compares fields deeply. |
+| `Validate(IMessage message)` | Returns `(bool Valid, List<string> Errors)`. See the caveat below. |
+| `CompressMessage(IMessage message)` | Gzip of the binary encoding, returned as a Base64 string. |
+| `DecompressMessage<T>(string compressedBase64)` | Reverses `CompressMessage`. Returns `T?`. |
+| `GetMessageMetadata<T>()` | Returns a `MessageMetadata` with the name, full name, field count and a `FieldMetadata` list (name, type, `IsRequired`, `IsRepeated`). |
+
+The helper types `MessageMetadata` and `FieldMetadata` are public, sealed classes in the same file.
+
+**Errors**
+
+- `ToJson`, `ToBytes`, `GetMessageSize`, `ToDict`, `Clone` and `CompressMessage` throw `ArgumentNullException` for a `null` message. `Validate` returns an error result instead. `AreEqual` treats two `null` values as equal. `Merge` skips `null` entries and throws `ArgumentException` when no messages are passed.
+- `FromJson` and `DecompressMessage` throw `ArgumentException` for null or empty input. `FromBytes` does the same for null or empty `data`.
+- Parse failures in `FromJson`, `FromBytes` and `DecompressMessage` are wrapped in `InvalidOperationException` with the original exception as `InnerException`.
+
+**Caveats**
+
+- `FromBytes` rejects an empty array. A message with no set fields encodes to zero bytes, so `FromBytes<T>(ToBytes(new T()))` throws. Store a length or a wrapper message if empty messages are valid input.
+- `FromJson<T>` returns `T?` by signature but never returns `null`; the return type is only nullable for the signature.
+- `Validate` looks up each required field by its descriptor name (for example `user_id`) with `GetProperty`. Generated C# properties are PascalCase (`UserId`), so the lookup returns `null` and every required field is reported as missing, even when it is set. `IsRequired` is only true for proto2 `required` fields, so `Validate` reports nothing for proto3 messages. Do not rely on it as a schema check.
+- `GetMessageMetadata` always sets `DefaultValue` to `null`.
+
+```csharp
+// Compress before storing a message in a cache or queue
+var packed = ProtobufUtility.CompressMessage(order);
+var unpacked = ProtobufUtility.DecompressMessage<Order>(packed);
+```
+
+### ReflectionUtility
+
+| Method | Behaviour |
+|---|---|
+| `GetPublicMethods(Type type, Func<MethodInfo, bool>? filter = null)` | Public instance methods, optionally filtered. Static methods are not included. |
+| `GetPublicProperties(Type type)` | Public instance properties. |
+| `ImplementsInterface(Type type, Type interfaceType)` | `interfaceType.IsAssignableFrom(type)`. Also `true` when `type` is `interfaceType` itself. |
+| `GetGenericArguments(Type type)` | The generic arguments of `type`, or an empty list if it is not generic. |
+| `InvokeMethod(object instance, string methodName, params object?[]? parameters)` | Finds a public instance method by name and calls it. |
+| `GetPropertyValue(object instance, string propertyName)` | Reads a public instance property. Name matching ignores case. Returns `null` when the property does not exist. |
+| `SetPropertyValue(object instance, string propertyName, object? value)` | Writes a public instance property. Name matching ignores case. |
+| `ObjectToDictionary(object instance)` | Maps each public property to its value. Properties whose getter throws are skipped. |
+| `CreateInstance(Type type, params object?[]? constructorParams)` | `Activator.CreateInstance` with the given constructor arguments. |
+| `GetCustomAttributes<T>(MemberInfo member)` | Attributes of type `T` on a type or member, with inheritance. Returns an empty list for `null`. |
+| `IsPrimitiveOrValueType(Type type)` | `true` for CLR primitives, `string`, `decimal`, `DateTime`, `Guid`, and any value type. |
+| `GetTypeHierarchy(Type type)` | `type` followed by its base types, excluding `object`. |
+| `FindType(string typeName)` | Tries `Type.GetType(typeName)`, then `Assembly.GetType` on each loaded assembly. Returns `null` if nothing matches. |
+| `GetAssemblyVersion(Type type)` | `Version` of the assembly that declares `type`, or `null`. |
+| `IsAsyncMethod(MethodInfo method)` | `true` when the return type is `Task` or `Task<T>`. `ValueTask` is not detected. |
+
+**Errors**
+
+- Every method throws `ArgumentNullException` for a `null` required argument. `InvokeMethod`, `GetPropertyValue` and `SetPropertyValue` also throw `ArgumentException` for an empty name.
+- `InvokeMethod` throws `MethodAccessException` when no public instance method with that name exists. Exceptions thrown by the invoked method arrive wrapped in `TargetInvocationException`.
+- `SetPropertyValue` throws `PropertyAccessException` when the property is missing or read-only.
+- `CreateInstance` wraps any failure in `InvalidOperationException`.
+- `GetPropertyValue` returns `null` for a missing property instead of throwing, so a `null` result does not tell you whether the property exists. Check with `GetPublicProperties` first if that distinction matters.
+
+**Caveats**
+
+- `InvokeMethod` uses `Type.GetMethod(name, flags)`. If the type has overloads with the same name, this throws `AmbiguousMatchException` rather than choosing one. Use `GetPublicMethods` to pick the `MethodInfo` and call `Invoke` yourself.
+- `InvokeMethod` and `GetPropertyValue` search only public instance members, so private or static members are not reachable.
+- `FindType` searches only assemblies that are already loaded. Load an assembly first if it may not be loaded yet.
+
+### Typical usage
+
+```csharp
+using GrpcWebBridge.Utilities;
+
+// Describe a message type for a service catalogue
+var meta = ProtobufUtility.GetMessageMetadata<Order>();
+foreach (var field in meta.Fields)
+{
+    Console.WriteLine($"{field.Name}: {field.Type}{(field.IsRepeated ? "[]" : string.Empty)}");
+}
+
+// Convert a JSON body from a browser into a message, then compare with a stored copy
+var incoming = ProtobufUtility.FromJson<Order>(requestBody);
+var unchanged = ProtobufUtility.AreEqual(incoming, storedOrder);
+
+// Reflection: call a method chosen at runtime, after checking it exists and is async
+var handler = ReflectionUtility.FindType("MyApp.Handlers.OrderHandler");
+if (handler is not null)
+{
+    var instance = ReflectionUtility.CreateInstance(handler);
+    var task = ReflectionUtility.InvokeMethod(instance!, "HandleAsync", incoming);
+}
+```
 
 ## License
 
