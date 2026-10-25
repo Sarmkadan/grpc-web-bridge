@@ -53,6 +53,7 @@
 - [ProtobufUtility and ReflectionUtility](#protobufutility-and-reflectionutility)
 - [StreamUtility, JsonUtility, CacheUtility](#streamutility-jsonutility-cacheutility)
 - [HealthCheckWorker](#healthcheckworker)
+- [MetricsCollectionWorker](#metricscollectionworker)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3559,6 +3560,106 @@ With the default `DispatchOptions` (`UseAsyncDispatch = false`), handlers run in
 - Cycles run every `CheckIntervalSeconds` after the previous cycle finishes, so a slow cycle delays the next one.
 - Health probes assume each service exposes `/health` over HTTP on its registered port. Services without that endpoint are reported unhealthy.
 - The counters are plain `int` fields updated without locking. Read `GetStatistics()` for monitoring only, not for exact figures.
+
+## MetricsCollectionWorker
+
+`GrpcWebBridge.BackgroundWorkers.MetricsCollectionWorker` is a `BackgroundService` that samples process-level metrics on a fixed interval, keeps the most recent samples in an in-memory history queue, and logs warnings when a sample crosses an alert threshold. It is declared in `src/GrpcWebBridge/BackgroundWorkers/MetricsCollectionWorker.cs`.
+
+`AddGrpcWebBridge` does not register the worker. Add it yourself:
+
+```csharp
+builder.Services.AddSingleton(new MetricsCollectionOptions { CollectionIntervalSeconds = 60 });
+builder.Services.AddSingleton<MetricsCollectionWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MetricsCollectionWorker>());
+```
+
+The constructor takes `ILogger<MetricsCollectionWorker>` and an optional `MetricsCollectionOptions`. If no options are registered, DI uses the default parameter value and the worker runs with `new MetricsCollectionOptions()`. If you register `MetricsCollectionOptions` as shown, the worker receives that instance. Registering the worker as a singleton as well lets other code resolve it by type, for example to call `GetAggregatedMetrics`.
+
+### MetricsCollectionOptions
+
+| Property | Default | Meaning |
+|---|---|---|
+| `CollectionIntervalSeconds` | `30` | Delay between the end of one collection and the start of the next. |
+| `MaxSnapshotsToKeep` | `1000` (`Constants.ServiceRegistry.MaxCachedServices`) | Capacity of the history queue. The oldest snapshot is dropped once the limit is reached. |
+| `CpuAlertThresholdPercent` | `80` | CPU value above which a warning is logged. |
+| `MemoryAlertThresholdMb` | `1024` | Managed memory in megabytes above which a warning is logged. |
+| `ErrorRateAlertThresholdPercent` | `5` | Error rate above which a warning is logged. |
+
+`MaxSnapshotsToKeep` borrows the service-registry cache limit as its default. The source marks this as a placeholder, so set it explicitly if you need a different retention size. Unlike `HealthCheckOptions`, these options have no `Validate()` method. Nothing checks that values are positive.
+
+### MetricsSnapshot
+
+Each collection produces one `MetricsSnapshot`:
+
+| Property | Type | Source |
+|---|---|---|
+| `Timestamp` | `DateTime` | `DateTime.UtcNow` at collection time. |
+| `CpuUsagePercent` | `double` | `Process.TotalProcessorTime.TotalSeconds`, rounded to 2 decimals. Despite the name, this is cumulative CPU time in seconds, not a percentage. Returns `0` if the read throws. |
+| `MemoryUsageMb` | `double` | `GC.GetTotalMemory(false)` divided by 1024 × 1024. This is managed heap only, not working set. |
+| `ThreadCount` | `int` | `Process.GetCurrentProcess().Threads.Count`. |
+| `GcCollections` | `object?` | Anonymous object with `Gen0`, `Gen1`, and `Gen2`, from `GC.CollectionCount(n)`. These are cumulative counts since process start. |
+| `RequestMetrics` | `MetricsSnapshot.RequestMetricsData?` | Request totals copied from `MetricsController`'s static counters. |
+
+`MetricsSnapshot.RequestMetricsData` has three properties:
+
+| Property | Type | Meaning |
+|---|---|---|
+| `TotalRequests` | `long` | Requests processed, read from `MetricsController._totalRequests`. |
+| `TotalErrors` | `long` | Failed requests, read from `MetricsController._totalErrors`. |
+| `ErrorRate` | `double` | `TotalErrors / TotalRequests × 100`, rounded to 2 decimals. `0` when `TotalRequests` is `0`. |
+
+`MetricsSnapshot.ToString()` and `RequestMetricsData.ToString()` return a summary string with these fields.
+
+### Collection cycle
+
+1. `ExecuteAsync` logs the interval and enters a loop. The first collection runs immediately, without waiting for the interval.
+2. `CollectMetricsAsync` builds a new `MetricsSnapshot` from the sources listed above.
+3. Under a lock, the snapshot is enqueued. Then the oldest entries are dequeued while the count exceeds `MaxSnapshotsToKeep`.
+4. The snapshot is logged at debug level, then `CheckAlertsAsync` compares it with the three thresholds.
+5. The worker waits `CollectionIntervalSeconds` and repeats until the host stops it.
+
+Any exception inside a collection is logged and the loop continues. Cancellation ends the loop and logs that the worker stopped.
+
+### Alerts
+
+Alerts are log entries only. The worker does not publish events and does not change any state when a threshold is crossed:
+
+| Condition | Log level | Message |
+|---|---|---|
+| `CpuUsagePercent > CpuAlertThresholdPercent` | Warning | `High CPU usage detected` |
+| `MemoryUsageMb > MemoryAlertThresholdMb` | Warning | `High memory usage detected` |
+| `ErrorRate > ErrorRateAlertThresholdPercent` | Warning | `High error rate detected` |
+
+Because `CpuUsagePercent` holds cumulative CPU seconds, the CPU alert fires once the process has used more than 80 seconds of CPU time in total. It does not measure current load. Set `CpuAlertThresholdPercent` with that in mind, or treat the CPU alert as a rough signal.
+
+### History queue
+
+Snapshots are stored in a `Queue<MetricsSnapshot>` guarded by a private lock. The queue starts with capacity `MaxSnapshotsToKeep` and is trimmed on every insert, so it never holds more than `MaxSnapshotsToKeep` entries. Samples are kept in collection order, oldest first.
+
+Two public methods read or clear the queue:
+
+- `GetSnapshotHistory()` returns a new `List<MetricsSnapshot>` copy of the queue. Changes to the list do not affect the worker.
+- `ClearHistory()` empties the queue and logs at information level. Collection continues and new snapshots are added from the next cycle.
+
+`GetAggregatedMetrics(int lastMinutes = 5)` summarises the snapshots taken in the last `lastMinutes` minutes. A value of `0` or less covers all retained history. The result is an anonymous object with `period`, `snapshotCount`, `cpu`, `memory`, `threads` (each with `average`, `min`, and `max`), and `latestRequests`, the `RequestMetricsData` from the newest snapshot in the window. If the window contains no snapshots, the result is `{ message = "No metrics data available for the specified time period" }`.
+
+`MetricsCollectionWorkerExtensions` adds `GetSnapshotsInRange`, `GetPeakUsageStatistics`, `GetTrendAnalysis`, and `GetAlertSummary` on top of the history. These are read-only helpers over the same queue.
+
+```csharp
+var worker = app.Services.GetRequiredService<MetricsCollectionWorker>();
+var recent = worker.GetAggregatedMetrics(lastMinutes: 10);
+var history = worker.GetSnapshotHistory();
+```
+
+This works only when the worker is registered as a singleton, as in the registration snippet above. `AddHostedService<T>()` alone does not make it resolvable by type.
+
+### Caveats
+
+- Each collection calls `Process.GetCurrentProcess()` twice and does not dispose the `Process` objects. This is simple but allocates on every cycle.
+- `MemoryUsageMb` is managed heap only. It will read lower than the process's total memory use.
+- `ToString()` on the worker reads `_currentSnapshot`, which is set once in the constructor and never updated. It shows the construction time and zeros, not the latest collection. Use `GetSnapshotHistory()` for current values.
+- `GetAggregatedMetrics` and the history queue are the only way to read samples. Nothing is persisted, so history is lost on restart.
+- The request counters come from static fields in `MetricsController`. Their values reflect the whole process, not just this worker.
 
 ## License
 
