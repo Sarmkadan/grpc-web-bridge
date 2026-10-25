@@ -8,8 +8,14 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Tests for <see cref="ProtobufUtility"/> covering JSON and binary serialization, size, dictionary conversion, cloning, merging, equality and validation.
+/// </summary>
 public class ProtobufUtilityTests
 {
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.ToJson"/> renders a Timestamp in its RFC 3339 string form.
+    /// </summary>
     [Fact]
     public void ToJson_ShouldReturnValidJson()
     {
@@ -19,6 +25,9 @@ public class ProtobufUtilityTests
         Assert.Equal("\"2021-05-03T00:00:00.123456789Z\"", json);
     }
 
+    /// <summary>
+    /// Verifies that a message serialized with <see cref="ProtobufUtility.ToJson"/> parses back to an equal message via <see cref="ProtobufUtility.FromJson{T}"/>.
+    /// </summary>
     [Fact]
     public void FromJson_ShouldParseBackToEquivalentMessage()
     {
@@ -29,6 +38,9 @@ public class ProtobufUtilityTests
         Assert.True(ProtobufUtility.AreEqual(original, parsed));
     }
 
+    /// <summary>
+    /// Verifies that a message survives a binary round trip through <see cref="ProtobufUtility.ToBytes"/> and <see cref="ProtobufUtility.FromBytes{T}"/>.
+    /// </summary>
     [Fact]
     public void ToBytes_And_FromBytes_RoundTrip()
     {
@@ -39,6 +51,9 @@ public class ProtobufUtilityTests
         Assert.True(ProtobufUtility.AreEqual(original, parsed));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.GetMessageSize"/> returns the same value as the message's own <c>CalculateSize</c>.
+    /// </summary>
     [Fact]
     public void GetMessageSize_ShouldMatchCalculateSize()
     {
@@ -48,6 +63,9 @@ public class ProtobufUtilityTests
         Assert.Equal(sizeDirect, sizeFromUtility);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.ToDict"/> exposes every field of a Struct as a dictionary entry with its numeric value.
+    /// </summary>
     [Fact]
     public void ToDict_ShouldContainAllFields()
     {
@@ -60,6 +78,9 @@ public class ProtobufUtilityTests
         Assert.Equal(20, ((JsonElement)dict["nanos"]!).GetInt32());
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.Clone"/> returns a message equal to the original but a distinct instance.
+    /// </summary>
     [Fact]
     public void Clone_ShouldCreateEqualButDistinctInstance()
     {
@@ -69,6 +90,9 @@ public class ProtobufUtilityTests
         Assert.NotSame(original, clone);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.Merge"/> combines the fields of two messages into one result.
+    /// </summary>
     [Fact]
     public void Merge_ShouldCombineFieldsFromMultipleMessages()
     {
@@ -84,6 +108,9 @@ public class ProtobufUtilityTests
         Assert.Equal(2, merged.Fields["second"].NumberValue);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.AreEqual"/> reports true for two messages with identical field values.
+    /// </summary>
     [Fact]
     public void AreEqual_ShouldReturnTrueForEqualMessages()
     {
@@ -92,6 +119,9 @@ public class ProtobufUtilityTests
         Assert.True(ProtobufUtility.AreEqual(a, b));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.Validate"/> reports a well-formed message as valid with no errors.
+    /// </summary>
     [Fact]
     public void Validate_ShouldReturnValidForWellFormedMessage()
     {
@@ -101,12 +131,18 @@ public class ProtobufUtilityTests
         Assert.Empty(errors);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.ToJson"/> throws <see cref="ArgumentNullException"/> when the message is null.
+    /// </summary>
     [Fact]
     public void ToJson_NullMessage_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => ProtobufUtility.ToJson(null!));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.FromJson{T}"/> throws <see cref="ArgumentException"/> for null or empty input.
+    /// </summary>
     [Fact]
     public void FromJson_NullOrEmpty_ThrowsArgumentException()
     {
@@ -114,6 +150,9 @@ public class ProtobufUtilityTests
         Assert.Throws<ArgumentException>(() => ProtobufUtility.FromJson<Timestamp>(string.Empty));
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ProtobufUtility.FromBytes{T}"/> throws <see cref="ArgumentException"/> for null or empty input.
+    /// </summary>
     [Fact]
     public void FromBytes_NullOrEmpty_ThrowsArgumentException()
     {
