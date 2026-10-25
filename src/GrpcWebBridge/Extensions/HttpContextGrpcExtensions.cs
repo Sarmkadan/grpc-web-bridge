@@ -28,8 +28,11 @@ public static class HttpContextGrpcExtensions
     /// <returns>
     /// true if the request's Content-Type matches one of the valid gRPC-Web content types (application/grpc-web+proto, application/grpc-web-text+proto, application/grpc-web-text, application/grpc-web, application/grpc+proto, application/grpc), ignoring case; otherwise, false.
     /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is null.</exception>
     public static bool IsGrpcWebRequest(this HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var contentType = context.Request.ContentType;
         if (string.IsNullOrWhiteSpace(contentType))
         {
@@ -75,8 +78,11 @@ public static class HttpContextGrpcExtensions
     /// <returns>
     /// The request path value if available; otherwise, an empty string.
     /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is null.</exception>
     public static string GetGrpcMethodPath(this HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         return context.Request.Path.Value ?? string.Empty;
     }
 
