@@ -48,6 +48,7 @@
 - [AuthenticationService](#authenticationservice)
 - [ProtocolTranslationService](#protocoltranslationservice)
 - [Response Formatters (JSON/XML/CSV)](#response-formatters-jsonxmlcsv)
+- [CryptographyUtility](#cryptographyutility)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3051,6 +3052,68 @@ id,name
 | `TrimWhitespace` | `false` | Stored, but no method applies it. |
 
 `FromCsv` and `FromCsv<T>` parse CSV back into dictionaries or objects. `FromCsv<T>` skips any property it cannot convert. `ValidateCsv` reports rows whose column count does not match the header.
+
+## CryptographyUtility
+
+`CryptographyUtility` (`src/GrpcWebBridge/Utilities/CryptographyUtility.cs`) is a static class in the `GrpcWebBridge.Utilities` namespace. It covers password hashing, SHA-256 and HMAC-SHA256 digests, random token generation, and AES-256-GCM encryption. It uses only `System.Security.Cryptography` and needs no extra packages.
+
+```csharp
+using GrpcWebBridge.Utilities;
+
+var hash = CryptographyUtility.HashPassword("correct horse battery staple");
+var ok = CryptographyUtility.VerifyPassword("correct horse battery staple", hash); // true
+
+var key = CryptographyUtility.GenerateApiKey(32);           // keep this in configuration
+var sealedText = CryptographyUtility.EncryptAes256("secret", key);
+var clear = CryptographyUtility.DecryptAes256(sealedText, key); // "secret"
+```
+
+### Password hashing (PBKDF2-SHA256)
+
+| Method | Behaviour |
+|---|---|
+| `HashPassword(string password)` | Generates a random 16-byte salt and derives a 32-byte key with PBKDF2-SHA256 and 100,000 iterations. Returns `{iterations}.{base64 salt}.{base64 hash}`, for example `100000.<salt>.<hash>`. Two calls with the same password return different strings. |
+| `VerifyPassword(string password, string hash)` | Recomputes the hash with the iteration count and salt stored in `hash` and compares the result with `CryptographicOperations.FixedTimeEquals`. Returns `false` for any malformed or unparseable hash instead of throwing. |
+
+`VerifyPassword` also accepts the legacy format: a single Base64 string holding the 16-byte salt followed by the 32-byte hash (48 bytes in total). Legacy hashes are verified with 10,000 iterations. Rehash them with `HashPassword` after a successful login if you want to move them to the current format; the class does not do this for you.
+
+Both methods throw `ArgumentException` when `password` (or `hash` in `VerifyPassword`) is `null` or empty.
+
+### SHA-256 and HMAC-SHA256
+
+| Method | Input | Output |
+|---|---|---|
+| `ComputeSha256(string input)` | UTF-8 bytes of `input` | 64 uppercase hex characters |
+| `ComputeHmacSha256(string input, string secretKey)` | UTF-8 bytes of `input`, keyed with the UTF-8 bytes of `secretKey` | 64 uppercase hex characters |
+
+Both methods throw `ArgumentException` for a `null` or empty argument. `ComputeSha256` is suited to checksums and integrity checks. `ComputeHmacSha256` is suited to message authentication. The secret key is used as-is, with no derivation step, so it should be a high-entropy value.
+
+### Random tokens
+
+| Method | Default | Minimum | Output |
+|---|---|---|---|
+| `GenerateToken(int length = 32)` | 32 bytes | 16 bytes | Base64 of `length` random bytes. The string is longer than `length`. |
+| `GenerateApiKey(int length = 32)` | 32 characters | 16 characters | `length` characters drawn from `A-Z`, `a-z` and `0-9`. |
+
+Values below the minimum throw `ArgumentOutOfRangeException`. Both methods use `RandomNumberGenerator`.
+
+### AES-256-GCM encryption
+
+| Method | Behaviour |
+|---|---|
+| `EncryptAes256(string plaintext, string key)` | Encrypts the UTF-8 bytes of `plaintext` with AES-256-GCM. Returns Base64 of `IV (12 bytes) || ciphertext || tag (16 bytes)`. A fresh random IV is generated for each call. |
+| `DecryptAes256(string ciphertext, string key)` | Reverses `EncryptAes256`. Returns the decrypted text as UTF-8. |
+
+**Key requirements**
+
+- `key` must be at least 32 characters long. Only the first 32 characters are used.
+- Those 32 characters are encoded as UTF-8 and must produce exactly 32 bytes. Use ASCII characters for the key. A non-ASCII character in the first 32 positions makes the key longer than 32 bytes, and encryption then fails.
+- The key string is used directly as the AES key. There is no salt and no key-derivation function. Generate it with `GenerateApiKey(32)` or an equivalent random source, and store it in configuration or a secret store, not in source code.
+
+**Errors**
+
+- `EncryptAes256` throws `ArgumentException` for a `null` or empty `plaintext`, or for a short `key`. Any failure inside the cipher is wrapped in `InvalidOperationException` ("Encryption failed").
+- `DecryptAes256` throws `ArgumentException` for an empty `ciphertext` or a short `key`. A wrong key, a modified ciphertext, invalid Base64, or input too short to hold an IV and tag all throw `InvalidOperationException` ("Decryption failed"). The authentication tag is checked, so tampering is detected rather than returning garbled text.
 
 ## License
 
