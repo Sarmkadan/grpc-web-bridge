@@ -16,6 +16,18 @@ namespace GrpcWebBridge.Middleware;
 /// </summary>
 public sealed class RequestLoggingMiddleware
 {
+    /// <summary>
+    /// Path prefixes excluded from detailed request/response logging by default
+    /// (noisy endpoints such as health checks, Swagger UI, metrics and favicon).
+    /// </summary>
+    private static readonly string[] DefaultExcludedPaths =
+    [
+        "/health",
+        "/swagger",
+        "/api/metrics",
+        "/favicon.ico"
+    ];
+
     private readonly RequestDelegate _next;
     private readonly ILogger<RequestLoggingMiddleware> _logger;
     private readonly HashSet<string> _excludedPaths;
@@ -30,13 +42,7 @@ public sealed class RequestLoggingMiddleware
         _next = next;
         _logger = logger;
         // Exclude noisy endpoints from detailed logging
-        _excludedPaths = new HashSet<string>
-        {
-            "/health",
-            "/swagger",
-            "/api/metrics",
-            "/favicon.ico"
-        };
+        _excludedPaths = new HashSet<string>(DefaultExcludedPaths);
     }
 
     /// <summary>
