@@ -199,15 +199,15 @@ Builds RFC 7807 `ProblemDetails` responses from exceptions and adds fields to th
 
 ### Type mapping in `ToProblemDetails`
 
-Defaults are `Type = "about:blank"`, `Title = "Internal Server Error"`, `Status = 500`, `Detail = exception.Message`. The first matching case in the `switch` wins, so the order below matters (`ArgumentNullException` is tested before `ArgumentException`, and the base `GrpcWebBridgeException` is tested last).
+Defaults are `Type = "about:blank"`, `Title = "Internal Server Error"`, `Status = 500`, `Detail = exception.Message`. The first matching case in the `switch` wins, so the order below matters. `ArgumentNullException` is tested before `ArgumentException`, and the `GrpcWebBridgeException` row is tested before the `System` exception rows (`UnauthorizedAccessException`, `TimeoutException`, `OperationCanceledException`). Its subclasses are matched by their own rows above it.
 
 | Exception | Title | Status | Type | Extra extensions |
 |-----------|-------|--------|------|------------------|
 | `ValidationException` | Validation Failed | 400 | `rfc7231#section-6.5.1` | `field`, `providedValue`, `validationRule`, `errors` (dictionary) |
 | `ProtocolException` | Protocol Translation Failed | 400 | `rfc7231#section-6.5.1` | `sourceFormat`, `targetFormat` (`"unknown"` when null) |
-| `StreamingException` | Streaming Operation Failed | 500 | `rfc7231#section-6.6.1` | `streamId` (`"unknown"` when null), `streamState` |
-| `ServiceRegistrationException` | Service Registration Failed | 400 | `rfc7231#section-6.5.1` | `serviceName` (`"unknown"` when null), `serviceEndpoint` |
-| `ConfigurationException` | Configuration Error | 400 | `rfc7231#section-6.5.1` | `configurationKey` (`"unknown"` when null), `configurationValue` |
+| `StreamingException` | Streaming Operation Failed | 500 | `rfc7231#section-6.6.1` | `streamId` (`"unknown"` when null), `streamState` (only when `LastStreamState` is set) |
+| `ServiceRegistrationException` | Service Registration Failed | 400 | `rfc7231#section-6.5.1` | `serviceName` (`"unknown"` when null), `serviceEndpoint` (only when non-empty) |
+| `ConfigurationException` | Configuration Error | 400 | `rfc7231#section-6.5.1` | `configurationKey` (`"unknown"` when null), `configurationValue` (only when non-empty) |
 | `ArgumentNullException` | Invalid Request | 400 | `rfc7231#section-6.5.1` | `paramName` |
 | `ArgumentException` | Invalid Argument | 400 | `rfc7231#section-6.5.1` | none |
 | `GrpcWebBridgeException` | Bridge Operation Failed (or gRPC-derived title) | 500, or mapped from `GrpcStatus` | Default | `errorCode`, plus every `Context` entry copied verbatim |
