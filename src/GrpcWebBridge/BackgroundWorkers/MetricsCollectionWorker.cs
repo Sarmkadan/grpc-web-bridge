@@ -25,6 +25,12 @@ public sealed class MetricsCollectionWorker : BackgroundService
 
     public override string ToString() => $"MetricsCollectionWorker {{ Timestamp = {_currentSnapshot.Timestamp}, CpuUsagePercent = {_currentSnapshot.CpuUsagePercent}, MemoryUsageMb = {_currentSnapshot.MemoryUsageMb}, ThreadCount = {_currentSnapshot.ThreadCount}, GcCollections = {_currentSnapshot.GcCollections}, RequestMetrics = {_currentSnapshot.RequestMetrics} }}";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsCollectionWorker"/> class.
+    /// </summary>
+    /// <param name="logger">The logger used to report collection activity.</param>
+    /// <param name="options">The collection options; defaults are used when <c>null</c>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is <c>null</c>.</exception>
     public MetricsCollectionWorker(
         ILogger<MetricsCollectionWorker> logger,
         MetricsCollectionOptions? options = null)
