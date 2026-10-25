@@ -11,6 +11,9 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="MetricsCollectionWorker"/> covering construction, snapshot history access and aggregation.
+/// </summary>
 public sealed class MetricsCollectionWorkerTests
 {
     private readonly ILogger<MetricsCollectionWorker> _logger;
@@ -29,6 +32,9 @@ public sealed class MetricsCollectionWorkerTests
         };
     }
 
+    /// <summary>
+    /// Verifies that passing a null logger to the constructor throws <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
@@ -39,6 +45,9 @@ public sealed class MetricsCollectionWorkerTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Verifies that passing null options creates a worker that falls back to default <see cref="MetricsCollectionOptions"/>.
+    /// </summary>
     [Fact]
     public void Constructor_NullOptions_CreatesWorkerWithDefaultOptions()
     {
@@ -53,6 +62,9 @@ public sealed class MetricsCollectionWorkerTests
             .Should().Be(typeof(MetricsCollectionOptions));
     }
 
+    /// <summary>
+    /// Verifies that a worker is created successfully when given a valid logger and options.
+    /// </summary>
     [Fact]
     public void Constructor_ValidParameters_CreatesWorkerSuccessfully()
     {
@@ -63,6 +75,9 @@ public sealed class MetricsCollectionWorkerTests
         worker.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Verifies that aggregating metrics with no collected history returns the "no data" message.
+    /// </summary>
     [Fact]
     public void GetAggregatedMetrics_NoHistory_ReturnsNoDataMessage()
     {
@@ -79,6 +94,9 @@ public sealed class MetricsCollectionWorkerTests
             .Should().Be("No metrics data available for the specified time period");
     }
 
+    /// <summary>
+    /// Verifies that aggregating metrics after the history has been cleared returns the "no data" message.
+    /// </summary>
     [Fact]
     public void GetAggregatedMetrics_AfterClearHistory_ReturnsNoDataMessage()
     {
@@ -96,6 +114,9 @@ public sealed class MetricsCollectionWorkerTests
             .Should().Be("No metrics data available for the specified time period");
     }
 
+    /// <summary>
+    /// Verifies that recent snapshots are aggregated into correct CPU, memory, thread and latest request statistics.
+    /// </summary>
     [Fact]
     public void GetAggregatedMetrics_WithRecentHistory_ReturnsAggregatedData()
     {
@@ -200,6 +221,9 @@ public sealed class MetricsCollectionWorkerTests
         latestRequestsType.GetProperty("ErrorRate")?.GetValue(latestRequestsObj)?.Should().Be(5.0);
     }
 
+    /// <summary>
+    /// Verifies that the snapshot history is returned in the order the snapshots were recorded.
+    /// </summary>
     [Fact]
     public void GetSnapshotHistory_ReturnsSnapshotsInOrder()
     {
@@ -238,6 +262,9 @@ public sealed class MetricsCollectionWorkerTests
         result[2].CpuUsagePercent.Should().Be(30.0);
     }
 
+    /// <summary>
+    /// Verifies that the snapshot history is empty after <see cref="MetricsCollectionWorker.ClearHistory"/> is called.
+    /// </summary>
     [Fact]
     public void GetSnapshotHistory_AfterClearHistory_ReturnsEmptyList()
     {
@@ -265,6 +292,9 @@ public sealed class MetricsCollectionWorkerTests
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="MetricsCollectionWorker.ClearHistory"/> removes all entries from the underlying history queue.
+    /// </summary>
     [Fact]
     public void ClearHistory_ClearsTheHistory()
     {
@@ -294,6 +324,9 @@ public sealed class MetricsCollectionWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that a zero-minute window returns the "no data" message when the only snapshot is older than the window.
+    /// </summary>
     [Fact]
     public void GetAggregatedMetrics_WithZeroMinutes_ReturnsNoDataWhenNoRecentSnapshots()
     {
@@ -336,6 +369,9 @@ public sealed class MetricsCollectionWorkerTests
             .Should().Be("No metrics data available for the specified time period");
     }
 
+    /// <summary>
+    /// Verifies that a negative minute window is treated as a large positive window, so recent snapshots are still included.
+    /// </summary>
     [Fact]
     public void GetAggregatedMetrics_WithNegativeMinutes_TreatedAsLargePositive()
     {
