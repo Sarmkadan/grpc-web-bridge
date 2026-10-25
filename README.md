@@ -49,6 +49,7 @@
 - [ProtocolTranslationService](#protocoltranslationservice)
 - [Response Formatters (JSON/XML/CSV)](#response-formatters-jsonxmlcsv)
 - [CryptographyUtility](#cryptographyutility)
+- [ValidationUtility](#validationutility)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3114,6 +3115,62 @@ Values below the minimum throw `ArgumentOutOfRangeException`. Both methods use `
 
 - `EncryptAes256` throws `ArgumentException` for a `null` or empty `plaintext`, or for a short `key`. Any failure inside the cipher is wrapped in `InvalidOperationException` ("Encryption failed").
 - `DecryptAes256` throws `ArgumentException` for an empty `ciphertext` or a short `key`. A wrong key, a modified ciphertext, invalid Base64, or input too short to hold an IV and tag all throw `InvalidOperationException` ("Decryption failed"). The authentication tag is checked, so tampering is detected rather than returning garbled text.
+
+## ValidationUtility
+
+`ValidationUtility` (`src/GrpcWebBridge/Utilities/ValidationUtility.cs`) is a static class in the `GrpcWebBridge.Utilities` namespace. It holds the input checks used for requests and configuration: required values, lengths, email, URL, IP address, service IDs, method names, numeric ranges, ports, required dictionary keys, regex patterns and JWT shape. It uses only the BCL (`System.Net`, `System.Text.RegularExpressions`) and needs no extra packages.
+
+```csharp
+using GrpcWebBridge.Utilities;
+
+var (valid, error) = ValidationUtility.ValidateEmail("user@example.com"); // (true, null)
+var (ok, msg) = ValidationUtility.ValidatePort(70000);                    // (false, "Port must be between 1 and 65535, got 70000")
+
+ValidationUtility.ValidateServiceId(serviceId).ThrowIfInvalid(nameof(serviceId));
+```
+
+### The `(Valid, Error)` contract
+
+Every `Validate*` method returns `(bool Valid, string? Error)`:
+
+- When `Valid` is `true`, `Error` is `null`.
+- When `Valid` is `false`, `Error` is a human-readable message that names the field. Use it directly in a response or log line. Do not parse it.
+
+The methods never throw for bad input. The exception is `ValidatePattern`, which throws `ArgumentNullException` when the `pattern` argument itself is `null`.
+
+`ThrowIfInvalid(this (bool Valid, string? Error) result, string paramName)` is an extension method that turns a failed result into an `ArgumentException`. The exception's message is `Error` and its `ParamName` is `paramName`. It does nothing when `Valid` is `true`. Use it in guards: `ValidateEmail(email).ThrowIfInvalid(nameof(email));`.
+
+### Methods
+
+| Method | Accepts | Valid when | Limits and notes |
+|---|---|---|---|
+| `ValidateNotEmpty(string? value, string fieldName)` | string | Not `null`, not empty, and not whitespace-only. | Whitespace-only input is rejected here. |
+| `ValidateNotEmpty<T>(IEnumerable<T>? collection, string fieldName)` | sequence | Not `null` and contains at least one element. | Uses `Any()`, so only the first element is read. |
+| `ValidateStringLength(string? value, string fieldName, int minLength = 0, int maxLength = int.MaxValue)` | string | Not `null` or empty, and length within `[minLength, maxLength]`. | Only the empty check is applied when the bounds are left at their defaults. Whitespace is not rejected. |
+| `ValidateEmail(string? email)` | string | Not `null` or whitespace-only, matches `^[^\s@]+@[^\s@]+\.[^\s@]+$` (case-insensitive), and is at most **254** characters. | The regex is checked before the length, so an over-long string that also has a bad shape reports "Email format is invalid". |
+| `ValidateUrl(string? url)` | string | Not `null` or whitespace-only, parses as an absolute URI, and the scheme is `http` or `https`. | No length limit. Other schemes such as `ftp:` or `mailto:` are rejected. |
+| `ValidateIpAddress(string? ipAddress)` | string | Parses with `IPAddress.TryParse`. Accepts IPv4 and IPv6. | Not `null` or whitespace-only. |
+| `ValidateServiceId(string? serviceId)` | string | Not `null` or whitespace-only, at most **255** characters, and matches `^[a-zA-Z0-9_\-\.]+$`. | Letters, digits, `_`, `-` and `.` only. |
+| `ValidateMethodName(string? methodName)` | string | Not `null` or whitespace-only, at most **255** characters, and matches `^[a-zA-Z][a-zA-Z0-9_]*$`. | Must start with a letter. Letters, digits and `_` only, so `.` and `-` are rejected. |
+| `ValidateRange(int value, string fieldName, int minValue = int.MinValue, int maxValue = int.MaxValue)` | `int` | `minValue <= value <= maxValue`. | The message gives the bound that was crossed, not the value. |
+| `ValidatePort(int port, string fieldName = "Port")` | `int` | `1 <= port <= 65535`. | Port `0` is rejected because it is reserved for dynamic assignment. The message includes the value received. |
+| `ValidateRequiredKeys(Dictionary<string, object>? dict, string fieldName, params string[] requiredKeys)` | dictionary | `dict` is not `null` and contains every key in `requiredKeys`. | The message lists the missing keys. Key comparison uses the dictionary's comparer. |
+| `ValidatePattern(string? value, string fieldName, Regex pattern, string patternDescription = "")` | string | Not `null` or empty, and `pattern.IsMatch(value)` is `true`. | Throws `ArgumentNullException` for a `null` pattern. `patternDescription` is used in the message; when empty the message says "specified pattern". |
+| `ValidateJwtFormat(string? token)` | string | Not `null` or whitespace-only, splits on `.` into exactly three segments, and each segment decodes with `Convert.FromBase64String` after padding. | Checks shape only. It does not verify the signature or the claims. The decoder is standard Base64, so segments that use base64url characters `-` or `_` are reported as invalid. |
+
+### Other helpers
+
+`SanitizeInput(string? input)` is not a validator. It returns an empty string for `null` or empty input and HTML-encodes `&`, `<`, `>`, `"` and `'`. It does not reject anything.
+
+### Length limits at a glance
+
+| Input | Limit | Enforced by |
+|---|---|---|
+| Email | 254 characters (RFC 5321) | `ValidateEmail` |
+| Service ID | 255 characters | `ValidateServiceId` |
+| Method name | 255 characters | `ValidateMethodName` |
+| Port | 1 to 65535 | `ValidatePort` |
+| Other strings | none by default | `ValidateStringLength` with explicit `minLength` and `maxLength` |
 
 ## License
 
