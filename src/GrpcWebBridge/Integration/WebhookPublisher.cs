@@ -18,6 +18,21 @@ namespace GrpcWebBridge.Integration;
 /// </summary>
 public sealed class WebhookPublisher : IDisposable
 {
+    /// <summary>
+    /// Base delay in milliseconds used for webhook retry backoff.
+    /// </summary>
+    private const int BaseRetryDelayMs = 1000;
+
+    /// <summary>
+    /// Maximum delay in milliseconds applied to the final webhook retry attempt.
+    /// </summary>
+    private const int MaxRetryDelayMs = 10000;
+
+    /// <summary>
+    /// Exponent base for webhook retry backoff (delay doubles on each attempt).
+    /// </summary>
+    private const int RetryBackoffBase = 2;
+
     private readonly ILogger<WebhookPublisher> _logger;
     private readonly HttpClientFactory _httpClientFactory;
     private readonly ConcurrentDictionary<string, WebhookSubscription> _subscriptions;
@@ -332,8 +347,8 @@ public sealed class WebhookPublisher : IDisposable
     /// </summary>
     private int CalculateRetryDelayWithJitter(int retryCount, int maxRetries)
     {
-        // Base delay: exponential backoff (2^retryCount * 1000ms)
-        double baseDelayMs = Math.Pow(2, retryCount) * 1000;
+        // Base delay: exponential backoff (RetryBackoffBase^retryCount * BaseRetryDelayMs)
+        double baseDelayMs = Math.Pow(RetryBackoffBase, retryCount) * BaseRetryDelayMs;
 
         // Add jitter: random factor between 0.5 and 1.5
         Random random = new Random();
@@ -343,7 +358,7 @@ public sealed class WebhookPublisher : IDisposable
         // Cap at reasonable maximum for last retry
         if (retryCount >= maxRetries - 1)
         {
-            delayWithJitter = Math.Min(delayWithJitter, 10000); // Max 10 seconds for final retry
+            delayWithJitter = Math.Min(delayWithJitter, MaxRetryDelayMs); // Max 10 seconds for final retry
         }
 
         return (int)delayWithJitter;
