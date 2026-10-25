@@ -97,6 +97,17 @@ public sealed class StreamingSession
 
     /// <summary>Records activity by updating <see cref="LastActivityAt"/> to the current UTC time.</summary>
     internal void Touch() => LastActivityAt = DateTime.UtcNow;
+
+    /// <summary>
+    /// Returns a diagnostic description of this session: identifier, derived state
+    /// (<c>Empty</c> or <c>Active</c>), creation time and associated stream count.
+    /// </summary>
+    public override string ToString()
+    {
+        var streamCount = StreamCount;
+        var state = streamCount == 0 ? "Empty" : "Active";
+        return $"StreamingSession {{ SessionId = {SessionId}, State = {state}, CreatedAt = {CreatedAt:O}, Streams = {streamCount} }}";
+    }
 }
 
 /// <summary>
