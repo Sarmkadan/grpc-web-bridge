@@ -290,6 +290,15 @@ public sealed class HealthCheckOptions
     /// The initial delay in seconds before the first health check run. Default is 10 seconds.
     /// </summary>
     public int InitialDelaySeconds { get; set; } = DefaultInitialDelaySeconds;
+
+    /// <summary>
+    /// Returns a string representation of the health check options.
+    /// </summary>
+    /// <returns>A string containing CheckIntervalSeconds, CheckTimeoutMs and InitialDelaySeconds.</returns>
+    public override string ToString()
+    {
+        return $"HealthCheckOptions {{ CheckIntervalSeconds = {CheckIntervalSeconds}, CheckTimeoutMs = {CheckTimeoutMs}, InitialDelaySeconds = {InitialDelaySeconds} }}";
+    }
 }
 
 /// <summary>
@@ -313,4 +322,13 @@ public class ServiceHealthChangedEvent : EventBase
     /// The timestamp when the health status was recorded. Defaults to DateTime.MinValue but is set to current UTC time when the event is published.
     /// </summary>
     public DateTime Timestamp { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the health changed event.
+    /// </summary>
+    /// <returns>A string containing ServiceId, ServiceName, IsHealthy and Timestamp.</returns>
+    public override string ToString()
+    {
+        return $"ServiceHealthChangedEvent {{ ServiceId = {ServiceId}, ServiceName = {ServiceName}, IsHealthy = {IsHealthy}, Timestamp = {Timestamp:O} }}";
+    }
 }
