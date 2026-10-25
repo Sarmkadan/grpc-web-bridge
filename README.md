@@ -42,6 +42,7 @@
 - [RequestLoggingMiddleware](#requestloggingmiddleware)
 - [WebhookPublisher](#webhookpublisher)
 - [TracingService and BridgeActivitySource](#tracingservice-and-bridgeactivitysource)
+- [BridgePrometheusMetrics](#bridgeprometheusmetrics)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2390,6 +2391,85 @@ services.AddGrpcWebBridgeTracing(
 - **No built-in call sites.** Nothing in `src/GrpcWebBridge` calls the `Start*Activity` methods yet. The only wiring in the bridge is the DI registration and the `AddSource` call. A span exists only where your code calls `TracingService`.
 - **The caller ends each span.** `TracingService` does not dispose spans. A span is reported to exporters when it is stopped, which happens on `Dispose`, so a span that is never disposed is never exported.
 - **Parenting follows `Activity.Current`.** A `grpc.bridge.*` span started while an ASP.NET Core request is active becomes a child of that request's span.
+
+## BridgePrometheusMetrics
+
+`src/GrpcWebBridge/Services/BridgePrometheusMetrics.cs` is a static class that defines the bridge's Prometheus metrics with `prometheus-net` (the `prometheus-net.AspNetCore` package, version 8.2.1). The metrics are registered in prometheus-net's default registry. The class is opt-in: nothing is exported until the host calls both `AddGrpcWebBridgePrometheus()` and `app.MapMetrics()`.
+
+```csharp
+builder.Services.AddGrpcWebBridgePrometheus();   // registers the metric definitions
+// ...
+app.MapMetrics();                                // serves the scrape endpoint at /metrics
+```
+
+`AddGrpcWebBridgePrometheus()` touches each static field so the metrics exist before the first request. `MapMetrics()` is the call that serves them.
+
+### Exposed metrics
+
+| Metric | Type | Labels | Description | Recorded by |
+|--------|------|--------|-------------|-------------|
+| `grpcweb_bridge_requests_total` | counter | `service`, `method`, `grpc_status` | Completed bridged RPC calls | `BridgePrometheusMetrics.RecordCall` |
+| `grpcweb_bridge_request_duration_seconds` | histogram | `service`, `method` | End-to-end call latency in seconds | `BridgePrometheusMetrics.RecordCall` |
+| `grpcweb_bridge_active_streams` | gauge | none | Streams currently open | `ActiveStreams.Inc()` when a stream starts, `ActiveStreams.Dec()` in `finally` |
+| `grpcweb_bridge_stream_errors_total` | counter | `service`, `method` | Stream failures | `BridgePrometheusMetrics.RecordStreamError` |
+
+Notes on the series:
+
+- **Histogram buckets** are `0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10` seconds. A histogram exposes `_bucket`, `_sum` and `_count` series, for example `grpcweb_bridge_request_duration_seconds_bucket`.
+- **Counter names** already end in `_total`, so the exposed names match the table.
+- **`grpc_status` values** come from `response.Status.ToString()`, which gives the `GrpcStatusCode` enum name in PascalCase, such as `Ok`, `NotFound` or `Unavailable`. The exception path in the invoke action records the literal `INTERNAL` instead, so a failed call does not use the same value as an `Internal` status from the backend.
+- **Label values come from requests.** `service` and `method` are the `ServiceId` and `MethodName` from the request body, so any caller can create new series. Put the endpoint behind a gateway or network policy.
+
+### Where the metrics are recorded
+
+Only `BridgeController` calls the recorders. Nothing else under `src/` does.
+
+- **Unary invoke** (`api/bridge/invoke`) records one call per request, with the status returned by the backend or `INTERNAL` if the call throws. The duration covers the protocol translation and the backend call.
+- **Streaming** (`api/bridge/stream`) increments `grpcweb_bridge_active_streams` when the stream is created and decrements it in `finally`. A stream error is counted only when an unhandled exception reaches the outer `catch`. A client disconnect is not counted as an error.
+- **No per-message metrics.** Stream messages and batch calls do not record anything.
+
+### Scraping
+
+The endpoint is `GET /metrics` on the bridge's HTTP port. It is served by `app.MapMetrics()` and returns the Prometheus text format.
+
+```bash
+curl -s http://localhost:5000/metrics | grep '^grpcweb_bridge_'
+```
+
+Replace `localhost:5000` with the address the bridge listens on. The `Kestrel` section of `appsettings.json` sets it to `http://0.0.0.0:5000` by default, so bind it to a loopback or internal address in production.
+
+A static Prometheus scrape job, based on `examples/prometheus.yml`:
+
+```yaml
+scrape_configs:
+  - job_name: 'grpc-web-bridge'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ['localhost:5000']
+```
+
+The Kubernetes example in `examples/kubernetes.yaml` has two options. The pod annotations are `prometheus.io/scrape: "true"`, `prometheus.io/port: "5000"` and `prometheus.io/path: "/metrics"`. The Prometheus Operator option is a `ServiceMonitor` that selects the `grpc-web-bridge` service on the `http` port with `path: /metrics`.
+
+Example queries:
+
+```promql
+# Requests per second, by method and gRPC status
+sum by (service, method, grpc_status) (rate(grpcweb_bridge_requests_total[5m]))
+
+# p95 latency per method
+histogram_quantile(0.95, sum by (le, service, method) (rate(grpcweb_bridge_request_duration_seconds_bucket[5m])))
+
+# Open streams
+grpcweb_bridge_active_streams
+```
+
+### Caveats
+
+- **Unauthenticated endpoint.** `/metrics` has no `[Authorize]` requirement and is excluded from the content-type validation middleware. Anyone who can reach the port can read the metrics, including the service and method names.
+- **Process-wide state.** The metrics are static fields. Counters reset when the process restarts, and the gauge is only meaningful within one process.
+- **`MetricsController` is separate.** The JSON endpoints under `api/metrics` read their own static counters and do not read these Prometheus metrics. See [MetricsController](#metricscontroller).
 
 ## License
 
