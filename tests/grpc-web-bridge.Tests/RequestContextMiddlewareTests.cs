@@ -13,6 +13,10 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Tests for <see cref="RequestContextMiddleware"/>, verifying that the ambient request context is
+/// populated for the duration of a request and cleared once the middleware completes.
+/// </summary>
 public sealed class RequestContextMiddlewareTests
 {
     private readonly RequestContextManager _contextManager;
@@ -24,6 +28,10 @@ public sealed class RequestContextMiddlewareTests
         _mockLogger = Substitute.For<ILogger<RequestContextMiddleware>>();
     }
 
+    /// <summary>
+    /// Verifies that an incoming X-Request-ID header is used as the request id of the active context,
+    /// echoed back on the response, and that the context is cleared after the middleware completes.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_Should_Create_Context_With_RequestId()
     {
@@ -53,6 +61,10 @@ public sealed class RequestContextMiddlewareTests
         requestIdHeader.ToString().Should().Be("test-request-id");
     }
 
+    /// <summary>
+    /// Verifies that when no X-Request-ID header is present, a non-empty request id is generated for the
+    /// active context and written to the response, and that the context is cleared afterwards.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_Should_Create_Context_With_Generated_RequestId()
     {
@@ -82,6 +94,10 @@ public sealed class RequestContextMiddlewareTests
         _contextManager.IsContextActive().Should().BeFalse(); // Should be cleared after completion
     }
 
+    /// <summary>
+    /// Verifies that the user id of the active context is taken from the <c>sub</c> claim of the
+    /// authenticated principal, and that the context is cleared after the middleware completes.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_Should_Create_Context_With_UserId_From_Claims()
     {
@@ -114,6 +130,10 @@ public sealed class RequestContextMiddlewareTests
         _contextManager.IsContextActive().Should().BeFalse(); // Should be cleared after completion
     }
 
+    /// <summary>
+    /// Verifies that once the middleware has finished handling a request, no request context remains
+    /// active on the manager.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_Should_Clear_Context_After_Completion()
     {
@@ -134,6 +154,10 @@ public sealed class RequestContextMiddlewareTests
         _contextManager.GetContext().Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that an exception thrown by the downstream pipeline propagates out of the middleware
+    /// unchanged, and that the request context is still cleared.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_Should_Handle_Exceptions_And_Still_Clear_Context()
     {
@@ -154,6 +178,10 @@ public sealed class RequestContextMiddlewareTests
         _contextManager.IsContextActive().Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that the request context remains accessible after the downstream pipeline awaits
+    /// an asynchronous operation, and that it is cleared once the middleware completes.
+    /// </summary>
     [Fact]
     public async Task Context_Should_Be_Available_In_Async_Operations()
     {
@@ -182,6 +210,10 @@ public sealed class RequestContextMiddlewareTests
         _contextManager.IsContextActive().Should().BeFalse(); // Should be cleared after completion
     }
 
+    /// <summary>
+    /// Verifies that the request context flows into work started on a thread-pool task via
+    /// <c>Task.Run</c> from within the downstream pipeline.
+    /// </summary>
     [Fact]
     public async Task Context_Should_Be_Available_In_Background_Tasks()
     {
