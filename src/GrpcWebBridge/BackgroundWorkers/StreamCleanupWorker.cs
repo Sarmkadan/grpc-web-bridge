@@ -193,4 +193,6 @@ public sealed class StreamCleanupOptions
     /// Gets or sets the GC trigger threshold. Default value: 10.
     /// </summary>
     public int GcTriggerThreshold { get; set; } = 10;
+
+    public override string ToString() => $"StreamCleanupOptions {{ CleanupIntervalSeconds = {CleanupIntervalSeconds}, IdleTimeoutDuration = {IdleTimeoutDuration}, StaleStreamDuration = {StaleStreamDuration}, GcTriggerThreshold = {GcTriggerThreshold} }}";
 }
