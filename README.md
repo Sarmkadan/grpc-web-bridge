@@ -32,6 +32,7 @@
 - [BridgeController](#bridgecontroller)
 - [MetricsController](#metricscontroller)
 - [HealthCheckController](#healthcheckcontroller)
+- [ConfigurationController](#configurationcontroller)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1520,6 +1521,122 @@ Example:
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" "$BRIDGE_URL/api/health"
 curl -s "$BRIDGE_URL/api/health/detailed" | jq '.data.streaming'
+```
+
+## ConfigurationController
+
+`src/GrpcWebBridge/Controllers/ConfigurationController.cs` is mounted at `api/configuration` (`[Route("api/configuration")]`) and produces `application/json`. It reads the bridge's `GrpcWebBridgeOptions` and the `ServiceRegistry`, and keeps a small runtime-only settings store.
+
+| Verb | Route | Purpose |
+|------|-------|---------|
+| GET | `/api/configuration` | Read the active configuration snapshot |
+| PUT | `/api/configuration` | Submit a set of setting changes and get back which ones were accepted |
+| POST | `/api/configuration/validate` | List registered services with their status and health |
+| POST | `/api/configuration/reset` | Clear the runtime settings store |
+
+Caveats:
+
+- **PUT does not change `GrpcWebBridgeOptions`.** Accepted values are returned in `updates` and are not written back to the options object. The only value kept anywhere is `RequestsPerSecond`, which goes into the controller's runtime store. Every other accepted value is reported as applied but has no effect on the running bridge.
+- **Runtime store is static and not thread-safe.** `_runtimeConfig` is a `static` `Dictionary<string, object>`. It is shared across requests and across instances of the controller, and it is not synchronized. It also resets on process restart.
+- **`RateLimiting.Enabled` is always `false` in practice.** It is `true` only when the runtime store contains the key `RateLimitingEnabled`. No PUT key writes that key, so the flag can only be set by code.
+- **Some GET fields are fixed.** `Authentication` always reports `RequiresBearerToken`, `SupportsApiKey` and `TokenValidationEnabled` as `true`, whatever the real authentication setup is.
+- **No authorization attribute.** The controller has no `[Authorize]`, so GET, PUT, validate and reset are open to any caller that can reach the bridge. Restrict `api/configuration` at the gateway or network level.
+
+### GET /api/configuration
+
+Success (`200 OK`). The payload is wrapped in `data`, with a `timestamp` (UTC) at the top level.
+
+Values exposed under `data` from `GrpcWebBridgeOptions.Configuration` (`BridgeConfiguration`):
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| `Environment` | `Configuration.Environment` | For example `Production`, `Development`, `Testing` |
+| `MaxStreamCount` | `Configuration.MaxStreamCount` | Streaming session limit |
+| `StreamIdleTimeoutSeconds` | `Configuration.StreamIdleTimeoutSeconds` | Idle stream timeout |
+| `MaxMessageSize` | `Configuration.MaxMessageSize` | Maximum gRPC message size in bytes |
+| `CompressResponses` | `Configuration.CompressResponses` | Response compression on or off |
+| `CompressionLevel` | `Configuration.CompressionLevel` | Compression level |
+| `EnableSwagger` | `Configuration.EnableSwagger` | Swagger toggle |
+| `AllowedOrigins` | `Configuration.AllowedOrigins` | CORS origins list |
+
+Derived or fixed fields:
+
+| Field | Value |
+|-------|-------|
+| `RateLimiting.Enabled` | `true` only if the runtime store has `RateLimitingEnabled` (see caveats) |
+| `RateLimiting.RequestsPerSecond` | Runtime store value, or `1000` when unset |
+| `Authentication.*` | Hard-coded `true` values (see caveats) |
+| `RuntimeConfig` | Full contents of the runtime store |
+
+Not exposed by this endpoint: `StreamHeartbeatIntervalSeconds`, `DefaultTimeoutMilliseconds`, `EnableLogging`, `EnableMetrics`, `EnableCors`, `RequireAuthentication`, `AllowedMethods`, `CustomHeaders`, `ServiceDefaults`, `InstanceId`.
+
+On exception it returns `500` with `{ "error": "Failed to retrieve configuration" }`.
+
+### PUT /api/configuration
+
+Request body: a `settings` object of key/value pairs. Keys are matched case-insensitively. Values are compared as text, so JSON numbers, booleans and quoted strings all work.
+
+```json
+{
+  "settings": {
+    "CompressionLevel": 4,
+    "RequestsPerSecond": 500
+  }
+}
+```
+
+Accepted keys:
+
+| Key | Valid value | Effect |
+|-----|-------------|--------|
+| `CompressResponses` | `true` or `false` | Reported in `updates` only |
+| `CompressionLevel` | Integer `0` to `9` | Reported in `updates` only |
+| `RequestsPerSecond` | Integer greater than `0` | Stored in the runtime store and reported in `updates` |
+| `StreamIdleTimeoutSeconds` | Integer greater than `0` | Reported in `updates` only |
+
+Behavior:
+
+- A missing or empty `settings` object returns `400` with `{ "error": "No settings provided to update" }`.
+- Unknown keys are logged as warnings and ignored. A value that fails validation is skipped silently. Neither case returns an error, so the response is still `200` and `updates` lists only the applied values.
+- Success (`200 OK`) returns `success: true`, a `message` such as `"2 configuration setting(s) updated"`, `updates` (the applied key/value pairs) and `timestamp`.
+- On exception it returns `500` with `{ "error": "Failed to update configuration", "details": "..." }`.
+
+Example:
+
+```bash
+curl -s -X PUT "$BRIDGE_URL/api/configuration" \
+  -H "Content-Type: application/json" \
+  -d '{"settings":{"CompressionLevel":4,"RequestsPerSecond":500}}'
+```
+
+### POST /api/configuration/validate
+
+Lists every service in `ServiceRegistry` and marks it healthy when `Status` is `ServiceStatus.Serving`. This check does not contact the backends.
+
+Success (`200 OK`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | bool | Always `true` on success |
+| `validationStatus` | string | Always `"completed"` |
+| `serviceCount` | int | Number of registered services |
+| `healthyServices` | int | Services with `isHealthy: true` |
+| `details` | array | One item per service: `serviceId`, `serviceName`, `status`, `endpoint`, `port`, `methodCount`, `isHealthy` |
+| `timestamp` | string | UTC time |
+
+On exception it returns `500` with `{ "error": "Validation failed", "details": "..." }`.
+
+### POST /api/configuration/reset
+
+Clears the runtime store (`RuntimeConfig`, `RateLimiting`). It does not touch `GrpcWebBridgeOptions`, so values set at startup stay in effect.
+
+Success (`200 OK`) returns `success: true`, `message: "Configuration reset to defaults"` and `timestamp`. On exception it returns `500` with `{ "error": "Failed to reset configuration" }`.
+
+Example:
+
+```bash
+curl -s "$BRIDGE_URL/api/configuration" | jq '.data.Environment, .data.CompressionLevel'
+curl -s -X POST "$BRIDGE_URL/api/configuration/reset"
 ```
 
 ## License
