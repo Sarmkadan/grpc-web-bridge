@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net.Http.Headers;
+using GrpcWebBridge.Domain;
 using Microsoft.AspNetCore.Http;
 
 namespace GrpcWebBridge.Extensions;
@@ -46,6 +47,28 @@ public static class HttpContextGrpcExtensions
     }
 
     /// <summary>
+    /// Determines whether the specified <see cref="HttpContext"/> represents a base64-encoded gRPC-Web (grpc-web-text) request based on the Content-Type header.
+    /// </summary>
+    /// <param name="context">The <see cref="HttpContext"/> to check.</param>
+    /// <returns>
+    /// true if the request's media type equals <see cref="Constants.Http.GrpcWebTextContentType"/> (application/grpc-web-text), ignoring case and parameters; otherwise, false.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is null.</exception>
+    public static bool IsGrpcWebTextRequest(this HttpContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var contentType = context.Request.ContentType;
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return false;
+        }
+
+        return MediaTypeHeaderValue.TryParse(contentType, out var header)
+            && string.Equals(header.MediaType, Constants.Http.GrpcWebTextContentType, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Gets the gRPC method path from the request path in the specified <see cref="HttpContext"/>.
     /// </summary>
     /// <param name="context">The <see cref="HttpContext"/> containing the request.</param>
@@ -55,5 +78,24 @@ public static class HttpContextGrpcExtensions
     public static string GetGrpcMethodPath(this HttpContext context)
     {
         return context.Request.Path.Value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Attempts to get the gRPC method path from the request path in the specified <see cref="HttpContext"/> without throwing.
+    /// </summary>
+    /// <param name="context">The <see cref="HttpContext"/> containing the request.</param>
+    /// <param name="path">
+    /// When this method returns, contains the request path if it is available; otherwise, an empty string.
+    /// </param>
+    /// <returns>
+    /// true if a non-empty request path is available; otherwise, false.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is null.</exception>
+    public static bool TryGetGrpcMethodPath(this HttpContext context, out string path)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        path = context.Request.Path.Value ?? string.Empty;
+        return path.Length > 0;
     }
 }
