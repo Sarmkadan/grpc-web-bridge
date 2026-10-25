@@ -40,6 +40,7 @@
 - [RouteHeaderTransformMiddleware](#routeheadertransformmiddleware)
 - [ErrorHandlingMiddleware](#errorhandlingmiddleware)
 - [RequestLoggingMiddleware](#requestloggingmiddleware)
+- [WebhookPublisher](#webhookpublisher)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2178,6 +2179,111 @@ The position in the pipeline matters. Logging only sees what runs after it, so t
 - **Exceptions skip the response entry.** The response entry is written only when the rest of the pipeline returns normally. If an exception is thrown, no `Outgoing response` entry is written for that request. `ErrorHandlingMiddleware` logs the exception instead.
 - **Timing excludes the body copy.** `elapsedMilliseconds` stops before the buffered response is copied to the client, so it does not include that copy.
 - **Logs can be large.** Every non-excluded request produces two entries with full headers, and the Error and Warning levels follow the status code. Set the log level for this type in configuration if the volume is too high.
+
+## WebhookPublisher
+
+`GrpcWebBridge.Integration.WebhookPublisher` sends bridge events to external HTTP endpoints. A subscription names a URL and the event types it wants. Each published event that matches is queued and then POSTed as JSON by one background worker. The worker starts when the publisher is constructed, and the publisher implements `IDisposable`. The queue is in memory, so events that are still queued when the process exits are lost.
+
+### Public API
+
+- `WebhookPublisher(ILogger<WebhookPublisher> logger, HttpClientFactory httpClientFactory, WebhookPublisherOptions? options = null)` creates the publisher and starts processing. A `null` `options` uses the default values.
+- `string Subscribe(string webhookUrl, string[] eventTypes, Dictionary<string, string>? headers = null, bool retryOnFailure = true)` registers a subscription and returns its ID. It throws `ArgumentException` when the URL is null or empty, and `InvalidOperationException` when the URL is not an absolute URI. `eventTypes` are compared with the event's class name, such as `"ServiceRegisteredEvent"`. An empty array matches every event. `headers` are sent with every request. `retryOnFailure: false` disables retries for this subscription.
+- `bool Unsubscribe(string subscriptionId)` removes a subscription. It returns `false` when the ID is unknown.
+- `Task PublishEventAsync(EventBase @event)` queues one delivery for each active subscription that matches the event. It throws `ArgumentNullException` for a `null` event. It returns once the deliveries are queued, not once they are sent. If no subscription matches, it only logs at debug level.
+- `List<WebhookSubscription> GetSubscriptions()` returns the active subscriptions only.
+- `object GetStatistics()` returns an anonymous object with `totalSubscriptions`, `activeSubscriptions`, `totalEventsSent`, `totalEventsFailed` and `averageFailureRate`. `totalEventsSent` is the sum of `SuccessCount`, and `totalEventsFailed` is the sum of `FailureCount`. `averageFailureRate` is the average of `FailureCount / (SuccessCount + FailureCount + 1)` across all subscriptions, rounded to two decimals.
+- `void Dispose()` cancels the worker, waits up to five seconds for it to stop, and completes the queue.
+
+### Types
+
+`WebhookSubscription` describes a subscription:
+
+| Property | Description |
+|----------|-------------|
+| `Id` | Subscription ID returned by `Subscribe`. |
+| `Url` | Target endpoint. |
+| `EventTypes` | Event class names to match. An empty array matches all events. |
+| `Headers` | Extra HTTP headers sent with each request. |
+| `RetryOnFailure` | Whether failed deliveries are retried. |
+| `IsActive` | `false` after the subscription is disabled for failures. |
+| `CreatedAt` | UTC creation time. |
+| `LastSuccessfulDelivery` | UTC time of the last successful delivery, or `null`. |
+| `SuccessCount` / `FailureCount` | Delivery counters. `FailureCount` counts failed attempts, so one event can add more than one. |
+
+`WebhookEvent` is the queued record for one delivery: `EventId`, `EventType`, `Timestamp`, `Payload` (the original event object), `SubscriptionId`, `RetryCount` and `MaxRetries`. `RetryCount` is always `0` in the queued record, and `MaxRetries` is copied from the options when the event is published. The retry loop counts attempts in a local variable and does not update these fields, so they do not show the retries that were performed.
+
+`WebhookPublisherOptions` holds the configuration:
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `MaxRetries` | `3` | Maximum retries per event. Delivery uses at most `Math.Min(3, MaxRetries)`. |
+| `FailureThresholdForDisable` | `10` | A subscription is set to inactive once its `FailureCount` is greater than this value. |
+
+### Delivery format
+
+Each delivery is an HTTP `POST` with `Content-Type: application/json`. The body has camelCase property names:
+
+```json
+{
+  "eventId": "…",
+  "eventType": "ServiceRegisteredEvent",
+  "timestamp": "…",
+  "payload": { "eventId": "…", "createdAt": "…", "serviceId": "…", "serviceName": "…", "endpoint": "…" }
+}
+```
+
+The `payload` object is the published event, serialized with the bridge's default `JsonUtility` settings.
+
+### Retries and backoff
+
+- **Attempts.** A subscription with `RetryOnFailure = true` makes up to `1 + Math.Min(3, MaxRetries)` attempts. With `RetryOnFailure = false` it makes one attempt.
+- **Delay.** Before retry *n* (starting at 1), the worker waits `2^n` seconds multiplied by a random jitter factor in the range `[0.5, 1.5)`. With the default options, the waits are 1–3 s, 2–6 s and 4–12 s. The delay is capped at 10 seconds, so no wait is longer than 10 s.
+- **What is retried.** Timeouts and 5xx responses are retried. The code also throws on other non-success responses, such as 4xx, and the same handler catches that exception and retries it. Other exceptions are retried in the same way.
+- **After the last attempt.** The event is dropped and the failure is logged. `FailureCount` is incremented.
+- **Disabling.** Once `FailureCount` is greater than `FailureThresholdForDisable`, the subscription is set to inactive. It no longer receives events and is not returned by `GetSubscriptions`. There is no method to reactivate it, so subscribe again instead.
+
+### Caveats
+
+- **Sequential delivery.** One worker sends all queued events in order, so a retry wait for one endpoint delays every other delivery.
+- **Unsubscribing drops queued events.** A subscription is looked up when its event is processed. If it is removed before that, the event is dropped without an error.
+- **Retries are not persisted.** Pending retries live in memory only and are lost when the process stops.
+
+### Usage example
+
+```csharp
+using GrpcWebBridge.Events;
+using GrpcWebBridge.Integration;
+using Microsoft.Extensions.Logging.Abstractions;
+
+var webhookToken = Environment.GetEnvironmentVariable("WEBHOOK_TOKEN") ?? string.Empty;
+
+using var httpClientFactory = new HttpClientFactory(NullLogger<HttpClientFactory>.Instance);
+using var webhooks = new WebhookPublisher(
+    NullLogger<WebhookPublisher>.Instance,
+    httpClientFactory,
+    new WebhookPublisherOptions
+    {
+        MaxRetries = 3,
+        FailureThresholdForDisable = 10
+    });
+
+var subscriptionId = webhooks.Subscribe(
+    "https://hooks.example.com/grpc-bridge",
+    new[] { "ServiceRegisteredEvent" },
+    headers: new Dictionary<string, string> { ["X-Webhook-Token"] = webhookToken });
+
+await webhooks.PublishEventAsync(new ServiceRegisteredEvent
+{
+    ServiceId = "catalog-service",
+    ServiceName = "Catalog",
+    Endpoint = "https://localhost:5001"
+});
+
+var statistics = webhooks.GetStatistics();
+Console.WriteLine($"Subscription {subscriptionId}: {statistics}");
+```
+
+The `WEBHOOK_TOKEN` variable is read from the environment, so no credential is stored in code. `PublishEventAsync` returns once the event is queued, not once it is delivered. Disposing the publisher cancels the worker, so events that have not been sent by then are not delivered.
 
 ## License
 
