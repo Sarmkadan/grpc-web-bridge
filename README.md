@@ -45,6 +45,7 @@
 - [BridgePrometheusMetrics](#bridgeprometheusmetrics)
 - [StreamingSessionManager](#streamingsessionmanager)
 - [StreamDiagnosticsService](#streamdiagnosticsservice)
+- [AuthenticationService](#authenticationservice)
 - [ProtocolTranslationService](#protocoltranslationservice)
 - [License](#license)
 
@@ -2663,6 +2664,132 @@ public sealed class StreamingAlertHook
     }
 }
 ```
+
+## AuthenticationService
+
+`AuthenticationService` (`src/GrpcWebBridge/Services/AuthenticationService.cs`) is a sealed singleton that authenticates incoming requests and checks roles. It supports three of the `AuthenticationScheme` values: `Bearer`, `ApiKey` and `Custom`. Each successful call returns an `AuthenticationContext` and stores it in an in-memory cache keyed by the context `Id`. Failures throw `GrpcWebBridgeException` with a fixed error code. The service only logs failures. It does not publish events.
+
+### Supported schemes
+
+| `AuthenticationScheme` | Method | Token in the context | Expiration |
+|------------------------|--------|----------------------|------------|
+| `Bearer` (1) | `AuthenticateBearer(string token, string? userId = null)` | The raw JWT. | The token's `exp` claim (`ValidTo`). |
+| `ApiKey` (2) | `AuthenticateApiKey(string apiKey, string userId)` | The API key. | 60 minutes from now. |
+| `Custom` (4) | `AuthenticateCustom(string userId, Dictionary<string, string> credentials)` | `null`. | 60 minutes from now. |
+
+`AuthenticationScheme.None` and `AuthenticationScheme.Certificate` are defined in the enum, but this service has no method for them.
+
+- **Bearer.** The token is read with `JwtSecurityTokenHandler`. It is not verified. The service does not check the signature, the issuer, or the audience. It only checks that the token is readable and that `ValidTo` is in the future. A token without an `exp` claim has `ValidTo` set to its default value, so it is rejected as `TOKEN_EXPIRED`. The user ID is `userId` if given, otherwise the `sub` claim, otherwise `"unknown"`.
+- **ApiKey.** The key is stored as the context token and is not checked against any store. Any non-empty key is accepted, so the caller has to validate the key before calling this method.
+- **Custom.** Every entry in `credentials` becomes a claim. The service does not validate the credentials.
+
+`ExtractBearerToken(string? authHeader)` reads the token from an `Authorization` header. It matches the `Bearer ` prefix without regard to case, trims the value, and returns `null` when the header is missing, has another scheme, or has an empty token.
+
+### JWT constants
+
+`GrpcWebBridge.Domain.Constants.Authentication` holds the JWT settings:
+
+| Constant | Value | Used by |
+|----------|-------|---------|
+| `JwtIssuer` | `"sarmkadan.com"` | Expected `iss` value. Not checked by `AuthenticationService`. |
+| `JwtAudience` | `"grpc-web-bridge"` | Expected `aud` value. Not checked by `AuthenticationService`. |
+| `JwtExpirationMinutes` | `60` | Lifetime of `ApiKey` and `Custom` contexts. |
+
+Nothing in `AuthenticationService` reads `JwtIssuer` or `JwtAudience`. The ASP.NET JWT bearer handler registered by `AddGrpcWebBridgeAuthentication` also has `ValidateIssuer`, `ValidateAudience` and `ValidateIssuerSigningKey` set to `false`. Validating the issuer and audience is the job of the caller who configures `TokenValidationParameters`.
+
+### AuthenticationContext result
+
+Every successful call returns an `AuthenticationContext` (`GrpcWebBridge.Domain.Models`). The service sets these members:
+
+| Member | Bearer | ApiKey | Custom |
+|--------|--------|--------|--------|
+| `Id` | New GUID (N format). | Same. | Same. |
+| `Scheme` | `Bearer` | `ApiKey` | `Custom` |
+| `Token` | Raw JWT. | API key. | `null` |
+| `UserId` | See above. | `userId` argument. | `userId` argument. |
+| `Roles` | From the role claim (see below). | Empty. | Empty. |
+| `Claims` | All other JWT claims. | Empty. | One entry per credential. |
+| `ExpiresAt` | `ValidTo` (UTC). | Now + 60 min. | Now + 60 min. |
+| `IsAuthenticated` | `true` | `true` | `true` |
+
+The service does not set `Username`, `IpAddress` or `CustomData`. Callers can set them afterwards. `AuthenticatedAt` is the time the context was created.
+
+**Roles.** A claim whose type is exactly `ClaimTypes.Role` (`http://schemas.microsoft.com/ws/2008/06/identity/claims/role`) is added to `Roles`. Every other claim goes into `Claims`, keyed by its type. Because the token is only read, the claim types are the raw names from the token. A plain `role` claim is stored under `Claims["role"]` and is not added to `Roles`.
+
+### Role and state checks
+
+- `bool ValidateContext(AuthenticationContext context)` returns `false` for `null`, for an expired context, for a context that is not authenticated, and when `Validate()` throws. It never throws itself.
+- `bool AuthorizeRole(AuthenticationContext context, string requiredRole)` runs `ValidateContext` and then `HasRole`.
+- `bool AuthorizeAnyRole(AuthenticationContext context, params string[] requiredRoles)` runs `ValidateContext` and then `HasAnyRole`. With no roles given it returns `false`.
+- `AuthenticationContext? GetCachedContext(string contextId)` returns a context that an earlier call cached, or `null`.
+
+### Failure responses and error codes
+
+Each failing call throws `GrpcWebBridgeException`. The exception's `ErrorCode` is one of the values below. The message is the text shown in the table.
+
+| Method | Condition | `ErrorCode` | Message |
+|--------|-----------|-------------|---------|
+| `AuthenticateBearer` | Token is null, empty or whitespace. | `INVALID_TOKEN` | `Token cannot be empty` |
+| `AuthenticateBearer` | Token cannot be read as a JWT. | `INVALID_TOKEN` | `Invalid token format` |
+| `AuthenticateBearer` | Token read but is not a `JwtSecurityToken`. | `TOKEN_PARSE_ERROR` | `Failed to parse token` |
+| `AuthenticateBearer` | `ValidTo` is earlier than now (or missing). | `TOKEN_EXPIRED` | `Token has expired` |
+| `AuthenticateBearer` | Any other exception, including validation of the context. | `AUTH_FAILED` | `Authentication failed: {reason}` |
+| `AuthenticateApiKey` | API key is null, empty or whitespace. | `INVALID_API_KEY` | `API key cannot be empty` |
+| `AuthenticateApiKey` | `userId` is null, empty or whitespace. | `INVALID_USER_ID` | `User ID cannot be empty` |
+| `AuthenticateCustom` | `userId` is null, empty or whitespace. | `INVALID_USER_ID` | `User ID cannot be empty` |
+| `AuthenticateCustom` | `credentials` is `null` or empty. | `INVALID_CREDENTIALS` | `Credentials cannot be empty` |
+
+`CreateAuthFailureResponse(string requestId)` builds a `GrpcResponse` with `RequestId` set and an error status of `GrpcStatusCode.Unauthenticated` with the message `Authentication required`. It does not throw. Use it when a request has no usable credentials.
+
+### Failure events
+
+`AuthenticationFailedEvent` (`GrpcWebBridge.Events`, in `Events/EventBus.cs`) has a `FailureReason` string and an optional `ClientIp`. It derives from `EventBase`. The service never publishes it. The only failure output from `AuthenticationService` is a log entry at Warning or Error level. To get an event, the caller must catch the `GrpcWebBridgeException` and publish one itself.
+
+### Caveats
+
+- **Bearer tokens are not verified.** `AuthenticateBearer` accepts any readable JWT whose `exp` is in the future. An attacker can forge the payload and the service will accept it, so the output of this method must not be trusted as an identity on its own. Put signature validation in front of it. `BridgeController` calls `AuthenticateBearer` directly and does not verify the signature itself.
+- **Failed bearer authentication is anonymous in `BridgeController`.** Its `ExtractAuthContext` catches every exception from `AuthenticateBearer` and treats the request as unauthenticated. See [BridgeController](#bridgecontroller).
+- **The API key is logged.** `AuthenticateApiKey` writes the raw key to the Information log with the message `AuthenticateApiKey called with {ApiKey} and {UserId}`. Anyone with access to the logs can read the keys.
+- **The context cache is never trimmed.** Every successful call adds its context to an in-memory dictionary keyed by `Id`, and nothing removes entries. Expired contexts stay in memory until the process restarts.
+- **Empty credential values raise `ArgumentException`.** `AuthenticateCustom` calls `AuthenticationContext.AddClaim` for each credential. An empty key or value throws `ArgumentException`, not `GrpcWebBridgeException`, so callers that catch only the bridge exception will not see it.
+
+### Usage example
+
+```csharp
+using GrpcWebBridge.Domain.Exceptions;
+using GrpcWebBridge.Domain.Models;
+using GrpcWebBridge.Services;
+using Microsoft.Extensions.Logging.Abstractions;
+
+var auth = new AuthenticationService(NullLogger<AuthenticationService>.Instance);
+
+// Returns null when the request may proceed, otherwise the response to send.
+GrpcResponse? Authorize(string? authorizationHeader, string requestId)
+{
+    var token = auth.ExtractBearerToken(authorizationHeader);
+    if (token is null)
+    {
+        return auth.CreateAuthFailureResponse(requestId);
+    }
+
+    try
+    {
+        // The signature and iss/aud must be verified before this call (see Caveats).
+        var context = auth.AuthenticateBearer(token);
+
+        // CreateAuthFailureResponse always uses Unauthenticated, so a missing role gets the same status.
+        return auth.AuthorizeRole(context, "admin")
+            ? null
+            : auth.CreateAuthFailureResponse(requestId);
+    }
+    catch (GrpcWebBridgeException)
+    {
+        return auth.CreateAuthFailureResponse(requestId);
+    }
+}
+```
+
+`AuthenticateBearer` throws `GrpcWebBridgeException` for every failure listed above, so the `catch` covers an invalid, expired or unreadable token.
 
 ## ProtocolTranslationService
 
