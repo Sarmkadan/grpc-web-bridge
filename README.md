@@ -1,5 +1,36 @@
 # GoalTracker Integration
 
+## Table of Contents
+
+- [Environment Variables](#environment-variables)
+- [Usage](#usage)
+- [Rules](#rules)
+- [Goals List](#goals-list)
+- [Add Step to Goal](#add-step-to-goal)
+- [Getting Started](#getting-started)
+- [REST/JSON transcoding](#restjson-transcoding)
+- [StreamingExceptionExtensions](#streamingexceptionextensions)
+- [GrpcRequestExtensions](#grpcrequestextensions)
+- [StreamCleanupWorkerJsonExtensions](#streamcleanupworkerjsonextensions)
+- [StreamingServiceValidation](#streamingservicevalidation)
+- [DateTimeUtilityJsonExtensions](#datetimeutilityjsonextensions)
+- [EventBusJsonExtensionsTests](#eventbusjsonextensionstests)
+- [ServiceRegistryTestsExtensions](#serviceregistrytestsextensions)
+- [ReflectionServiceTestsExtensions](#reflectionservicetestsextensions)
+- [HealthEndpoints](#healthendpoints)
+- [RequestContextManagerJsonExtensionsTests](#requestcontextmanagerjsonextensionstests)
+- [EventBusExtensionsTests](#eventbusextensionstests)
+- [CorrelationIdManagerTests](#correlationidmanagertests)
+- [AdaptiveFlowControllerTests](#adaptiveflowcontrollertests)
+- [ServiceDiscoveryClientValidationTests](#servicediscoveryclientvalidationtests)
+- [EventBusTests](#eventbustests)
+- [HealthEndpointsTests](#healthendpointstests)
+- [Service Registration (DependencyInjection)](#service-registration-dependencyinjection)
+- [HttpClientFactory](#httpclientfactory)
+- [EventBus](#eventbus)
+- [CacheManager](#cachemanager)
+- [License](#license)
+
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
 
 ## Environment Variables
