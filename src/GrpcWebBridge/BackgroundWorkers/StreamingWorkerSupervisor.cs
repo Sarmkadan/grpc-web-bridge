@@ -306,34 +306,59 @@ public sealed class StreamingWorkerSupervisor : BackgroundService
 public sealed class StreamingWorkerSupervisorOptions
 {
     /// <summary>
+    /// Default monitoring interval in seconds between supervisor health checks (10 seconds).
+    /// </summary>
+    public const int DefaultMonitoringIntervalSeconds = 10;
+    /// <summary>
+    /// Default number of consecutive health check failures before the streaming service is restarted (3).
+    /// </summary>
+    public const int DefaultMaxConsecutiveFailures = 3;
+    /// <summary>
+    /// Default heartbeat timeout in seconds after which the streaming service is restarted (60 seconds).
+    /// </summary>
+    public const int DefaultHeartbeatTimeoutSeconds = 60;
+    /// <summary>
+    /// Default initial delay in seconds before the first monitoring cycle (15 seconds).
+    /// </summary>
+    public const int DefaultInitialDelaySeconds = 15;
+    /// <summary>
+    /// Default delay in seconds after a monitoring error before the next cycle (5 seconds).
+    /// </summary>
+    public const int DefaultErrorDelaySeconds = 5;
+    /// <summary>
+    /// Default delay in milliseconds applied after a streaming service restart (100 milliseconds).
+    /// </summary>
+    public const int DefaultRestartDelayMs = 100;
+
+    /// <summary>
     /// Gets or sets the monitoring interval in seconds (default: 10s)
     /// </summary>
-    public int MonitoringIntervalSeconds { get; set; } = 10;
+    public int MonitoringIntervalSeconds { get; set; } = DefaultMonitoringIntervalSeconds;
 
     /// <summary>
     /// Gets or sets the maximum consecutive failures before restart (default: 3)
     /// </summary>
-    public int MaxConsecutiveFailures { get; set; } = 3;
+    public int MaxConsecutiveFailures { get; set; } = DefaultMaxConsecutiveFailures;
 
     /// <summary>
     /// Gets or sets the heartbeat timeout in seconds (default: 60s)
     /// </summary>
-    public int HeartbeatTimeoutSeconds { get; set; } = 60;
+    public int HeartbeatTimeoutSeconds { get; set; } = DefaultHeartbeatTimeoutSeconds;
 
     /// <summary>
     /// Gets or sets the initial delay in seconds before starting monitoring (default: 15s)
     /// </summary>
-    public int InitialDelaySeconds { get; set; } = 15;
+    public int InitialDelaySeconds { get; set; } = DefaultInitialDelaySeconds;
 
     /// <summary>
     /// Gets or sets the delay after an error in seconds (default: 5s)
     /// </summary>
-    public int ErrorDelaySeconds { get; set; } = 5;
+    public int ErrorDelaySeconds { get; set; } = DefaultErrorDelaySeconds;
 
     /// <summary>
     /// Gets or sets the restart delay in milliseconds (default: 100ms)
     /// </summary>
-    public int RestartDelayMs { get; set; } = 100;
+    public int RestartDelayMs { get; set; } = DefaultRestartDelayMs;
 }
 
 /// <summary>
