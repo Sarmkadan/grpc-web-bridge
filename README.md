@@ -34,6 +34,7 @@
 - [HealthCheckController](#healthcheckcontroller)
 - [ConfigurationController](#configurationcontroller)
 - [StreamDiagnosticsController](#streamdiagnosticscontroller)
+- [RateLimitingMiddleware](#ratelimitingmiddleware)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1691,6 +1692,84 @@ Example:
 ```bash
 curl -s "$BRIDGE_URL/api/streams/diagnostics" | jq '.ActiveStreamCount, .HighBackpressureStreamCount'
 ```
+
+## RateLimitingMiddleware
+
+`src/GrpcWebBridge/Middleware/RateLimitingMiddleware.cs` limits how many requests a client may send per time window, and optionally caps the total request rate across all clients. It is **opt-in**: nothing in `Program.cs` adds it, so requests are not limited until you call `UseRateLimiting()`.
+
+Each client is tracked in a sliding window: the middleware keeps the timestamps of recent requests and rejects a request when the count in the window has reached `RequestsPerSecond * WindowSizeSeconds`. Stale client entries are removed every 5 minutes after they have been idle for 10 minutes.
+
+### Enabling it
+
+`UseRateLimiting` is an `IApplicationBuilder` extension in `RateLimitingMiddlewareExtensions`. It takes an optional `RateLimitingOptions`; when omitted, the defaults below are used.
+
+```csharp
+app.UseRateLimiting(new RateLimitingOptions
+{
+    RequestsPerSecond = 50,
+    GlobalRequestsPerSecond = 5000
+});
+```
+
+The middleware runs at the point where you call `UseRateLimiting()`. Requests rejected by it never reach the middleware or endpoints registered after it.
+
+### RateLimitingOptions
+
+All properties are settable. Defaults are also available as `public const` values on the class (`DefaultRequestsPerSecond`, `DefaultWindowSizeSeconds`, `DefaultRetryAfterSeconds`, `DefaultGlobalRequestsPerSecond`).
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `RequestsPerSecond` | int | `100` | Maximum requests per client in one window. The per-client limit is `RequestsPerSecond * WindowSizeSeconds`. |
+| `WindowSizeSeconds` | int | `1` | Length of the sliding window, in seconds. |
+| `RetryAfterSeconds` | int | `60` | Value sent in the `Retry-After` header on a per-client `429`, and reported as `retryAfter` in both rejection bodies. |
+| `EnableGlobalLimit` | bool | `true` | Turns the global cap on or off. |
+| `GlobalRequestsPerSecond` | int | `10000` | Maximum requests across all clients in one window. The global limit is `GlobalRequestsPerSecond * WindowSizeSeconds`. |
+| `ExemptPaths` | `IReadOnlyList<string>` | `["/health", "/swagger"]` | Request paths that skip rate limiting. A path matches when it starts with one of these segments (`PathString.StartsWithSegments`). |
+
+Validation runs in the middleware constructor and throws `ArgumentOutOfRangeException` when:
+
+- `RequestsPerSecond` is `0` or negative;
+- `WindowSizeSeconds` is `0` or negative;
+- `RetryAfterSeconds` is negative.
+
+`GlobalRequestsPerSecond` is **not** checked by the constructor. A zero or negative value is accepted and causes every request to be rejected with `503` while `EnableGlobalLimit` is `true`. `RateLimitingOptionsExtensions.Validate(this RateLimitingOptions)` checks these cases too, but nothing in `src/` calls it, so call it yourself if you need that check.
+
+### Client identification
+
+The client key is the first value of the `X-Forwarded-For` header when present, otherwise `Connection.RemoteIpAddress`, otherwise `"unknown"`. The header is trusted without checking that the request came through a proxy. A client that can reach the bridge directly can send any `X-Forwarded-For` value and get a fresh limit each time. Set this header only at a trusted proxy, or remove it there.
+
+### Responses
+
+Each request is checked in this order:
+
+1. **Exempt path.** Passed through without any check.
+2. **Per-client limit.** If the client is over `RequestsPerSecond * WindowSizeSeconds`, the response is:
+   - Status `429 Too Many Requests`.
+   - Header `Retry-After: <RetryAfterSeconds>`.
+   - Content type `application/json`, with the body:
+
+   ```json
+   {
+     "error": "Rate Limit Exceeded",
+     "message": "Too many requests. Maximum 100 requests per 1 seconds allowed",
+     "retryAfter": 60,
+     "timestamp": "2026-10-25T12:00:00Z"
+   }
+   ```
+
+3. **Global limit** (only when `EnableGlobalLimit` is `true`). If the total across all clients is over `GlobalRequestsPerSecond * WindowSizeSeconds`, the response is:
+   - Status `503 Service Unavailable`, **not** `429`.
+   - No `Retry-After` header. The body has `retryAfter` with the same value as `RetryAfterSeconds`.
+   - Body `error` is `"Service Overloaded"`.
+
+Only the per-client limit produces `429`. Code that backs off on `429` alone will not back off on a global `503`, so handle both if you need to.
+
+Caveats:
+
+- **A request rejected by the global limit still counts against its client.** The per-client check records the request before the global check runs, so the client's own window also fills up.
+- **The global total is the sum of all clients' windows.** It walks every tracked client on each request, so cost grows with the number of distinct client keys.
+- **Rejections are logged as warnings.** Each per-client `429` writes a warning with the client IP and path. Each global `503` writes a warning without a client identifier.
+- **Process-local state.** Counters live in memory. With several bridge instances behind a load balancer, each instance enforces its own limits.
 
 ## License
 
