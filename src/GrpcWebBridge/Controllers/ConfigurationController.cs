@@ -33,11 +33,16 @@ public class ConfigurationController : ControllerBase
     /// <param name="options">The bridge configuration options.</param>
     /// <param name="serviceRegistry">The registry of configured services.</param>
     /// <param name="logger">The logger for configuration operations.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="options"/>, <paramref name="serviceRegistry"/> or <paramref name="logger"/> is <see langword="null"/>.</exception>
     public ConfigurationController(
         GrpcWebBridgeOptions options,
         ServiceRegistry serviceRegistry,
         ILogger<ConfigurationController> logger)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(serviceRegistry);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _options = options;
         _serviceRegistry = serviceRegistry;
         _logger = logger;
