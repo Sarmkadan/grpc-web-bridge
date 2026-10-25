@@ -15,8 +15,19 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Regression tests guarding against unbounded memory growth in <see cref="EventBus"/>
+/// (event history) and <see cref="RequestContextManager"/> (active request contexts).
+/// Each test drives a long-running or high-volume scenario and asserts that the
+/// retained state stays bounded or is released once the work is complete.
+/// </summary>
 public sealed class MemoryLeakTests
 {
+    /// <summary>
+    /// Guards against the event history of <see cref="EventBus"/> growing without limit
+    /// when a large volume of events (100k) is published. Without the count-based cap
+    /// (<c>maxHistorySize</c>), every published event would remain referenced forever.
+    /// </summary>
     [Fact]
     public async Task EventBus_MemoryDoesNotGrow_With100kEvents()
     {
@@ -44,6 +55,11 @@ public sealed class MemoryLeakTests
         eventBus.Dispose();
     }
 
+    /// <summary>
+    /// Guards against the event history of <see cref="EventBus"/> retaining stale events
+    /// indefinitely. Events older than <c>maxHistoryAge</c> must be trimmed on publish, so
+    /// a steady stream of events spread over time cannot accumulate in memory.
+    /// </summary>
     [Fact]
     public async Task EventBus_MemoryDoesNotGrow_WithOldEvents()
     {
@@ -72,6 +88,12 @@ public sealed class MemoryLeakTests
         eventBus.Dispose();
     }
 
+    /// <summary>
+    /// Guards against per-request context leaks in <see cref="RequestContextManager"/>.
+    /// If each request creates a context and completes without clearing it, the active
+    /// context registry would grow with every request (100k here). After every request
+    /// is cleared, no active contexts may remain.
+    /// </summary>
     [Fact]
     public async Task RequestContextManager_MemoryDoesNotGrow_With100kRequests()
     {
@@ -103,6 +125,12 @@ public sealed class MemoryLeakTests
         manager.Dispose();
     }
 
+    /// <summary>
+    /// Guards against the active context registry of <see cref="RequestContextManager"/>
+    /// losing or failing to track live contexts. It verifies that concurrent contexts are
+    /// registered, that <c>Clear()</c> removes only the current context, and that
+    /// <c>TryRemoveContext</c> releases the remaining entry, so the registry drains to empty.
+    /// </summary>
     [Fact]
     public async Task RequestContextManager_ContextRegistryTracksActiveContexts()
     {
@@ -135,6 +163,12 @@ public sealed class MemoryLeakTests
         manager.Dispose();
     }
 
+    /// <summary>
+    /// Guards against orphaned contexts, i.e. contexts created for requests that never
+    /// call <c>Clear()</c>, staying in the registry forever. The test verifies that they
+    /// are still tracked (so they can be found) and that <c>TryRemoveContext</c> can
+    /// evict each one by request id, leaving the registry empty.
+    /// </summary>
     [Fact]
     public async Task RequestContextManager_OrphanedContextsCanBeCleanedUp()
     {
