@@ -54,6 +54,7 @@
 - [StreamUtility, JsonUtility, CacheUtility](#streamutility-jsonutility-cacheutility)
 - [HealthCheckWorker](#healthcheckworker)
 - [MetricsCollectionWorker](#metricscollectionworker)
+- [StreamingWorkerSupervisor](#streamingworkersupervisor)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3660,6 +3661,130 @@ This works only when the worker is registered as a singleton, as in the registra
 - `ToString()` on the worker reads `_currentSnapshot`, which is set once in the constructor and never updated. It shows the construction time and zeros, not the latest collection. Use `GetSnapshotHistory()` for current values.
 - `GetAggregatedMetrics` and the history queue are the only way to read samples. Nothing is persisted, so history is lost on restart.
 - The request counters come from static fields in `MetricsController`. Their values reflect the whole process, not just this worker.
+
+## StreamingWorkerSupervisor
+
+`GrpcWebBridge.BackgroundWorkers.StreamingWorkerSupervisor` is a `BackgroundService` that watches the load on `StreamingService`, counts consecutive unhealthy checks, and runs a restart step when the failure limit or the heartbeat timeout is reached. It publishes a `StreamingWorkerHealthChangedEvent` on health changes and a `StreamingWorkerRestartedEvent` on every restart. It is declared in `src/GrpcWebBridge/BackgroundWorkers/StreamingWorkerSupervisor.cs`, together with `StreamingWorkerSupervisorOptions` and the two event types.
+
+`AddGrpcWebBridge` already registers the supervisor as a hosted service (`services.AddHostedService<StreamingWorkerSupervisor>()`). Its constructor needs an `EventBus`, which only `AddBidirectionalStreaming` registers, so call that method as well. The constructor takes `ILogger<StreamingWorkerSupervisor>`, `StreamingService`, `EventBus`, and an optional `StreamingWorkerSupervisorOptions`. The options are not registered in DI by default, so the supervisor uses `new StreamingWorkerSupervisorOptions()`. To change them, register an instance before the host starts:
+
+```csharp
+builder.Services.AddSingleton(new StreamingWorkerSupervisorOptions
+{
+    MonitoringIntervalSeconds = 5,
+    MaxConsecutiveFailures = 5
+});
+```
+
+### StreamingWorkerSupervisorOptions
+
+| Property | Default | Meaning |
+|---|---|---|
+| `MonitoringIntervalSeconds` | `10` (`DefaultMonitoringIntervalSeconds`) | Delay between the end of one check and the start of the next. |
+| `MaxConsecutiveFailures` | `3` (`DefaultMaxConsecutiveFailures`) | Consecutive unhealthy checks that trigger a restart step. |
+| `HeartbeatTimeoutSeconds` | `60` (`DefaultHeartbeatTimeoutSeconds`) | Gap since the previous check after which an unhealthy check also triggers a restart step. |
+| `InitialDelaySeconds` | `15` (`DefaultInitialDelaySeconds`) | Pause after the supervisor starts, before the first check. |
+| `ErrorDelaySeconds` | `5` (`DefaultErrorDelaySeconds`) | Pause after an unexpected exception in a check, before the loop continues. |
+| `RestartDelayMs` | `100` (`DefaultRestartDelayMs`) | Pause after a restart step completes. |
+
+The options are plain mutable properties. Unlike `HealthCheckOptions`, there is no `Validate()` method, so zero or negative values are accepted as they are.
+
+### Health check
+
+Each cycle calls `CheckStreamingServiceHealth`, which reads `StreamingService.ActiveStreamCount`:
+
+- With no active streams, the service is healthy (idle).
+- With active streams below `Constants.Streaming.MaxStreamCount` (10000), the service is healthy.
+- With active streams at or above `MaxStreamCount`, the service is unhealthy. Any exception while reading the count also counts as unhealthy.
+
+The check looks only at stream count. It does not probe the gRPC backends or the streams themselves.
+
+### Restart policy
+
+Each cycle runs in this order:
+
+1. **Healthy.** The failure count goes to `0` and `LastHealthyTime` is updated. If the count was above `0` before this cycle, the supervisor logs a recovery and publishes `StreamingWorkerHealthChangedEvent` with `IsHealthy = true`.
+2. **Unhealthy.** The failure count goes up by one, a warning is logged, and `StreamingWorkerHealthChangedEvent` is published with `IsHealthy = false`. Then the restart step runs if either condition holds:
+   - `ConsecutiveFailureCount >= MaxConsecutiveFailures`, or
+   - `LastHeartbeatTime` is older than `HeartbeatTimeoutSeconds`.
+3. `LastHeartbeatTime` is set to the current time at the end of every cycle.
+
+The restart step:
+
+1. Increments `TotalRestarts`.
+2. Resets `ConsecutiveFailureCount` to `0`.
+3. Logs the restart and publishes `StreamingWorkerRestartedEvent`.
+4. Waits `RestartDelayMs`.
+
+The restart is simulated. The supervisor does not dispose or recreate `StreamingService`, and it does not close existing streams. Only the supervisor's own counters are reset. A sustained overload therefore keeps the service at capacity, and the supervisor restarts again every `MaxConsecutiveFailures` cycles. Each restart publishes another event.
+
+The heartbeat check is evaluated only in the unhealthy branch. It compares the previous cycle's `LastHeartbeatTime` with the current time. Because that value is refreshed every cycle, the gap is normally about `MonitoringIntervalSeconds`. With the defaults, the heartbeat limit is reached only when cycles are delayed by more than 60 seconds.
+
+Any other exception in a cycle is logged, and the loop waits `ErrorDelaySeconds` before continuing. Cancellation ends the loop.
+
+### StreamingWorkerHealthChangedEvent
+
+`StreamingWorkerHealthChangedEvent` derives from `EventBase`. The supervisor sets `Source` to `"StreamingWorkerSupervisor"`.
+
+| Property | Type | Value |
+|---|---|---|
+| `IsHealthy` | `bool` | `false` for an unhealthy check, `true` for the recovery after failures. |
+| `ConsecutiveFailures` | `int` | The failure count when the event is published. |
+| `TotalRestarts` | `int` | The restart count so far. |
+| `ActiveStreamCount` | `int` | `StreamingService.ActiveStreamCount` at publish time. |
+| `MaxStreamCapacity` | `int` | `Constants.Streaming.MaxStreamCount`. |
+| `Timestamp` | `DateTime` | UTC time of publication. |
+
+The event is published on every unhealthy check, so a sustained overload produces one event per cycle. A healthy check publishes only when it ends a failure streak. Healthy checks with no preceding failures are silent.
+
+### StreamingWorkerRestartedEvent
+
+`StreamingWorkerRestartedEvent` derives from `EventBase`, with `Source` set to `"StreamingWorkerSupervisor"`.
+
+| Property | Type | Value |
+|---|---|---|
+| `ConsecutiveFailuresBeforeRestart` | `int` | See the caveat below. |
+| `TotalRestarts` | `int` | The restart count, including this restart. |
+| `ActiveStreamCount` | `int` | `StreamingService.ActiveStreamCount` at restart time. |
+| `Timestamp` | `DateTime` | UTC time of publication. |
+
+Subscribe to both events through the `EventBus`:
+
+```csharp
+using GrpcWebBridge.BackgroundWorkers;
+
+eventBus.Subscribe<StreamingWorkerHealthChangedEvent>(evt =>
+{
+    Console.WriteLine($"Streaming healthy={evt.IsHealthy}, failures={evt.ConsecutiveFailures}, streams={evt.ActiveStreamCount}/{evt.MaxStreamCapacity}");
+});
+
+eventBus.Subscribe<StreamingWorkerRestartedEvent>(evt =>
+{
+    Console.WriteLine($"Streaming restart #{evt.TotalRestarts} with {evt.ActiveStreamCount} active streams");
+});
+```
+
+Publish errors are caught and logged, so a failing handler does not stop the monitoring loop. Handlers run inline or from the async queue depending on `DispatchOptions`, as described in [EventBus](#eventbus).
+
+### Statistics
+
+`GetStatistics()` returns an anonymous object with these fields: `isRunning`, `consecutiveFailureCount`, `totalRestarts`, `maxConsecutiveFailures`, `monitoringInterval`, `heartbeatTimeout`, `lastHealthyTime` and `lastHeartbeatTime` (ISO 8601 `"o"` strings, or `null`), `activeStreamCount`, and `maxStreamCapacity`. The same values are available as the public properties `IsRunning`, `ConsecutiveFailureCount`, `TotalRestarts`, `LastHealthyTime`, and `LastHeartbeatTime`.
+
+`AddHostedService<T>()` does not make the supervisor resolvable by type. To read these values from application code, register it as a singleton as well:
+
+```csharp
+builder.Services.AddSingleton<StreamingWorkerSupervisor>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<StreamingWorkerSupervisor>());
+```
+
+### Caveats
+
+- The restart is simulated, as described above. It does not free stream capacity or recreate `StreamingService`.
+- `ConsecutiveFailuresBeforeRestart` is always `0`. The counter is reset before the restarted event is built, so the event never shows the failures that led to the restart.
+- The recovery event reports `ConsecutiveFailures = 0`, and its log line says "recovered after 0 consecutive failures". The counter is reset before the event is built.
+- After a restart the failure count is `0`. The next healthy check therefore publishes no recovery event.
+- `RestartDelayMs` is awaited with `CancellationToken.None`, so host shutdown can wait up to that long after a restart.
+- The counters are plain `int` and `DateTime?` fields with no locking. Read the statistics for monitoring only.
 
 ## License
 
