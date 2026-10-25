@@ -317,4 +317,13 @@ public sealed class MetricsCollectionOptions
     /// The error rate percentage threshold for triggering alerts.
     /// </summary>
     public double ErrorRateAlertThresholdPercent { get; set; } = 5;
+
+    /// <summary>
+    /// Returns a string representation of the metrics collection options.
+    /// </summary>
+    /// <returns>A string containing all option values.</returns>
+    public override string ToString()
+    {
+        return $"MetricsCollectionOptions {{ CollectionIntervalSeconds = {CollectionIntervalSeconds}, MaxSnapshotsToKeep = {MaxSnapshotsToKeep}, CpuAlertThresholdPercent = {CpuAlertThresholdPercent}, MemoryAlertThresholdMb = {MemoryAlertThresholdMb}, ErrorRateAlertThresholdPercent = {ErrorRateAlertThresholdPercent} }}";
+    }
 }
