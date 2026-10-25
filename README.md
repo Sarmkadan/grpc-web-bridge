@@ -36,6 +36,7 @@
 - [StreamDiagnosticsController](#streamdiagnosticscontroller)
 - [RateLimitingMiddleware](#ratelimitingmiddleware)
 - [MaxBodySizeMiddleware](#maxbodysizemiddleware)
+- [ContentTypeValidationMiddleware](#contenttypevalidationmiddleware)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1826,6 +1827,78 @@ When `Content-Length` is greater than the limit, the middleware does not call th
 ```
 
 The `traceId` value is `HttpContext.TraceIdentifier`. Each rejection is logged as a warning that includes the path, the declared size, and the limit. The body is not read, so no request data is buffered.
+
+## ContentTypeValidationMiddleware
+
+`src/GrpcWebBridge/Middleware/ContentTypeValidationMiddleware.cs` rejects `POST` requests whose `Content-Type` is not a gRPC media type. It runs before routing, so a rejected request never reaches a controller or the gRPC-Web translation layer. It is registered by default in `Program.cs`.
+
+### Accepted content types
+
+The media type is compared case-insensitively, and any parameters (for example `; charset=utf-8`) are ignored. These six media types are accepted:
+
+| Media type | Encoding |
+|------------|----------|
+| `application/grpc-web` | Binary gRPC-Web frames |
+| `application/grpc-web+proto` | Binary gRPC-Web frames, protobuf payload |
+| `application/grpc-web-text` | Base64-encoded gRPC-Web frames |
+| `application/grpc-web-text+proto` | Base64-encoded gRPC-Web frames, protobuf payload |
+| `application/grpc` | Native gRPC framing |
+| `application/grpc+proto` | Native gRPC framing, protobuf payload |
+
+A missing or blank `Content-Type` header is rejected.
+
+### Which requests are checked
+
+Only requests that meet both conditions are validated:
+
+- The method is `POST`. Other methods (`GET`, `PUT`, `DELETE`, and so on) pass through unchanged.
+- The path does not start with one of these prefixes. The comparison is case-insensitive.
+
+| Excluded prefix | Typical use |
+|-----------------|-------------|
+| `/api` | REST endpoints such as `/api/bridge/invoke`, `/api/configuration` |
+| `/swagger` | Swagger UI |
+| `/openapi` | OpenAPI document |
+| `/health` | Health checks |
+| `/metrics` | Prometheus metrics |
+| `/_` | Framework and internal paths |
+
+The prefix list is a private constant. To change it, edit the source file.
+
+### 415 response
+
+When a checked request has an unsupported or missing `Content-Type`, the middleware does not call the next component. It writes this response:
+
+- Status `415 Unsupported Media Type`.
+- Content type `application/json`, with a body shaped like this:
+
+```json
+{
+  "error": "Unsupported Media Type",
+  "message": "Content-Type 'text/plain' is not supported. Use one of: application/grpc-web, application/grpc-web+proto, application/grpc-web-text, application/grpc-web-text+proto.",
+  "path": "/grpc.health.v1.Health/Check",
+  "traceId": "0HN1ABCDEF123:00000002"
+}
+```
+
+- `message` names the rejected value. A missing header is shown as `(none)`. It also lists four example types. The middleware accepts the two extra `application/grpc` and `application/grpc+proto` types as well, so the list in the message is not the complete set.
+- `path` is the request path.
+- `traceId` is `HttpContext.TraceIdentifier`.
+
+Each rejection is logged as a warning with the path and the received content type. The body is not read.
+
+### Registration
+
+`UseGrpcWebContentTypeValidation()` is an `IApplicationBuilder` extension in `ContentTypeValidationMiddlewareExtensions`. The middleware has no options and needs no service registration. In `Program.cs` it sits directly after the error handler:
+
+```csharp
+app.UseErrorHandling();
+app.UseGrpcWebContentTypeValidation();
+app.UseRequestLogging();
+app.UseRouting();
+```
+
+Keep it after `UseErrorHandling()` so that exceptions thrown by the rest of the pipeline still become JSON error responses. Keep it before `UseRouting()` so that invalid requests are rejected before routing runs.
 
 ## License
 
