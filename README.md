@@ -35,6 +35,7 @@
 - [ConfigurationController](#configurationcontroller)
 - [StreamDiagnosticsController](#streamdiagnosticscontroller)
 - [RateLimitingMiddleware](#ratelimitingmiddleware)
+- [MaxBodySizeMiddleware](#maxbodysizemiddleware)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1770,6 +1771,61 @@ Caveats:
 - **The global total is the sum of all clients' windows.** It walks every tracked client on each request, so cost grows with the number of distinct client keys.
 - **Rejections are logged as warnings.** Each per-client `429` writes a warning with the client IP and path. Each global `503` writes a warning without a client identifier.
 - **Process-local state.** Counters live in memory. With several bridge instances behind a load balancer, each instance enforces its own limits.
+
+## MaxBodySizeMiddleware
+
+`src/GrpcWebBridge/Middleware/MaxBodySizeMiddleware.cs` rejects requests whose declared body is larger than a configured limit. It checks the `Content-Length` header only, before the request reaches routing or any endpoint. It is **opt-in**: nothing in `Program.cs` adds it, so call `UseMaxRequestBodySize()` to enable it.
+
+The check runs only when `Content-Length` is present. A request without that header (for example, a chunked upload) is passed through without a size check. Kestrel's own request body limit still applies to such requests, and this middleware does not replace it.
+
+### MaxBodySizeOptions
+
+`MaxBodySizeOptions` is a plain class with one settable property. Its default is also exposed as the `public const` `MaxBodySizeOptions.DefaultMaxRequestBodySizeBytes`.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `MaxRequestBodySizeBytes` | long | `4194304` (4 MiB) | Largest accepted `Content-Length`, in bytes. A request is rejected when its `Content-Length` is greater than this value. |
+
+The middleware reads the options through `IOptions<MaxBodySizeOptions>`. Without any configuration, the 4 MiB default applies. To change the limit, register the options in `Program.cs` before `builder.Build()`:
+
+```csharp
+builder.Services.Configure<MaxBodySizeOptions>(options =>
+{
+    options.MaxRequestBodySizeBytes = 1 * 1024 * 1024;
+});
+```
+
+`MaxBodySizeOptionsExtensions` provides two helpers:
+
+- `Validate()` throws `ArgumentOutOfRangeException` when `MaxRequestBodySizeBytes` is zero or negative. Nothing in `src/` calls it, so call it yourself if you want that check.
+- `Clone()` returns a detached copy of the options.
+
+### Enabling it
+
+`UseMaxRequestBodySize` is an `IApplicationBuilder` extension in `MaxBodySizeMiddlewareExtensions`. Place it early in the pipeline, before `UseRouting()`, so oversized requests are rejected before any further processing:
+
+```csharp
+app.UseMaxRequestBodySize();
+app.UseRouting();
+```
+
+### 413 response
+
+When `Content-Length` is greater than the limit, the middleware does not call the next component. It writes this response:
+
+- Status `413 Payload Too Large`.
+- Content type `application/json`, with a body shaped like this:
+
+```json
+{
+  "error": "Payload Too Large",
+  "message": "Request body size 5242880 exceeds the maximum allowed 4194304 bytes.",
+  "path": "/api/bridge/invoke",
+  "traceId": "0HN1ABCDEF123:00000001"
+}
+```
+
+The `traceId` value is `HttpContext.TraceIdentifier`. Each rejection is logged as a warning that includes the path, the declared size, and the limit. The body is not read, so no request data is buffered.
 
 ## License
 
