@@ -58,6 +58,7 @@
 - [StreamingWorkerSupervisor](#streamingworkersupervisor)
 - [GrpcConnectionManager](#grpcconnectionmanager)
 - [ServiceRepository](#servicerepository)
+- [Misc Extensions (EnumExtensions, ServiceExtensions, HttpContextGrpcExtensions)](#misc-extensions-enumextensions-serviceextensions-httpcontextgrpcextensions)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -4047,6 +4048,93 @@ The lock does not protect the objects that are returned:
 The methods are declared `async`, but they contain no `await`, so each one completes synchronously. The `CancellationToken` parameters are accepted and never checked, so cancelling a token has no effect on these methods.
 
 Logging uses `Information` for add, update, and delete of services, and `Debug` for stored requests and responses.
+
+## Misc Extensions (EnumExtensions, ServiceExtensions, HttpContextGrpcExtensions)
+
+Three small extension-method files. They use only the BCL and ASP.NET Core types the project already references.
+
+- `EnumExtensions` (`src/GrpcWebBridge/Domain/EnumExtensions.cs`, namespace `GrpcWebBridge.Domain`) adds display strings, a display-aware `TryParse`, and `IsDefined` to any enum.
+- `ServiceExtensions` (`src/GrpcWebBridge/Extensions/ServiceExtensions.cs`, namespace `GrpcWebBridge.Extensions`) adds safe registration helpers, gRPC status mapping, and `GetHealthSummary`. It also defines the public `ServiceHealthSummary` class.
+- `HttpContextGrpcExtensions` (`src/GrpcWebBridge/Extensions/HttpContextGrpcExtensions.cs`, namespace `GrpcWebBridge.Extensions`) detects gRPC-Web requests and reads the gRPC method path from an `HttpContext`.
+
+### EnumExtensions
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+using GrpcWebBridge.Domain;
+
+public enum PlanTier
+{
+    [Display(Name = "Gold Plan")]
+    Gold,
+    Silver
+}
+
+string label = PlanTier.Gold.ToDisplayString();                            // "Gold Plan"
+string plain = PlanTier.Silver.ToDisplayString();                          // "Silver"
+bool ok = "gold plan".TryParse<PlanTier>(out var tier);                    // true, tier == PlanTier.Gold
+IReadOnlyList<string> all = EnumExtensions.GetDisplayStrings<PlanTier>(); // ["Gold Plan", "Silver"]
+bool defined = ((PlanTier)42).IsDefined();                                 // false
+```
+
+Caveats:
+
+- `TryParse` calls `Enum.TryParse` first, which also accepts numbers. A string such as `"99"` returns `true` with an undefined value. Call `IsDefined()` on the result if you need to reject those.
+- `TryParse` returns `false` for `null`, empty, or whitespace input. It matches `DisplayAttribute.Name` case-insensitively, and only after the plain member-name parse fails.
+- `ToDisplayString` reads only `DisplayAttribute.Name`. A combined flags value has no field of its own, so it returns the `ToString()` text such as `"A, B"`.
+
+### ServiceExtensions
+
+```csharp
+using GrpcWebBridge.Data;
+using GrpcWebBridge.Domain;
+using GrpcWebBridge.Domain.Models;
+using GrpcWebBridge.Extensions;
+using GrpcWebBridge.Services;
+
+// Validates the service, then adds it to the repository. Returns false instead of throwing.
+bool registered = await repository.TryRegisterServiceAsync(service);
+
+// Returns false when the method fails validation or the service rejects it.
+bool methodAdded = service.TryAddMethod(method);
+
+int httpStatus = GrpcStatusCode.NotFound.ToHttpStatusCode();   // 404
+string message = GrpcStatusCode.NotFound.GetStatusMessage();   // "Resource not found"
+
+ServiceHealthSummary summary = registry.GetHealthSummary(streaming);
+Console.WriteLine($"{summary.HealthyServices}/{summary.TotalServices} healthy, {summary.ActiveStreams} active streams");
+```
+
+Caveats:
+
+- `TryRegisterServiceAsync` and `TryAddMethod` catch every exception and return `false`. The reason is lost. Call `Validate()` yourself first if you need the message.
+- `ToGrpcResponse` maps exceptions to status codes in this order: `ArgumentException` (including `ArgumentNullException`) to `InvalidArgument`, `TimeoutException` to `DeadlineExceeded`, `InvalidOperationException` to `FailedPrecondition`, `OperationCanceledException` to `Cancelled`, and anything else to `Internal`. It sends `exception.Message` to the client unchanged, so do not use it for exceptions that carry internal details.
+- `StreamState` has its own `ToDisplayString` in this file. It returns `"Initializing"` for `StreamState.New`, while the `EnumExtensions` version returns `"New"`. The `StreamState` overload is chosen because it is more specific than `Enum`.
+- `GetHealthSummary` counts a service as unhealthy when its status is anything other than `ServiceStatus.Serving`.
+
+### HttpContextGrpcExtensions
+
+```csharp
+using GrpcWebBridge.Extensions;
+
+app.Use(async (context, next) =>
+{
+    if (context.IsGrpcWebRequest() && context.TryGetGrpcMethodPath(out var path))
+    {
+        var encoding = context.IsGrpcWebTextRequest() ? "grpc-web-text" : "grpc-web";
+        app.Logger.LogInformation("gRPC-Web {Encoding} call to {Path}", encoding, path);
+    }
+
+    await next();
+});
+```
+
+Caveats:
+
+- `IsGrpcWebRequest` compares the media type with exact, case-insensitive equality against six values. Despite the name `_validContentTypePrefixes`, it is not a prefix match, so `application/grpc-web+json` returns `false`.
+- `IsGrpcWebRequest` also returns `true` for plain `application/grpc`, which is native gRPC over HTTP/2 and not gRPC-Web. Check the protocol separately if you need to tell them apart.
+- `IsGrpcWebTextRequest` and `TryGetGrpcMethodPath` throw `ArgumentNullException` for a null `context`. `IsGrpcWebRequest` and `GetGrpcMethodPath` do not check, so a null `context` throws `NullReferenceException` there.
+- `GetGrpcMethodPath` returns the raw request path with its leading slash, such as `/shop.v1.Catalog/GetItem`. It does not check that the path is a gRPC method.
 
 ## License
 
