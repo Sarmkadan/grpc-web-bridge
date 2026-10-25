@@ -706,6 +706,15 @@ public sealed class ServiceRegisteredEvent : EventBase
     /// Gets or sets the service endpoint.
     /// </summary>
     public string Endpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Returns a string representation of the service registered event.
+    /// </summary>
+    /// <returns>A string containing ServiceId, ServiceName and Endpoint.</returns>
+    public override string ToString()
+    {
+        return $"ServiceRegisteredEvent: ServiceId: {ServiceId}, ServiceName: {ServiceName}, Endpoint: {Endpoint}";
+    }
 }
 
 /// <summary>
@@ -721,6 +730,15 @@ public sealed class ServiceUnregisteredEvent : EventBase
     /// Gets or sets the service name.
     /// </summary>
     public string ServiceName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Returns a string representation of the service unregistered event.
+    /// </summary>
+    /// <returns>A string containing ServiceId and ServiceName.</returns>
+    public override string ToString()
+    {
+        return $"ServiceUnregisteredEvent: ServiceId: {ServiceId}, ServiceName: {ServiceName}";
+    }
 }
 
 /// <summary>
@@ -747,6 +765,15 @@ public sealed class MethodInvokedEvent : EventBase
     /// Gets or sets a value indicating whether the method invocation was successful.
     /// </summary>
     public bool Success { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the method invoked event.
+    /// </summary>
+    /// <returns>A string containing ServiceId, MethodName, DurationMs and Success.</returns>
+    public override string ToString()
+    {
+        return $"MethodInvokedEvent: ServiceId: {ServiceId}, MethodName: {MethodName}, DurationMs: {DurationMs}, Success: {Success}";
+    }
 }
 
 /// <summary>
