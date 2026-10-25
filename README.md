@@ -31,6 +31,7 @@
 - [CacheManager](#cachemanager)
 - [BridgeController](#bridgecontroller)
 - [MetricsController](#metricscontroller)
+- [HealthCheckController](#healthcheckcontroller)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1423,6 +1424,102 @@ Example:
 
 ```bash
 curl -s -X POST "$BRIDGE_URL/api/metrics/reset"
+```
+
+## HealthCheckController
+
+`src/GrpcWebBridge/Controllers/HealthCheckController.cs` is mounted at `api/health` (`[Route("api/health")]`) and produces `application/json`. It exposes six endpoints:
+
+| Verb | Route | Purpose |
+|------|-------|---------|
+| GET | `/api/health` | Overall health for load balancers. Returns `200` or `503` (see below) |
+| GET | `/api/health/detailed` | System, process, service, streaming and GC diagnostics |
+| GET | `/api/health/services` | Per-service status with a summary of healthy and unhealthy counts |
+| GET | `/api/health/resources` | Memory, CPU time, thread and GC counters |
+| GET | `/api/health/ready` | Readiness: `200` once at least one service is `Serving`, otherwise `503` |
+| GET | `/api/health/alive` | Liveness: always `200` while the process can respond |
+
+Caveats:
+
+- **Service health counts only `Serving`.** A service is healthy when its `Status` is `ServiceStatus.Serving`. Every other status, including `Unknown`, counts as unhealthy.
+- **Stream capacity is a fixed constant.** `utilizationPercent` and `maxStreams` use the controller's private constant `10000`. They do not read the configured stream limit.
+- **Counters are per process.** `alive.uptime` and the diagnostics uptime are measured from a static start time that is set when the controller type is first loaded. Restarts reset them.
+- **No authorization attribute.** The controller has no `[Authorize]`, so every endpoint is open to any caller that can reach the bridge. `detailed` and `resources` expose process and host details, so restrict them at the gateway or network level.
+
+### GET /api/health
+
+Load-balancer check. The response is not wrapped in `data`. Fields are at the top level, and the counts sit under `metrics`.
+
+Healthy rules:
+
+- With no registered services, the bridge is healthy.
+- With registered services, it is healthy when `healthyServices >= totalServices * 0.8` (at least 80% are `Serving`).
+
+Responses:
+
+| Code | Condition | Body |
+|------|-----------|------|
+| `200 OK` | Healthy by the rule above | `success: true`, `healthy: true`, `status: "healthy"` |
+| `503 Service Unavailable` | Fewer than 80% of services are `Serving` | Same shape, with `healthy: false` and `status: "degraded"` |
+| `503 Service Unavailable` | Unexpected exception while reading the registry | `FormatError` payload (`error: "Health Check Failed"`, `message: "Unable to determine system health"`). No `metrics` field |
+
+Fields under `metrics` on the success and degraded responses:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `metrics.totalServices` | int | Number of registered services |
+| `metrics.healthyServices` | int | Services with `Status == Serving` |
+| `metrics.unhealthyServices` | int | `totalServices - healthyServices` |
+| `metrics.healthPercentage` | double | `healthyServices / totalServices * 100`, rounded to two decimals. `100` when there are no services |
+
+Also present: `timestamp` (UTC) and `warnings` (null).
+
+Example, with 4 of 5 services serving (`80%`, so `200`):
+
+```json
+{
+  "success": true,
+  "healthy": true,
+  "status": "healthy",
+  "metrics": {
+    "totalServices": 5,
+    "healthyServices": 4,
+    "unhealthyServices": 1,
+    "healthPercentage": 80
+  },
+  "warnings": null,
+  "timestamp": "2026-10-25T12:00:00Z"
+}
+```
+
+With 3 of 5 serving (`60%`), the same endpoint returns `503` with `"healthy": false` and `"status": "degraded"`.
+
+### GET /api/health/detailed
+
+Success (`200 OK`). Every field sits under `data`. On exception it returns `500` with `{ "error": "Diagnostics Failed" }`.
+
+The streaming block is the only place `utilizationPercent` appears:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.streaming.activeStreams` | int | Streams currently open in `StreamingService` |
+| `data.streaming.maxStreams` | int | Fixed `10000` |
+| `data.streaming.utilizationPercent` | double | `activeStreams / maxStreams * 100`, rounded to two decimals. Can exceed `100` if more than `10000` streams are open |
+
+The other blocks are `data.uptime`, `data.system`, `data.services` (with per-service `details`) and `data.gcMetrics`.
+
+### Other endpoints
+
+- `GET /api/health/services` returns `data.summary` (`totalServices`, `healthyServices`, `unhealthyServices`) and `data.services`. Each item has `status`, `isHealthy`, `endpoint`, `port`, `lastUpdated` and `methodCount`. On exception it returns `500`.
+- `GET /api/health/resources` returns `data.memory`, `data.processor` (`cpuUsagePercent` is total processor time in seconds, not a percentage) and `data.gc`. On exception it returns `500`.
+- `GET /api/health/ready` returns `{ "ready": true, "reason": "...", "servicesAvailable": n }` with `200`. It returns `503` with the same shape and `ready: false` when no service is `Serving`. On exception it returns `503` with `{ "ready": false, "reason": "Unable to determine readiness" }`.
+- `GET /api/health/alive` always returns `200` with `{ "alive": true, "timestamp": "...", "uptime": <seconds> }`. It does not check services.
+
+Example:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" "$BRIDGE_URL/api/health"
+curl -s "$BRIDGE_URL/api/health/detailed" | jq '.data.streaming'
 ```
 
 ## License
