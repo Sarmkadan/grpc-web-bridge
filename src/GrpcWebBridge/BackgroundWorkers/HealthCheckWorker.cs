@@ -32,12 +32,17 @@ public sealed class HealthCheckWorker : BackgroundService
     /// <param name="serviceRegistry">The service registry instance.</param>
     /// <param name="eventBus">The event bus instance.</param>
     /// <param name="options">The health check options. If null, default options are used.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/>, <paramref name="serviceRegistry"/> or <paramref name="eventBus"/> is <see langword="null"/>.</exception>
     public HealthCheckWorker(
         ILogger<HealthCheckWorker> logger,
         ServiceRegistry serviceRegistry,
         EventBus eventBus,
         HealthCheckOptions? options = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(serviceRegistry);
+        ArgumentNullException.ThrowIfNull(eventBus);
+
         _logger = logger;
         _serviceRegistry = serviceRegistry;
         _eventBus = eventBus;
