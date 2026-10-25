@@ -9,6 +9,9 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="StreamCleanupWorker"/> covering option defaults, custom option handling and initial statistics.
+/// </summary>
 public class StreamCleanupWorkerTests
 {
     private readonly ILogger<StreamCleanupWorker> _loggerMock;
@@ -21,6 +24,9 @@ public class StreamCleanupWorkerTests
         _streamingServiceMock = new StreamingService(streamingServiceLoggerMock);
     }
 
+    /// <summary>
+    /// Verifies that passing null options makes the worker fall back to default cleanup settings and zeroed statistics.
+    /// </summary>
     [Fact]
     public void Constructor_WithNullOptions_UsesDefaultOptions()
     {
@@ -45,6 +51,9 @@ public class StreamCleanupWorkerTests
         stats.Should().BeEquivalentTo(expected);
     }
 
+    /// <summary>
+    /// Verifies that custom cleanup options supplied to the constructor are reflected in the worker's reported statistics.
+    /// </summary>
     [Fact]
     public void Constructor_WithCustomOptions_UsesCustomOptions()
     {
@@ -77,6 +86,9 @@ public class StreamCleanupWorkerTests
         stats.Should().BeEquivalentTo(expected);
     }
 
+    /// <summary>
+    /// Verifies that statistics reported before any cleanup run, with default options, are zeroed and show default intervals and timeouts.
+    /// </summary>
     [Fact]
     public void GetStatistics_ReturnsCorrectInitialValues_WithDefaultOptions()
     {
@@ -100,6 +112,9 @@ public class StreamCleanupWorkerTests
         stats.Should().BeEquivalentTo(expected);
     }
 
+    /// <summary>
+    /// Verifies that statistics reported before any cleanup run, with custom options, are zeroed and show the configured intervals and timeouts.
+    /// </summary>
     [Fact]
     public void GetStatistics_ReturnsCorrectInitialValues_WithCustomOptions()
     {
