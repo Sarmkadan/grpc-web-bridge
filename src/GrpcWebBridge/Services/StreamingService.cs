@@ -28,6 +28,12 @@ public sealed class StreamingService
     }
 
     /// <summary>
+    /// Returns a string representation of the service including the active stream count
+    /// </summary>
+    /// <returns>A string describing the current <see cref="ActiveStreamCount"/>.</returns>
+    public override string ToString() => $"StreamingService {{ ActiveStreamCount = {ActiveStreamCount} }}";
+
+    /// <summary>
     /// Creates a new stream and registers it
     /// </summary>
     /// <param name="streamId">Unique identifier for the stream.</param>
