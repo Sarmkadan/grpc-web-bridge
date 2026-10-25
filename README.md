@@ -38,6 +38,7 @@
 - [MaxBodySizeMiddleware](#maxbodysizemiddleware)
 - [ContentTypeValidationMiddleware](#contenttypevalidationmiddleware)
 - [RouteHeaderTransformMiddleware](#routeheadertransformmiddleware)
+- [ErrorHandlingMiddleware](#errorhandlingmiddleware)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2004,6 +2005,96 @@ The key is set only when at least one hook matches. Read it with a null check.
 - **Response transforms can fail after the response has started.** `TransformResponseAsync` runs after the next middleware returns. If the response has already started (for example, a body was streamed), changing its headers throws. That exception is caught and logged like any other hook failure.
 - **Cancellation.** Both methods receive `HttpContext.RequestAborted`. A hook that observes the token can stop early if the client disconnects.
 - **Without any hook, the middleware does nothing.** It does not inspect the request until at least one hook is registered and matches.
+
+## ErrorHandlingMiddleware
+
+`ErrorHandlingMiddleware` (`src/GrpcWebBridge/Middleware/ErrorHandlingMiddleware.cs`) is the outermost error boundary of the pipeline. It catches exceptions thrown by the rest of the pipeline, logs them, and writes an RFC 7807 `ProblemDetails` response as JSON. Register it with `app.UseErrorHandling()` as the first middleware, as `Program.cs` does.
+
+### Request flow
+
+1. The middleware logs `Processing {Method} {Path}` at Information level and calls the next component.
+2. If the pipeline completes without an exception, it logs `Finished processing {Method} {Path}`.
+3. If an exception is thrown, it logs it at Error level with the message `Unhandled exception in request pipeline`, converts it with `Exception.ToProblemDetails(HttpContext)`, and sets the response status from `ProblemDetails.Status`. The body is written with `Content-Type: application/json`.
+
+The conversion is in `src/GrpcWebBridge/Domain/Exceptions/ProblemDetailsExtensions.cs`. It uses a `switch` on the exception type, and the first matching case wins. The table below follows that order. The `ValidationException` case comes before the `GrpcWebBridgeException` case, and `ArgumentNullException` comes before `ArgumentException`, because it derives from it.
+
+### Exception to ProblemDetails mapping
+
+Every conversion starts with `type` set to `about:blank`, `title` set to `Internal Server Error`, `status` set to 500, and `detail` set to `exception.Message`. The cases below override those defaults.
+
+| Exception | HTTP status | `type` | `title` | Extra `details` keys |
+|-----------|-------------|--------|---------|----------------------|
+| `ValidationException` | 400 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1` | `Validation Failed` | `field`, `providedValue`, `validationRule`, and `errors`, each only when set |
+| `ProtocolException` | 400 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1` | `Protocol Translation Failed` | `sourceFormat`, `targetFormat` (`"unknown"` when unset) |
+| `StreamingException` | 500 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1` | `Streaming Operation Failed` | `streamId` (`"unknown"` when unset), `streamState` when set |
+| `ServiceRegistrationException` | 400 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1` | `Service Registration Failed` | `serviceName` (`"unknown"` when unset), `serviceEndpoint` when set |
+| `ConfigurationException` | 400 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1` | `Configuration Error` | `configurationKey` (`"unknown"` when unset), `configurationValue` when set |
+| `ArgumentNullException` | 400 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1` | `Invalid Request` | `paramName` |
+| `ArgumentException` | 400 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1` | `Invalid Argument` | none |
+| `GrpcWebBridgeException` | Mapped from `GrpcStatus`, otherwise 500 | `about:blank` | GRPC status title, or `Bridge Operation Failed` when `GrpcStatus` is not set | `errorCode` when set, plus every entry in `Context` |
+| `UnauthorizedAccessException` | 401 | `https://datatracker.ietf.org/doc/html/rfc7235#section-3.1` | `Unauthorized` | none |
+| `TimeoutException` | 504 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.4` | `Operation Timeout` | none |
+| `OperationCanceledException` (includes `TaskCanceledException`) | 400 | `https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.3` | `Operation Cancelled` | none |
+| Any other exception | 500 | `about:blank` | `Internal Server Error` | none |
+
+Every conversion also adds `exceptionType` to `details`, set to the full .NET type name of the exception.
+
+**`GrpcWebBridgeException` status.** When `GrpcStatus` is set, the HTTP status comes from the table in [5. gRPC status to HTTP status](#5-grpc-status-to-http-status). The subclasses above (`ValidationException`, `ProtocolException`, `StreamingException`, `ServiceRegistrationException`, `ConfigurationException`) have their own cases, so their `GrpcStatus` is ignored. For example, `ServiceRegistrationException` returns 400 even when its `GrpcStatus` is `NotFound` or `Unavailable`.
+
+### Response body
+
+The response body is the `ErrorResponse` class from the same file. Its fields are camelCase:
+
+| Field | Value |
+|-------|-------|
+| `success` | Always `false`. |
+| `type` | The `type` URI from the mapping. |
+| `title` | The `title` from the mapping. |
+| `error` | Same as `title`. Kept for backward compatibility. |
+| `status` | The HTTP status code. |
+| `detail` | The exception message, or the mapped detail text. |
+| `message` | Same as `detail`. Kept for backward compatibility. |
+| `instance` | Not set by the middleware, so it is `null`. |
+| `path` | `HttpContext.Request.Path`. |
+| `traceId` | `HttpContext.TraceIdentifier`. |
+| `timestamp` | The UTC time when the problem was created. |
+| `details` | The extension entries from the mapping. Always contains `exceptionType`. |
+
+An example for a `ValidationException` (the `instance` field is `null` and is left out):
+
+```json
+{
+  "success": false,
+  "type": "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
+  "title": "Validation Failed",
+  "error": "Validation Failed",
+  "status": 400,
+  "detail": "Value must be between 1 and 100.",
+  "message": "Value must be between 1 and 100.",
+  "path": "/api/bridge/invoke",
+  "traceId": "0HN1ABCDEF123:00000002",
+  "timestamp": "2026-10-25T10:15:30.1234567Z",
+  "details": {
+    "field": "pageSize",
+    "providedValue": 500,
+    "validationRule": "Range",
+    "errors": {
+      "pageSize": "Value must be between 1 and 100.",
+      "value": 500,
+      "rule": "Range"
+    },
+    "exceptionType": "GrpcWebBridge.Domain.Exceptions.ValidationException"
+  }
+}
+```
+
+### Caveats
+
+- **Exception messages reach the client.** `detail` is set from `exception.Message` for every exception type, including the 500 fallback. Internal messages, such as connection strings or file paths in an exception message, are returned to the caller. Keep sensitive data out of exception messages.
+- **`OperationCanceledException` is logged as an error.** The catch-all logs every exception at Error level, including cancellations such as a client that disconnected. Those requests get a 400 response, which the disconnected client does not see.
+- **The `type` URIs for 504 and 400 point at other RFC 7231 sections.** `TimeoutException` uses `section-6.6.4` and `OperationCanceledException` uses `section-6.6.3`. In RFC 7231, those sections describe 503 and 502. The URIs are copied from the code, so the table lists them as they are.
+- **If the response has already started, the middleware fails.** It sets `Response.StatusCode` before writing the body. Once the response has started, that assignment throws, and the exception leaves the middleware.
+- **`exceptionType` is always added.** The code comment says it is for debugging and not for production, but the code adds it on every response.
 
 ## License
 
