@@ -452,6 +452,14 @@ public static class HealthEndpoints
         /// Gets or sets the streaming service worker status
         /// </summary>
         public StreamingWorkerStatus? streaming_service { get; set; }
+
+        /// <summary>
+        /// Returns a short summary of the worker status summary
+        /// </summary>
+        public override string ToString()
+        {
+            return $"WorkerStatusSummary {{ streaming_service = {streaming_service} }}";
+        }
     }
 
     /// <summary>
@@ -478,6 +486,14 @@ public static class HealthEndpoints
         /// Gets or sets the worker status
         /// </summary>
         public string? status { get; set; }
+
+        /// <summary>
+        /// Returns a short summary of the streaming service worker status
+        /// </summary>
+        public override string ToString()
+        {
+            return $"StreamingWorkerStatus {{ active_stream_count = {active_stream_count}, max_stream_count = {max_stream_count}, stream_capacity = {stream_capacity}, status = {status} }}";
+        }
     }
 
     /// <summary>
@@ -504,6 +520,14 @@ public static class HealthEndpoints
         /// Gets or sets the timestamp when the status was generated
         /// </summary>
         public DateTime timestamp { get; set; }
+
+        /// <summary>
+        /// Returns a short summary of the system status
+        /// </summary>
+        public override string ToString()
+        {
+            return $"SystemStatus {{ environment = {environment}, application_name = {application_name}, version = {version}, timestamp = {timestamp:o} }}";
+        }
     }
 
     /// <summary>
