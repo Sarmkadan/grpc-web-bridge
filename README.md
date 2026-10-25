@@ -51,6 +51,7 @@
 - [CryptographyUtility](#cryptographyutility)
 - [ValidationUtility](#validationutility)
 - [ProtobufUtility and ReflectionUtility](#protobufutility-and-reflectionutility)
+- [StreamUtility, JsonUtility, CacheUtility](#streamutility-jsonutility-cacheutility)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3297,6 +3298,173 @@ if (handler is not null)
     var task = ReflectionUtility.InvokeMethod(instance!, "HandleAsync", incoming);
 }
 ```
+
+## StreamUtility, JsonUtility, CacheUtility
+
+Three static helper classes in the `GrpcWebBridge.Utilities` namespace, one per file in `src/GrpcWebBridge/Utilities/`. They use only the BCL and need no extra packages.
+
+- `StreamUtility` (`StreamUtility.cs`) copies, reads, compresses, pipes, tees and hashes streams, and retries writes.
+- `JsonUtility` (`JsonUtility.cs`) serializes and deserializes with one shared set of default options. The same file defines the public `JsonDateTimeConverter`.
+- `CacheUtility` (`CacheUtility.cs`) builds and parses cache keys and matches glob patterns. The same file defines the public `CacheStatistics` class.
+
+```csharp
+using GrpcWebBridge.Utilities;
+
+// Streams
+await StreamUtility.CopyStreamChunkedAsync(request.Body, fileStream);
+var bytes = await StreamUtility.ReadStreamToEndAsync(request.Body, maxSizeBytes: 1024 * 1024);
+
+// JSON
+var text = JsonUtility.Serialize(order);                  // camelCase, compact, nulls omitted
+var copy = JsonUtility.Deserialize<Order>(text);
+
+// Cache keys
+var key = CacheUtility.GenerateNamespacedKey("orders", "cust-42", "eu-west"); // "orders:cust-42|eu-west"
+```
+
+### StreamUtility
+
+Constants:
+
+| Constant | Value | Used by |
+|---|---|---|
+| `DefaultBufferSize` | 81,920 bytes (80 KiB) | Chunk size for copy, pipe and tee operations |
+| `DefaultMaxReadSizeBytes` | 10 MiB (10,485,760 bytes) | `ReadStreamToEndAsync`, `StreamToBase64Async` |
+| `DefaultRetryDelayMs` | 100 | `WriteWithRetryAsync` |
+
+Methods:
+
+| Method | Behaviour |
+|---|---|
+| `CopyStreamChunkedAsync(Stream source, Stream destination, int chunkSize = DefaultBufferSize)` | Copies `source` to `destination` in `chunkSize` pieces through a pooled buffer, then flushes `destination`. Throws `ArgumentOutOfRangeException` when `chunkSize` is zero or negative. |
+| `ReadStreamToEndAsync(Stream stream, int maxSizeBytes = DefaultMaxReadSizeBytes)` | Reads from the current position to the end and returns a `byte[]`. Throws `InvalidOperationException` once the content would exceed `maxSizeBytes`. |
+| `ReadLinesAsync(Stream stream)` | Yields the lines of the stream as an `IAsyncEnumerable<string>`, using a `StreamReader`. See the caveat about disposal below. |
+| `CreatePipeReader(Stream stream, int bufferSize = DefaultBufferSize)` | `PipeReader.Create` over the stream, with `StreamPipeReaderOptions(bufferSize)`. |
+| `CreatePipeWriter(Stream stream, int bufferSize = DefaultBufferSize)` | `PipeWriter.Create` over the stream with default `StreamPipeWriterOptions`. The `bufferSize` argument is accepted but not used. |
+| `CompressStreamAsync(Stream source, Stream destination)` | Gzip-compresses everything from `source` into `destination`. |
+| `DecompressStreamAsync(Stream source, Stream destination)` | Gunzips everything from `source` into `destination`. |
+| `WriteWithRetryAsync(Stream stream, byte[] data, int maxRetries = 3, int delayMs = DefaultRetryDelayMs)` | Writes and flushes `data`. After an `IOException` it waits `delayMs * retryNumber` and writes again. After `maxRetries` retries the exception is rethrown. Null or empty `data` returns without writing. |
+| `SafeSeek(Stream stream, long offset, SeekOrigin origin)` | Calls `Seek` when the stream supports it. Otherwise throws `NotSupportedException`. There is no fallback. |
+| `GetStreamLength(Stream stream)` | Returns the length as `long?`. Returns `null` for a `null` stream, an unseekable stream, or when reading `Length` throws. |
+| `IsStreamValid(Stream stream)` | `true` when the stream is not `null` and `CanRead` is `true`. |
+| `StreamToBase64Async(Stream stream)` | Reads the stream with `ReadStreamToEndAsync` and the default 10 MiB limit, then returns Base64. |
+| `Base64ToStream(string base64String)` | Decodes the Base64 string and returns a `MemoryStream` over the bytes. |
+| `CalculateStreamHashAsync(Stream stream, HashAlgorithm algorithm)` | Returns the uppercase hex digest from `ComputeHashAsync`. If the stream is seekable, its original position is restored afterwards. |
+| `TeeStreamAsync(Stream source, params Stream[] destinations)` | Reads `source` in chunks and writes each chunk to every destination in parallel, then flushes each destination. |
+
+**Errors**
+
+- Methods that take a stream throw `ArgumentNullException` for `null`, with two exceptions: `GetStreamLength` returns `null` and `IsStreamValid` returns `false`.
+- `WriteWithRetryAsync` throws `ArgumentOutOfRangeException` for a negative `maxRetries` or `delayMs`.
+- `TeeStreamAsync` throws `ArgumentException` when no destinations are passed. Null entries are skipped. Destinations that are not writable are skipped during the write loop.
+- `Base64ToStream` throws `ArgumentException` for a `null` or empty string and `InvalidOperationException` (with the `FormatException` as inner exception) for invalid Base64.
+
+**Caveats**
+
+- `ReadLinesAsync` disposes the stream it was given, because the `StreamReader` owns it. Do not use the stream after the enumeration.
+- `CompressStreamAsync` and `DecompressStreamAsync` dispose the `GZipStream` they create, which also closes `destination` (or `source`). Pass streams you are finished with, or wrap them in a non-closing stream first.
+- `WriteWithRetryAsync` does not track how much was written before a failure. If a write fails after part of `data` was accepted, the retry writes the whole buffer again. Use it only where a failed write leaves nothing behind, or where duplicated bytes are acceptable.
+- `ReadStreamToEndAsync`, `CalculateStreamHashAsync` and `CopyStreamChunkedAsync` start from the current position. They do not rewind first. Set `Position` yourself when needed.
+
+### JsonUtility
+
+#### Default options
+
+Every method except `SerializeWithOptions` uses these settings. `Serialize(obj, indented: true)` uses the same settings with `WriteIndented` set to `true`.
+
+| Setting | Value | Effect |
+|---|---|---|
+| `PropertyNamingPolicy` | `JsonNamingPolicy.CamelCase` | `OrderId` is written as `orderId`. |
+| `PropertyNameCaseInsensitive` | `true` | Deserialization matches `orderId` and `OrderId` alike. |
+| `DefaultIgnoreCondition` | `JsonIgnoreCondition.WhenWritingNull` | Null properties are left out of the output. |
+| `WriteIndented` | `false` | Compact output. |
+| `JsonStringEnumConverter` | `JsonNamingPolicy.CamelCase` | Enums are written as camelCase names, so `OrderStatus.Shipped` becomes `"shipped"`. |
+| `JsonDateTimeConverter` | Custom converter for `DateTime` | Written as ISO 8601 in UTC, for example `2026-10-25T12:00:00.0000000Z`. |
+
+Methods:
+
+| Method | Behaviour |
+|---|---|
+| `Serialize<T>(T obj, bool indented = false)` | Serializes with the default options. `indented: true` adds indentation. A `null` object returns the literal string `"null"`. |
+| `SerializeWithOptions<T>(T obj, JsonSerializerOptions options)` | Same as `Serialize`, with the options you pass in. Throws `ArgumentNullException` when `options` is `null`. |
+| `Deserialize<T>(string json)` | Returns `default` for an empty or whitespace-only string. Throws `ArgumentNullException` for `null`. Parse failures throw `InvalidOperationException`, with the `JsonException` as inner exception. |
+| `DeserializeToDictionary(string json)` | Returns `Dictionary<string, object>?`, or `null` for an empty or whitespace-only string. Nested objects and arrays are `JsonElement` values. Parse failures throw `InvalidOperationException`. |
+| `TryDeserialize<T>(string json, out T? result, out string? errorMessage)` | Returns `false` and sets `errorMessage` for empty input or a `JsonException`, without throwing for either. Returns `true` on success. |
+| `MergeJson(string targetJson, string sourceJson)` | Shallow merge of two JSON objects. A top-level key in the source replaces the same key in the target, including any nested object, and the result is compact JSON. Both arguments must be non-empty. |
+| `GetPropertyValue(string json, string propertyPath)` | Reads a value at a dot-separated path and returns its raw JSON text as a `string`, so a string value keeps its quotes. Returns `null` when the path is missing or the JSON is invalid. |
+| `SetPropertyValue(string json, string propertyPath, object value)` | Sets a value at a dot-separated path, creating missing intermediate objects. Returns compact JSON. |
+| `ValidateRequired(string json, params string[] requiredProperties)` | Returns `true` when `json` is an object and each listed top-level property exists and is not JSON `null`. Returns `false` for empty or invalid input. |
+
+`JsonDateTimeConverter` is a public `JsonConverter<DateTime>`. On write it converts the value to UTC and uses the `"O"` format. On read it parses with `DateTimeStyles.RoundtripKind`, so a value ending in `Z` comes back as UTC. Only `DateTime` is covered. `DateTimeOffset` uses the default converter.
+
+**Errors**
+
+- `Serialize` and `SerializeWithOptions` do not throw for a `null` object. They return `"null"`.
+- `Deserialize`, `DeserializeToDictionary` and `MergeJson` wrap `JsonException` and other parse failures in `InvalidOperationException`. `MergeJson` also wraps other exceptions raised inside it.
+- `MergeJson`, `GetPropertyValue` and `SetPropertyValue` throw `ArgumentException` for `null` or empty string arguments.
+- `ValidateRequired` returns `false` for empty or invalid JSON. It throws `ArgumentNullException` only when `requiredProperties` is `null`.
+- `SetPropertyValue` throws `InvalidOperationException` when it cannot set the value.
+
+**Caveats**
+
+- `GetPropertyValue` matches property names case-sensitively, unlike typed deserialization. A property name that contains `.` cannot be reached, because the path is split on every dot.
+- `SetPropertyValue` cannot write into an intermediate object that already exists in the JSON. `DeserializeToDictionary` returns nested objects as `JsonElement`, not `Dictionary<string, object>`, so the cast fails and the call throws. Writing into a path made of new objects works. Replace the whole object if you need to change an existing one.
+- `MergeJson` and `SetPropertyValue` work on a dictionary, so the key order of the output is not guaranteed. They also work only on objects, not arrays.
+- `ValidateRequired` checks only top-level properties.
+
+### CacheUtility
+
+#### Key format rules
+
+- Components are converted with `ToString()` and joined with `|`.
+- Each component is sanitized. Any character outside `a-z`, `A-Z`, `0-9`, `_`, `-` and `.` becomes `_`. As a result, `|` and `:` inside a value cannot break the format.
+- `GenerateKey` skips `null` components. An empty string component throws `ArgumentException`.
+- `IsValidKey` rejects keys longer than **512** characters. It also rejects characters outside letters, digits, `_`, `-`, `.`, `:`, `*`, `|` and whitespace. The generators do not enforce the 512-character limit, so call `IsValidKey` where you need the check.
+- Keys longer than **100** characters are not hashed. `FormatKeyForDebug` shortens them to the first 97 characters followed by `...` for logs. The only hashing in this class is the parameter suffix added by `GenerateMethodCacheKey`.
+
+Methods:
+
+| Method | Behaviour |
+|---|---|
+| `GenerateKey(params object?[] components)` | Joins the non-null components with `\|`. Throws `ArgumentException` when no arguments are given or every argument is `null`. |
+| `GenerateNamespacedKey(string @namespace, params object?[] components)` | Returns `{namespace}:{key}`. The namespace is sanitized. Throws for a `null` or empty namespace. |
+| `SanitizeKeyComponent(string component)` | Replaces each disallowed character with `_`. Returns an empty string for `null`. Throws `ArgumentException` for an empty string. Does not truncate. |
+| `CreatePatternKey(string prefix)` | Returns `{prefix}*` for use with `MatchesPattern`. The prefix is sanitized, so a `*` in the prefix cannot act as a wildcard. |
+| `MatchesPattern(string key, string pattern)` | Glob match over the whole key. `*` matches any run of characters and `?` matches one character. The pattern `*` matches every key. Throws for `null` or empty arguments. |
+| `GetKeyHash(string key)` | Returns `key.GetHashCode()`. The value is randomized per process, so do not persist it or compare it across restarts. |
+| `EstimateKeySize(string key)` | Returns `key.Length * 2 + 26`, an estimate of the string's memory size in bytes. |
+| `ParseKey(string key, string separator = "\|")` | Splits the key on `separator`. For keys made by `GenerateKey`, this reverses the join. |
+| `GenerateMethodCacheKey(string serviceId, string methodName, object? parameters = null)` | Returns `{serviceId}\|{methodName}`. When `parameters` is given, it appends `\|` and the first 8 uppercase hex characters of the SHA-256 of `JsonUtility.Serialize(parameters)`. |
+| `GenerateStreamCacheKey(string streamId)` | Returns `stream:{streamId}`. |
+| `GenerateServiceCacheKey(string serviceId)` | Returns `service:{serviceId}`. |
+| `GenerateAuthCacheKey(string userId)` | Returns `auth:{userId}`. Throws `ArgumentException` for `null` or empty input. |
+| `IsValidKey(string key)` | Returns `true` when the key is non-empty, at most 512 characters, and uses only the allowed characters described above. |
+| `FormatKeyForDebug(string key)` | Returns `<empty>` for `null` or empty input. Keys over 100 characters become the first 97 characters plus `...`. Other keys are returned unchanged. |
+
+**Errors**
+
+- `GenerateKey` throws `ArgumentNullException` when the `components` array is `null`. It throws `ArgumentException` when no arguments are given or every argument is `null`.
+- `GenerateNamespacedKey`, `CreatePatternKey`, `MatchesPattern`, `GetKeyHash`, `EstimateKeySize`, `ParseKey`, `GenerateStreamCacheKey`, `GenerateServiceCacheKey` and `GenerateMethodCacheKey` throw `ArgumentNullException` for `null` and `ArgumentException` for empty input.
+- `GenerateAuthCacheKey` throws `ArgumentException` for both `null` and empty input.
+- `SanitizeKeyComponent` returns an empty string for `null`, and throws `ArgumentException` for an empty string.
+
+**Caveats**
+
+- Sanitization can make different inputs produce the same key. `"a:b"` and `"a_b"` both become `a_b`. Keep raw identifiers unique after sanitization, or add a stable hash of the original value.
+- `GenerateMethodCacheKey` truncates the parameter hash to 8 hex characters, which is 32 bits. Two different parameter sets can share a key. Do not use the parameter suffix as the only identity of a cached value.
+- The parameter hash uses the default `JsonUtility` options, so null properties are omitted. `new { Id = 1, Note = (string?)null }` and `new { Id = 1 }` produce the same key. If serialization fails, the method falls back to `GetHashCode()`, which is not stable across processes.
+- `CacheStatistics` is a plain data class. `CacheUtility` does not update it, so the caller must increment its counters.
+
+`CacheStatistics` properties:
+
+| Property | Type | Meaning |
+|---|---|---|
+| `TotalKeysGenerated` | `long` | Number of keys generated. Set by the caller. |
+| `TotalCacheHits` | `long` | Number of cache hits. Set by the caller. |
+| `TotalCacheMisses` | `long` | Number of cache misses. Set by the caller. |
+| `TotalMemoryUsed` | `long` | Bytes used by the cache. Set by the caller. |
+| `KeysByNamespace` | `Dictionary<string, long>` | Key count per namespace. Starts empty. |
+| `HitRate` | `double` (computed) | Hits as a percentage of hits plus misses, from 0 to 100. Returns `0` when there are no lookups. |
 
 ## License
 
