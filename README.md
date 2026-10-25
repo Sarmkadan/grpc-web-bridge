@@ -47,6 +47,7 @@
 - [StreamDiagnosticsService](#streamdiagnosticsservice)
 - [AuthenticationService](#authenticationservice)
 - [ProtocolTranslationService](#protocoltranslationservice)
+- [Response Formatters (JSON/XML/CSV)](#response-formatters-jsonxmlcsv)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2887,6 +2888,169 @@ Note that `TranslateAndInvokeAsync` does not throw for ordinary validation failu
 - **No backend call yet.** `TranslateAndInvokeAsync` does not open a gRPC channel. It returns `Ok` with the request payload echoed back. Callers that need a real backend response must wait for that integration.
 - **`x-bridge-user` is not sent.** The method adds it to the outbound metadata, but nothing forwards that metadata to a backend yet.
 - **Conversion is not schema-aware.** `ConvertJsonToProtobuf` and `ConvertProtobufToJson` only wrap and unwrap the base64 `data` envelope. Clients must send and receive that envelope, not plain JSON objects that match the message definition.
+
+## Response Formatters (JSON/XML/CSV)
+
+`src/GrpcWebBridge/Formatters/` contains four classes for turning data into response bodies:
+
+| File | Type | Output |
+|------|------|--------|
+| `ResponseFormatter.cs` | `static class ResponseFormatter` | Standard JSON envelopes (`success`, `message`, `data`, `timestamp`, ...) |
+| `JsonFormatter.cs` | `sealed class JsonFormatter` | Plain JSON for any object, with `JsonFormatterOptions` |
+| `XmlFormatter.cs` | `sealed class XmlFormatter` | XML through `XmlSerializer`, with `XmlFormatterOptions` |
+| `CsvFormatter.cs` | `sealed class CsvFormatter` | RFC 4180-style CSV, with `CsvFormatterOptions` |
+
+`XmlFormatterExtensions.cs` and `CsvFormatterExtensions.cs` sit beside the XML and CSV classes. The JSON formatter has no companion extension file.
+
+### How the formatter is selected
+
+The bridge does not select a formatter from the `Accept` header. No output formatter is registered with MVC, and no code reads `Accept` to choose between JSON, XML, and CSV. The caller picks a class and calls it directly.
+
+- Controllers are annotated `[Produces("application/json")]` (`BridgeController`, `HealthCheckController`, `MetricsController`, `ConfigurationController`). ASP.NET serializes their results as JSON.
+- `ResponseFormatter` is used by `HealthCheckController` to build its envelopes. The helpers return anonymous objects, and `ResponseFormatter.ToJson` turns them into a string.
+- `XmlFormatter` and `CsvFormatter` have no callers outside the `Formatters/` folder. They are available for code that needs them, and nothing in the request pipeline calls them.
+- `ProtobufUtility` uses `Google.Protobuf.JsonFormatter`, not the `JsonFormatter` in this folder.
+
+If you want `Accept`-based negotiation, your code has to read the header and choose the formatter. The bridge does not do it for you:
+
+```csharp
+// Caller-side selection. This is not built into the bridge.
+var accept = context.Request.Headers.Accept.ToString();
+string body = accept switch
+{
+    "text/csv"        => new CsvFormatter().ToCsv(rows),
+    "application/xml" => new XmlFormatter().ToXml(response),
+    _                 => ResponseFormatter.ToJson(response),
+};
+```
+
+### ResponseFormatter
+
+Each `Format*` method returns an `object`. Pass it to `ToJson` to get a string. `ToJson(response, indented: true)` pretty-prints the output. The default is compact.
+
+`FormatSuccess(data, message, metadata)` with `ToJson(..., indented: true)`:
+
+```json
+{
+  "success": true,
+  "message": "ok",
+  "data": {
+    "id": 1,
+    "name": "alpha",
+    "active": true
+  },
+  "metadata": {
+    "source": "demo"
+  },
+  "timestamp": "2026-10-25T10:08:44.4865198Z"
+}
+```
+
+`FormatError("Not Found", "Missing", 404)` with the default compact output:
+
+```json
+{"success":false,"error":"Not Found","message":"Missing","statusCode":404,"timestamp":"2026-10-25T10:08:44.5590721Z"}
+```
+
+The other helpers are `FormatSuccessList`, `FormatValidationError`, `FormatStreamingResponse`, `FormatBatchResponse`, `FormatHealthCheckResponse`, `FormatStatisticsResponse`, `WrapResponse`, `FormatServiceRegistryResponse`, and `FormatConfigurationResponse`. Each returns an anonymous object with a `timestamp` key, plus the fields for that response type. `CreateCustomResponse` is the exception: it returns a JSON `string` directly, not an object. `ResponseFormatter` only builds data. It does not write to the HTTP response.
+
+### JsonFormatter
+
+`new JsonFormatter(options)` takes `JsonFormatterOptions`:
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `PrettyPrint` | `false` | Indents the output. `Format` and `FormatWithSortedKeys` read this option. |
+| `SortKeys` | `false` | Stored on the instance. Use `FormatWithSortedKeys` to sort keys. `Format` does not sort them. |
+| `MaxDepth` | `10` | Stored and compared in `Equals`. `Format` does not apply it. |
+| `IncludeNullValues` | `false` | Stored and compared in `Equals`. `Format` does not apply it. |
+
+`Format(item)` with defaults:
+
+```json
+{"id":1,"name":"alpha","active":true}
+```
+
+`Format(item)` with `PrettyPrint = true`:
+
+```json
+{
+  "id": 1,
+  "name": "alpha",
+  "active": true
+}
+```
+
+Keys are camelCase. The static helpers `Minify` and `PrettyPrint` take a JSON string and re-serialize it. `Validate` checks that required fields are present.
+
+### XmlFormatter
+
+`ToXml<T>(obj)` runs `XmlSerializer` on `T`. The type needs a public parameterless constructor and public read/write members, the same rules that apply to `XmlSerializer` in general. It throws `InvalidOperationException` if serialization fails.
+
+`ToXml(new Wrapper { Status = "ok", Count = 2 })` with defaults:
+
+```xml
+<?xml version="1.0" encoding="utf-16"?>
+<Wrapper xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Status>ok</Status>
+  <Count>2</Count>
+</Wrapper>
+```
+
+The same object with `OmitXmlDeclaration = true` and `OmitNamespaces = true`:
+
+```xml
+<Wrapper>
+  <Status>ok</Status>
+  <Count>2</Count>
+</Wrapper>
+```
+
+`XmlFormatterOptions` has these members:
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `Indent` | `true` | Indents the output. |
+| `IndentChars` | `"  "` | The indentation string. |
+| `OmitXmlDeclaration` | `false` | Leaves out the `<?xml ...?>` line. |
+| `OmitNamespaces` | `false` | Leaves out the `xsi` and `xsd` namespace declarations. |
+| `Encoding` | `UTF8` | Used by `ExportToFileAsync`. |
+
+The declaration reads `encoding="utf-16"` even though `Encoding` defaults to UTF-8. This happens because `ToXml` writes into a `StringWriter`, which reports UTF-16. `ExportToFileAsync` writes that same string with the configured `Encoding`, so a file written with the default settings contains UTF-8 bytes under a UTF-16 declaration. If a consumer reads the declaration, set `OmitXmlDeclaration = true` or write the declaration yourself.
+
+`FormatXml`, `MinifyXml`, `ValidateXml`, `GetElementValueByXPath`, `MergeXml`, `GetTextContent`, and `XmlToDictionary` work on XML strings. `FromXml<T>` and `ImportFromFileAsync<T>` do the reverse.
+
+### CsvFormatter
+
+`ToCsv(items)` writes a header row from the public property names of `T`, then one row per item. Each value is its `ToString()`, so a `bool` is written as `True` or `False`. An empty collection returns an empty string. Each line ends with a newline.
+
+A field is wrapped in double quotes when it contains the delimiter, a double quote, `\r`, or `\n`. Inner quotes are doubled, as RFC 4180 requires.
+
+`ToCsv` on the two-item list `[Item { Id = 1, Name = "alpha", Active = true }, Item { Id = 2, Name = "be,ta \"q\"", Active = false }]`:
+
+```csv
+Id,Name,Active
+1,alpha,True
+2,"be,ta ""q""",False
+```
+
+`DictsToCsv` takes `IEnumerable<Dictionary<string, string>>`. The header comes from the keys of the first dictionary. A row that lacks a key gets an empty cell. For `[{ "id": "1", "name": "a" }]`:
+
+```csv
+id,name
+1,a
+```
+
+`CsvFormatterOptions` has these members:
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `Delimiter` | `","` | Separates fields. `ToCsv`, `DictsToCsv`, and the quoting rule read it. |
+| `Encoding` | `UTF8` | Used by file operations. |
+| `IncludeHeaders` | `true` | Stored, but `ToCsv` and `DictsToCsv` always write a header. |
+| `TrimWhitespace` | `false` | Stored, but no method applies it. |
+
+`FromCsv` and `FromCsv<T>` parse CSV back into dictionaries or objects. `FromCsv<T>` skips any property it cannot convert. `ValidateCsv` reports rows whose column count does not match the header.
 
 ## License
 
