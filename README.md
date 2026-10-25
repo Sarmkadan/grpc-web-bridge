@@ -43,6 +43,7 @@
 - [WebhookPublisher](#webhookpublisher)
 - [TracingService and BridgeActivitySource](#tracingservice-and-bridgeactivitysource)
 - [BridgePrometheusMetrics](#bridgeprometheusmetrics)
+- [StreamingSessionManager](#streamingsessionmanager)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2470,6 +2471,104 @@ grpcweb_bridge_active_streams
 - **Unauthenticated endpoint.** `/metrics` has no `[Authorize]` requirement and is excluded from the content-type validation middleware. Anyone who can reach the port can read the metrics, including the service and method names.
 - **Process-wide state.** The metrics are static fields. Counters reset when the process restarts, and the gauge is only meaningful within one process.
 - **`MetricsController` is separate.** The JSON endpoints under `api/metrics` read their own static counters and do not read these Prometheus metrics. See [MetricsController](#metricscontroller).
+
+## StreamingSessionManager
+
+`GrpcWebBridge.Streaming.StreamingSessionManager` groups related gRPC streams under a logical session, usually one per client connection. A session carries client-level context (user, origin, authentication context, and free-form metadata) that applies to every stream opened in it. The manager is registered as a singleton behind `IStreamingSessionManager` in `Streaming/StreamingExtensions.cs` and in `Program.cs`. It keeps two in-memory maps: session ID to `StreamingSession`, and stream ID to session ID. The second map gives O(1) lookup from a stream to its session.
+
+Source: `src/GrpcWebBridge/Streaming/StreamingSessionManager.cs` (with `src/GrpcWebBridge/Streaming/IStreamingSessionManager.cs` for the interface).
+
+### StreamingSession lifecycle
+
+1. **Created.** `CreateSession` builds a `StreamingSession` with a new `SessionId` (a 32-character GUID in `"N"` format) and registers it. `CreatedAt` and `LastActivityAt` are set to the current UTC time.
+2. **Streams attached.** `AssociateStream(sessionId, streamId)` adds the stream ID to the session and writes the reverse mapping. Associating an unknown session returns `false` and logs a warning. Associating the same stream twice is harmless: the set does not grow, and `LastActivityAt` is still updated.
+3. **Streams detached.** `DisassociateStream(streamId)` removes the reverse mapping and the stream ID from its session. It is a no-op for unknown streams. It does not close the stream; it only forgets the association.
+4. **Closed.** `CloseSessionAsync(sessionId, finalStatus, cancellationToken)` removes the session from the registry first. It then, for every stream still attached, removes the reverse mapping and calls `IBidirectionalStreamingEngine.CloseStreamAsync(streamId, finalStatus, ...)`. The calls run in parallel through `Task.WhenAll`. The method returns `false` if the session is unknown.
+
+`LastActivityAt` is updated when a stream is associated or disassociated. Nothing in the manager expires sessions on idle time. Sessions stay registered until `CloseSessionAsync` is called. `GetSessionSummaries` exposes the idle time so that a caller can decide what to close.
+
+### StreamingSession members
+
+| Member | Description |
+|--------|-------------|
+| `SessionId` | Generated at construction. Read-only. |
+| `UserId`, `ClientOrigin`, `AuthContextId` | Optional, set once at creation (`init`). |
+| `CreatedAt` | UTC creation time. |
+| `LastActivityAt` | UTC time of the last stream association or disassociation. |
+| `Metadata` | `Dictionary<string, string>` for extra values such as a user agent or tenant ID. It is set once at creation, and its contents are not thread-safe. |
+| `StreamIds` | Snapshot copy of the attached stream IDs. |
+| `StreamCount` | Number of attached streams. |
+| `IsEmpty` | `true` when no streams are attached. |
+
+`AddStream`, `RemoveStream` and `Touch` are `internal`. Callers outside the assembly cannot change the stream set directly and must use the manager.
+
+### SessionSummary
+
+`SessionSummary` is a `sealed record` returned by `GetSessionSummaries()`. It is a point-in-time diagnostic view and does not change with the session afterwards.
+
+| Property | Description |
+|----------|-------------|
+| `SessionId` | Session identifier. |
+| `UserId` | User identifier, or `null` for anonymous sessions. |
+| `ClientOrigin` | Client origin, or `null`. |
+| `StreamCount` | Number of attached streams. |
+| `CreatedAt` | UTC creation time. |
+| `IdleSeconds` | Seconds between `LastActivityAt` and the moment the summary was built. |
+
+`SessionSummary` does not include the metadata or the stream IDs. Use `GetSession` or `GetActiveSessions` for those.
+
+### IStreamingSessionManager members
+
+| Member | Description |
+|--------|-------------|
+| `int ActiveSessionCount { get; }` | Number of registered sessions. |
+| `StreamingSession CreateSession(string? userId = null, string? clientOrigin = null, string? authContextId = null, Dictionary<string, string>? metadata = null)` | Creates and registers a session. Throws `ArgumentException` when `userId`, `clientOrigin` or `authContextId` is `null` or empty. |
+| `bool AssociateStream(string sessionId, string streamId)` | Attaches a stream to a session. Returns `false` when the session is not found. |
+| `void DisassociateStream(string streamId)` | Detaches a stream. Safe to call for an unknown stream. |
+| `StreamingSession? GetSessionForStream(string streamId)` | Returns the owning session, or `null` when the stream has no mapping. |
+| `StreamingSession? GetSession(string sessionId)` | Returns a session by ID, or `null`. |
+| `IReadOnlyCollection<StreamingSession> GetActiveSessions()` | Point-in-time snapshot of all registered sessions. |
+| `Task<bool> CloseSessionAsync(string sessionId, GrpcStatusCode finalStatus = GrpcStatusCode.Ok, CancellationToken cancellationToken = default)` | Tears down the session's streams with `finalStatus` and removes the session. Returns `false` if the session is unknown. |
+| `IReadOnlyList<SessionSummary> GetSessionSummaries()` | Diagnostic summaries of all registered sessions. |
+
+Parameter checks on `AssociateStream`, `DisassociateStream` and `CloseSessionAsync` use `ArgumentException.ThrowIfNullOrEmpty`.
+
+### Caveats
+
+- **`CreateSession` requires all three identity arguments.** The parameters are optional in the signature, but `userId`, `clientOrigin` and `authContextId` must each be non-empty. Passing `null` for any of them throws, so an anonymous session is not possible through this method as written.
+- **No automatic expiry.** A session that is never closed stays in memory, and so do its stream mappings. The caller must call `CloseSessionAsync`, typically when the client connection ends.
+- **A stream belongs to one session at a time.** `AssociateStream` overwrites the reverse mapping if the stream was already attached elsewhere. The old session still lists the stream ID in `StreamIds` until it is disassociated or closed.
+- **Teardown is not transactional.** The session is removed before streams are closed. If the engine throws for one stream, `CloseSessionAsync` throws, and the session is not in the registry any more.
+- **Metadata is mutable.** The dictionary passed to `CreateSession` is stored as-is, not copied. Changes made by the caller afterwards are visible to every reader, and concurrent writes are unsafe.
+
+### Usage example
+
+```csharp
+using GrpcWebBridge.Domain;
+using GrpcWebBridge.Streaming;
+
+public sealed class ClientConnectionHandler(IStreamingSessionManager sessions)
+{
+    public StreamingSession OnConnected(string userId, string origin, string authContextId)
+    {
+        return sessions.CreateSession(
+            userId: userId,
+            clientOrigin: origin,
+            authContextId: authContextId,
+            metadata: new Dictionary<string, string> { ["tenant"] = "default" });
+    }
+
+    public void OnStreamOpened(string sessionId, string streamId)
+    {
+        sessions.AssociateStream(sessionId, streamId);
+    }
+
+    public Task OnDisconnectedAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        return sessions.CloseSessionAsync(sessionId, GrpcStatusCode.Cancelled, cancellationToken);
+    }
+}
+```
 
 ## License
 
