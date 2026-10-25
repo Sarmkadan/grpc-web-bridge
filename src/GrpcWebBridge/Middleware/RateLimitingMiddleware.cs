@@ -245,6 +245,16 @@ public sealed class ClientRateLimit
             return DateTime.UtcNow - _lastRequestTime > timeout;
         }
     }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        lock (_lockObject)
+        {
+            var windowStart = _requestTimestamps.Count > 0 ? _requestTimestamps.Peek().ToString("O") : "none";
+            return $"RequestCount={_requestTimestamps.Count}, WindowStart={windowStart}, LastRequest={_lastRequestTime:O}";
+        }
+    }
 }
 
 /// <summary>
