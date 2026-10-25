@@ -8,6 +8,7 @@
 - [Goals List](#goals-list)
 - [Add Step to Goal](#add-step-to-goal)
 - [Getting Started](#getting-started)
+- [Startup and Program](#startup-and-program)
 - [REST/JSON transcoding](#restjson-transcoding)
 - [StreamingExceptionExtensions](#streamingexceptionextensions)
 - [GrpcRequestExtensions](#grpcrequestextensions)
@@ -214,6 +215,119 @@ The bridge's browser endpoint takes JSON, not `application/grpc-web-text`. See K
 - **Calls are not forwarded to the backend.** `ProtocolTranslationService.TranslateAndInvokeAsync` returns an OK response without opening a channel to the registered `Endpoint` and `Port`. The invoke endpoint therefore answers `success: true` with empty `data`.
 - **JSON payloads are dropped.** `BridgeRequest.Payload` is forwarded only when it is a `byte[]`. A JSON object, as in the example above, arrives as an empty payload.
 - **No `application/grpc-web-text` route.** The bridge's only browser endpoint is the JSON `POST /api/bridge/invoke`. Nothing in the bridge maps gRPC-Web paths such as `/helloworld.Greeter/SayHello`, so a grpc-web-text request to a bridged method is not handled.
+
+## Startup and Program
+
+This section documents the entry point `src/GrpcWebBridge/Program.cs` (top-level statements) and `src/GrpcWebBridge/Configuration/StartupConfiguration.cs`.
+
+### Startup sequence
+
+1. **Host and logging.** `WebApplication.CreateBuilder(args)` is called, then Serilog replaces the default logging. Output goes to the console and to a daily rolling file `logs/grpc-web-bridge-.txt`, relative to the working directory. The minimum level is `Debug`.
+2. **Service registration** on `builder.Services`:
+   - `AddGrpc` with the 4 MB message limits (see below).
+   - `AddGrpcWebBridge` with `WithDevelopment()`, `WithMaxStreamCount(10000)`, `WithCompression(true, 6)`, `WithSwagger(true)`, `WithCors(true)` and `AddAllowedOrigins("*")`.
+   - `AddGrpcWebBridgeSwagger`, `AddGrpcWebBridgeCors`, `AddGrpcWebBridgeAuthentication` (JWT bearer), `AddGrpcWebBridgePrometheus` and `AddGrpcWebBridgeTracing` (service name `grpc-web-bridge`).
+   - `AddControllers`, `AddRequestContextManager`, and `IStreamingSessionManager` as a singleton (`StreamingSessionManager`).
+3. **Build** with `builder.Build()`, then the middleware pipeline is wired (order below).
+4. **Endpoints** are mapped (see below).
+5. **Run.** `app.RunAsync()` runs inside `try`. An unhandled exception is logged with `Log.Fatal`, and `Environment.ExitCode` is set to `1` so systemd, Docker or Kubernetes sees a failed start. `Log.CloseAndFlush()` runs in `finally`.
+
+### Middleware order
+
+Each middleware wraps the ones registered after it, so the order in `Program.cs` is the order requests pass through:
+
+| # | Registration | Role |
+|---|---|---|
+| 1 | `UseErrorHandling()` | Converts exceptions into JSON `ProblemDetails`. It must come first so that every later failure becomes a JSON response. |
+| 2 | `UseGrpcWebContentTypeValidation()` | Validates the request content type. |
+| 3 | `UseRequestLogging()` | Logs requests and responses. |
+| 4 | `UseRouting()` | Endpoint routing. |
+| 5 | `UseCorrelationId()` | Correlation ID for the request. |
+| 6 | `UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true })` | gRPC-Web support for mapped gRPC endpoints. |
+| 7 | `UseCors("AllowGrpcWeb")` | CORS policy for the gRPC-Web clients. |
+| 8 | `UseAuthentication()` | JWT authentication. |
+| 9 | `UseRequestContext()` | Ambient request context. It comes after authentication so the context carries the authenticated user ID. |
+| 10 | `UseAuthorization()` | Authorization. |
+
+The endpoints are mapped after the pipeline, in this order:
+
+1. `MapControllers()`: REST controllers under `api/...`.
+2. `MapMetrics()`: Prometheus `/metrics`.
+3. `MapOpenApi()`: only when `IsDevelopment()`.
+4. `MapGrpcReflectionEndpoints()`.
+5. `MapHealthEndpoints()`.
+6. Minimal APIs: `GET /health` (legacy), `GET /api/services`, `GET /api/services/{serviceId}`, `GET /api/streams`.
+
+`RateLimitingMiddleware`, `MaxBodySizeMiddleware` and `RouteHeaderTransformMiddleware` are not registered in `Program.cs`. They are opt-in; see their sections. The HTTP request body limit is therefore the Kestrel default, not the 4 MB limit below.
+
+### Message size limits (4 MB)
+
+`Constants.Grpc.MaxMessageSize` is `4 * 1024 * 1024` bytes (4 MiB, 4194304). It is the single source for these limits:
+
+- **gRPC server.** `Program.cs` sets `MaxReceiveMessageSize` and `MaxSendMessageSize` on `AddGrpc`.
+- **Backend channels.** `GrpcConnectionManager` applies the same `MaxReceiveMessageSize` and `MaxSendMessageSize` to the channels it opens to backends.
+- **Bridge configuration.** `BridgeConfiguration.MaxMessageSize` defaults to the same value. `Program.cs` does not call `WithMaxMessageSize`, so the default applies.
+- **Payload checks.** `GrpcRequest` and `GrpcResponse` validation, and the request payload check in `ProtocolTranslationService`, reject payloads larger than the limit.
+
+To change the limit, edit `Constants.Grpc.MaxMessageSize` (and `Program.cs` if you want it set explicitly). The `AddGrpc` values are not read from configuration.
+
+### Stream limit: `WithMaxStreamCount(10000)`
+
+`Program.cs` calls `.WithMaxStreamCount(Constants.Streaming.MaxStreamCount)`, and that constant is `10000`. `WithMaxStreamCount` rejects values of `0` or less with an `ArgumentException`.
+
+Be aware that the configured value and the enforced value are not the same thing today:
+
+- `StreamingService.CreateStream` enforces `Constants.Streaming.MaxStreamCount` directly. It does not read `GrpcWebBridgeOptions`. Calling `WithMaxStreamCount(5000)` changes what `ConfigurationController` reports, but it does not change the limit that `CreateStream` enforces.
+- `StreamingWorkerSupervisor` also uses the constant.
+
+### Overriding settings
+
+**The `GrpcWebBridge` section of `appsettings.json` is not bound.** Nothing in the code calls `GetSection` or `Bind` for it, and `AddGrpcWebBridge` registers the options instance as passed in. Values such as `MaxStreamCount`, `MaxMessageSize` or `CompressionLevel` in that file have no effect. The only key read from configuration is `GrpcWebBridge:InstanceName`, which is passed to tracing.
+
+Ways to override the bridge options:
+
+- **In code (what works today).** Change the fluent calls in `Program.cs`:
+
+  ```csharp
+  services.AddGrpcWebBridge(options =>
+  {
+      options.WithDevelopment()
+          .WithMaxStreamCount(5000)
+          .WithMaxMessageSize(8 * 1024 * 1024)
+          .WithCompression(true, 6);
+  });
+  ```
+
+  Remember that the gRPC transport limit comes from `AddGrpc`, and that `WithMaxStreamCount` does not change the enforced stream limit (see above).
+
+- **From configuration (requires a change to the code).** Read the value yourself and pass it to the builder. This is not present in the repository:
+
+  ```csharp
+  var maxStreams = builder.Configuration.GetValue<int>("GrpcWebBridge:MaxStreamCount", Constants.Streaming.MaxStreamCount);
+  services.AddGrpcWebBridge(options => options.WithDevelopment().WithMaxStreamCount(maxStreams));
+  ```
+
+  Environment variables work only for the key that is read: `GrpcWebBridge__InstanceName` (or `GrpcWebBridge:InstanceName` in configuration) is read by `Program.cs`. The other `GrpcWebBridge__*` variables have no effect.
+
+Settings that ASP.NET Core does bind from `appsettings.json` and environment variables, without any bridge code, are `Logging`, `AllowedHosts` and `Kestrel`. The sample `appsettings.json` binds Kestrel to `0.0.0.0`. Change that to a specific address, or put a reverse proxy in front of the bridge, before exposing it.
+
+The `Authentication` section in `appsettings.json` is not read by the bridge either. Set JWT options in the `AddGrpcWebBridgeAuthentication(jwt => ...)` lambda in `Program.cs`; the commented-out examples there are the places to do it.
+
+### Caveats
+
+- `WithDevelopment()` is called unconditionally in `Program.cs`. The bridge therefore reports `Environment = "Development"` in every deployment. `WithDevelopment()` also sets `AllowedOrigins` to `["*"]`, and `AddAllowedOrigins("*")` is called again.
+- Validation runs at startup. `AddGrpcWebBridge` registers `GrpcWebBridgeOptionsValidator` with `ValidateOnStart()`, so invalid values (for example, `MaxMessageSize <= 0`, or CORS disabled while origins are listed) stop the host before it serves requests. The exit code is `1`. The validator does not check `MaxStreamCount`.
+- `ASPNETCORE_ENVIRONMENT` controls `IsDevelopment()`, which enables OpenAPI mapping and the console tracing exporter. The bridge's own `Environment` setting is not affected by it.
+
+### StartupConfiguration
+
+`StartupConfiguration` is a helper class with three public members. Nothing in the repository constructs or registers it: it is not registered in DI, and `Program.cs` does not call it.
+
+- `InitializeAsync()` seeds two sample services into `IServiceRepository`: `UserService` at `localhost:50051` (`GetUser`, `ListUsers`) and `OrderService` at `localhost:50052` (`CreateOrder`, `TrackOrder`).
+- `ValidateConfiguration(GrpcWebBridgeOptions options)` calls `options.Validate()` and logs the result.
+- `GetSystemInfo()` returns a `SystemInfo` snapshot (instance ID and name, environment, version, start time, `MaxStreamCount`, `MaxMessageSize`).
+
+To use it, create the instance yourself after `builder.Build()`, for example `new StartupConfiguration(app.Services, app.Services.GetRequiredService<ILogger<StartupConfiguration>>())`. The sample services are not seeded unless you call `InitializeAsync()`.
 
 ## REST/JSON transcoding
 
