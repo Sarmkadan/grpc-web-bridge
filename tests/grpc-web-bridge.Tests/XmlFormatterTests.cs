@@ -14,6 +14,9 @@ public class TestModel
     public string? Name { get; set; }
 }
 
+/// <summary>
+/// Unit tests for XmlFormatter covering serialization, deserialization, formatting, minification, validation, XPath lookup, file I/O and merging.
+/// </summary>
 public sealed class XmlFormatterTests
 {
     private readonly XmlFormatter _formatter;
@@ -23,6 +26,9 @@ public sealed class XmlFormatterTests
         _formatter = new XmlFormatter();
     }
 
+    /// <summary>
+    /// Verifies that ToXml serializes a valid object into an XML string containing its properties.
+    /// </summary>
     [Fact]
     public void ToXml_WithValidObject_ReturnsXmlString()
     {
@@ -38,6 +44,9 @@ public sealed class XmlFormatterTests
         xml.Should().Contain("<Name>Test</Name>");
     }
 
+    /// <summary>
+    /// Verifies that ToXml throws ArgumentNullException when the object is null.
+    /// </summary>
     [Fact]
     public void ToXml_WithNullObject_ThrowsArgumentNullException()
     {
@@ -48,6 +57,9 @@ public sealed class XmlFormatterTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Verifies that FromXml deserializes a valid XML document into the target object.
+    /// </summary>
     [Fact]
     public void FromXml_WithValidXml_ReturnsObject()
     {
@@ -63,6 +75,9 @@ public sealed class XmlFormatterTests
         result.Name.Should().Be("Test");
     }
 
+    /// <summary>
+    /// Verifies that FromXml throws ArgumentException when the XML input is empty.
+    /// </summary>
     [Fact]
     public void FromXml_WithNullOrEmptyXml_ThrowsArgumentException()
     {
@@ -73,6 +88,9 @@ public sealed class XmlFormatterTests
         act.Should().Throw<ArgumentException>();
     }
 
+    /// <summary>
+    /// Verifies that FormatXml returns indented XML that keeps all original elements.
+    /// </summary>
     [Fact]
     public void FormatXml_WithValidXml_ReturnsFormattedXml()
     {
@@ -89,6 +107,9 @@ public sealed class XmlFormatterTests
         formattedXml.Should().Contain("<Name>Test</Name>");
     }
 
+    /// <summary>
+    /// Verifies that FormatXml returns null for null input and an empty string for empty input.
+    /// </summary>
     [Fact]
     public void FormatXml_WithNullOrEmptyXml_ReturnsSameValue()
     {
@@ -101,6 +122,9 @@ public sealed class XmlFormatterTests
         resultEmpty.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that MinifyXml removes line breaks and indentation from valid XML.
+    /// </summary>
     [Fact]
     public void MinifyXml_WithValidXml_ReturnsMinifiedXml()
     {
@@ -117,6 +141,9 @@ public sealed class XmlFormatterTests
         minifiedXml.Should().Contain("<TestModel><Id>1</Id><Name>Test</Name></TestModel>");
     }
 
+    /// <summary>
+    /// Verifies that MinifyXml returns null for null input and an empty string for empty input.
+    /// </summary>
     [Fact]
     public void MinifyXml_WithNullOrEmptyXml_ReturnsSameValue()
     {
@@ -129,6 +156,9 @@ public sealed class XmlFormatterTests
         resultEmpty.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that ValidateXml reports well-formed XML as valid with no errors.
+    /// </summary>
     [Fact]
     public void ValidateXml_WithValidXml_ReturnsValid()
     {
@@ -143,6 +173,9 @@ public sealed class XmlFormatterTests
         errors.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that ValidateXml reports malformed XML as invalid and returns exactly one error.
+    /// </summary>
     [Fact]
     public void ValidateXml_WithInvalidXml_ReturnsInvalidWithErrors()
     {
@@ -158,6 +191,9 @@ public sealed class XmlFormatterTests
         errors.Should().ContainSingle();
     }
 
+    /// <summary>
+    /// Verifies that ValidateXml reports null or empty input as invalid with a single error.
+    /// </summary>
     [Fact]
     public void ValidateXml_WithNullOrEmptyXml_ReturnsInvalidWithError()
     {
@@ -172,6 +208,9 @@ public sealed class XmlFormatterTests
         errorsEmpty.Should().ContainSingle();
     }
 
+    /// <summary>
+    /// Verifies that GetElementValueByXPath returns the element value matched by a valid XPath.
+    /// </summary>
     [Fact]
     public void GetElementValueByXPath_WithValidXmlAndXPath_ReturnsValue()
     {
@@ -186,6 +225,9 @@ public sealed class XmlFormatterTests
         value.Should().Be("Test");
     }
 
+    /// <summary>
+    /// Verifies that GetElementValueByXPath returns null when the XPath matches no element.
+    /// </summary>
     [Fact]
     public void GetElementValueByXPath_WithInvalidXPath_ReturnsNull()
     {
@@ -200,6 +242,9 @@ public sealed class XmlFormatterTests
         value.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that GetElementValueByXPath returns null when the XML or XPath argument is null or empty.
+    /// </summary>
     [Fact]
     public void GetElementValueByXPath_WithNullOrEmptyParameters_ReturnsNull()
     {
@@ -216,6 +261,9 @@ public sealed class XmlFormatterTests
         valueEmptyXPath.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that ExportToFileAsync writes the serialized object to a file.
+    /// </summary>
     [Fact]
     public async Task ExportToFileAsync_WithValidObject_CreatesFile()
     {
@@ -245,6 +293,9 @@ public sealed class XmlFormatterTests
         }
     }
 
+    /// <summary>
+    /// Verifies that ExportToFileAsync throws ArgumentException when the file path is empty.
+    /// </summary>
     [Fact]
     public async Task ExportToFileAsync_WithNullFilePath_ThrowsArgumentException()
     {
@@ -258,6 +309,9 @@ public sealed class XmlFormatterTests
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
+    /// <summary>
+    /// Verifies that ImportFromFileAsync reads and deserializes an existing XML file.
+    /// </summary>
     [Fact]
     public async Task ImportFromFileAsync_WithExistingFile_ReturnsObject()
     {
@@ -286,6 +340,9 @@ public sealed class XmlFormatterTests
         }
     }
 
+    /// <summary>
+    /// Verifies that ImportFromFileAsync throws ArgumentException when the file path is empty.
+    /// </summary>
     [Fact]
     public async Task ImportFromFileAsync_WithNullFilePath_ThrowsArgumentException()
     {
@@ -296,6 +353,9 @@ public sealed class XmlFormatterTests
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
+    /// <summary>
+    /// Verifies that ImportFromFileAsync throws FileNotFoundException when the file does not exist.
+    /// </summary>
     [Fact]
     public async Task ImportFromFileAsync_WithNonExistingFile_ThrowsFileNotFoundException()
     {
@@ -306,6 +366,9 @@ public sealed class XmlFormatterTests
         await act.Should().ThrowAsync<FileNotFoundException>();
     }
 
+    /// <summary>
+    /// Verifies that MergeXml combines the elements of two valid XML documents.
+    /// </summary>
     [Fact]
     public void MergeXml_WithTwoValidXmlDocuments_ReturnsMergedXml()
     {
@@ -322,6 +385,9 @@ public sealed class XmlFormatterTests
         mergedXml.Should().Contain("<Element2>Value2</Element2>");
     }
 
+    /// <summary>
+    /// Verifies that MergeXml returns the non-empty argument when the other argument is null or empty.
+    /// </summary>
     [Fact]
     public void MergeXml_WithNullOrEmptyParameters_ReturnsOtherValue()
     {
