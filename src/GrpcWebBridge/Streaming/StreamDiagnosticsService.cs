@@ -70,6 +70,15 @@ public sealed class StreamingDiagnosticsEvent : EventBase
 
     /// <summary>Number of streams flagged for high backpressure ratios.</summary>
     public required int HighBackpressureStreamCount { get; init; }
+
+    /// <summary>
+    /// Returns a string representation of the streaming diagnostics event.
+    /// </summary>
+    /// <returns>A string containing ActiveStreamCount, TotalMessagesIn, TotalMessagesOut, TotalBackpressureEvents and HighBackpressureStreamCount.</returns>
+    public override string ToString()
+    {
+        return $"StreamingDiagnosticsEvent: ActiveStreamCount: {ActiveStreamCount}, TotalMessagesIn: {TotalMessagesIn}, TotalMessagesOut: {TotalMessagesOut}, TotalBackpressureEvents: {TotalBackpressureEvents}, HighBackpressureStreamCount: {HighBackpressureStreamCount}";
+    }
 }
 
 /// <summary>
