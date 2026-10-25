@@ -15,6 +15,11 @@ namespace GrpcWebBridge.Caching;
 /// </summary>
 public class CacheManager : IDisposable
 {
+    /// <summary>
+    /// Default interval, in minutes, between sweeps that remove expired entries.
+    /// </summary>
+    public const int DefaultCleanupIntervalMinutes = 1;
+
     private readonly ConcurrentDictionary<string, CacheEntry> _cache;
     private readonly Timer _cleanupTimer;
     private readonly ILogger<CacheManager> _logger;
@@ -32,7 +37,7 @@ public class CacheManager : IDisposable
         _options = options ?? new CacheManagerOptions();
 
         // Start periodic cleanup of expired entries
-        _cleanupTimer = new Timer(CleanupExpiredEntries, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        _cleanupTimer = new Timer(CleanupExpiredEntries, null, TimeSpan.FromMinutes(DefaultCleanupIntervalMinutes), TimeSpan.FromMinutes(DefaultCleanupIntervalMinutes));
     }
 
     /// <summary>
@@ -409,14 +414,24 @@ public sealed class CacheStatistics
 public sealed class CacheManagerOptions
 {
     /// <summary>
+    /// Default time-to-live for cache entries, in minutes.
+    /// </summary>
+    public const int DefaultTtlMinutes = 5;
+
+    /// <summary>
+    /// Default maximum number of entries allowed in the cache.
+    /// </summary>
+    public const int DefaultMaxEntries = 10000;
+
+    /// <summary>
     /// The default time-to-live for cache entries.
     /// </summary>
-    public TimeSpan DefaultTtl { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan DefaultTtl { get; set; } = TimeSpan.FromMinutes(DefaultTtlMinutes);
 
     /// <summary>
     /// The maximum number of entries allowed in the cache.
     /// </summary>
-    public int MaxEntries { get; set; } = 10000;
+    public int MaxEntries { get; set; } = DefaultMaxEntries;
 
     /// <summary>
     /// Whether to enable statistics collection.
