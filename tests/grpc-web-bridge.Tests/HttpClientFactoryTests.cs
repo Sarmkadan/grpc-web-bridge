@@ -18,6 +18,10 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="HttpClientFactory"/>: client lookup and registration, URI validation,
+/// request helpers, handler lifetime and rotation, options defaults, and disposal behaviour.
+/// </summary>
 public sealed class HttpClientFactoryTests : IDisposable
 {
     private readonly HttpClientFactory _factory;
@@ -54,6 +58,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // Constructor and basic setup
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that constructing the factory without a logger throws <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
@@ -62,6 +69,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Verifies that constructing the factory without options falls back to default options and yields a usable client.
+    /// </summary>
     [Fact]
     public void Constructor_WithNullOptions_UsesDefaultOptions()
     {
@@ -74,6 +84,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         client.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Verifies that the supplied options, such as request timeout, are applied to clients created by the factory.
+    /// </summary>
     [Fact]
     public void Constructor_WithOptions_SetsPropertiesCorrectly()
     {
@@ -99,6 +112,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // GetClient tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> with a valid name returns an <see cref="HttpClient"/>.
+    /// </summary>
     [Fact]
     public void GetClient_WithValidName_ReturnsHttpClient()
     {
@@ -110,6 +126,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         client.Should().BeOfType<HttpClient>();
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> with a null name throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public void GetClient_WithNullName_ThrowsConfigurationException()
     {
@@ -121,6 +140,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*name*");
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> with an empty name throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public void GetClient_WithEmptyName_ThrowsConfigurationException()
     {
@@ -132,6 +154,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*name*");
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> accepts a whitespace-only name and returns a client.
+    /// </summary>
     [Fact]
     public void GetClient_WithWhitespaceName_ReturnsHttpClient()
     {
@@ -142,6 +167,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         client.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Verifies that repeated <c>GetClient</c> calls with the same name return the same client instance.
+    /// </summary>
     [Fact]
     public void GetClient_WithSameName_ReturnsSameClientInstance()
     {
@@ -153,6 +181,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         client1.Should().BeSameAs(client2);
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> with different names returns different client instances.
+    /// </summary>
     [Fact]
     public void GetClient_WithDifferentNames_ReturnsDifferentClientInstances()
     {
@@ -164,6 +195,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         client1.Should().NotBeSameAs(client2);
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> without arguments returns the default client.
+    /// </summary>
     [Fact]
     public void GetClient_DefaultName_ReturnsDefaultClient()
     {
@@ -178,6 +212,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // RegisterClient tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>RegisterClient</c> with valid arguments makes the client retrievable by name.
+    /// </summary>
     [Fact]
     public void RegisterClient_WithValidParameters_RegistersClient()
     {
@@ -193,6 +230,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         retrievedClient.Should().BeSameAs(client);
     }
 
+    /// <summary>
+    /// Verifies that <c>RegisterClient</c> with a null name throws <see cref="ArgumentException"/>.
+    /// </summary>
     [Fact]
     public void RegisterClient_WithNullName_ThrowsArgumentException()
     {
@@ -207,6 +247,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*name*");
     }
 
+    /// <summary>
+    /// Verifies that <c>RegisterClient</c> with an empty name throws <see cref="ArgumentException"/>.
+    /// </summary>
     [Fact]
     public void RegisterClient_WithEmptyName_ThrowsArgumentException()
     {
@@ -221,6 +264,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*name*");
     }
 
+    /// <summary>
+    /// Verifies that <c>RegisterClient</c> with a null client throws <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public void RegisterClient_WithNullClient_ThrowsArgumentNullException()
     {
@@ -232,6 +278,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*client*");
     }
 
+    /// <summary>
+    /// Verifies that registering a client under an existing name replaces the previously registered client.
+    /// </summary>
     [Fact]
     public void RegisterClient_WithExistingName_ReplacesOldClient()
     {
@@ -252,6 +301,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // GetClientForUri tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>GetClientForUri</c> with a valid URI returns a client whose base address matches the URI.
+    /// </summary>
     [Fact]
     public void GetClientForUri_WithValidUri_ReturnsConfiguredClient()
     {
@@ -266,6 +318,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         client.BaseAddress.Should().Be(new Uri(uri));
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClientForUri</c> with a null URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public void GetClientForUri_WithNullUri_ThrowsConfigurationException()
     {
@@ -277,6 +332,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClientForUri</c> with an empty URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public void GetClientForUri_WithEmptyUri_ThrowsConfigurationException()
     {
@@ -288,6 +346,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClientForUri</c> with a malformed URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public void GetClientForUri_WithInvalidUriFormat_ThrowsConfigurationException()
     {
@@ -302,6 +363,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that repeated <c>GetClientForUri</c> calls with the same URI return the same client instance.
+    /// </summary>
     [Fact]
     public void GetClientForUri_WithSameUri_ReturnsSameClient()
     {
@@ -320,6 +384,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // GetAsync tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>GetAsync</c> with a null URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public async Task GetAsync_WithNullUri_ThrowsConfigurationException()
     {
@@ -331,6 +398,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that <c>GetAsync</c> with an empty URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public async Task GetAsync_WithEmptyUri_ThrowsConfigurationException()
     {
@@ -342,6 +412,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that <c>GetAsync</c> with a non-absolute URI throws <see cref="GrpcWebBridgeException"/>.
+    /// </summary>
     [Fact]
     public async Task GetAsync_WithInvalidUri_ThrowsGrpcWebBridgeException()
     {
@@ -359,6 +432,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // PostJsonAsync tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>PostJsonAsync</c> with a null URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public async Task PostJsonAsync_WithNullUri_ThrowsConfigurationException()
     {
@@ -373,6 +449,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that <c>PostJsonAsync</c> with an empty URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public async Task PostJsonAsync_WithEmptyUri_ThrowsConfigurationException()
     {
@@ -387,6 +466,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that <c>PostJsonAsync</c> with a null payload throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public async Task PostJsonAsync_WithNullPayload_ThrowsConfigurationException()
     {
@@ -405,6 +487,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // SendAsync tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>SendAsync</c> with a null URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public async Task SendAsync_WithNullUri_ThrowsConfigurationException()
     {
@@ -419,6 +504,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that <c>SendAsync</c> with an empty URI throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public async Task SendAsync_WithEmptyUri_ThrowsConfigurationException()
     {
@@ -433,6 +521,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*uri*");
     }
 
+    /// <summary>
+    /// Verifies that <c>SendAsync</c> with a null HTTP method throws <see cref="ConfigurationException"/>.
+    /// </summary>
     [Fact]
     public async Task SendAsync_WithNullMethod_ThrowsConfigurationException()
     {
@@ -451,6 +542,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // RemoveClient tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>RemoveClient</c> returns <c>true</c> for a registered name and removes the client.
+    /// </summary>
     [Fact]
     public void RemoveClient_WithExistingName_ReturnsTrueAndRemovesClient()
     {
@@ -464,6 +558,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that <c>RemoveClient</c> returns <c>false</c> for a name that is not registered.
+    /// </summary>
     [Fact]
     public void RemoveClient_WithNonExistingName_ReturnsFalse()
     {
@@ -474,6 +571,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <c>RemoveClient</c> with a null name throws <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public void RemoveClient_WithNullName_ThrowsArgumentNullException()
     {
@@ -484,6 +584,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Verifies that <c>RemoveClient</c> with an empty name returns <c>false</c>.
+    /// </summary>
     [Fact]
     public void RemoveClient_WithEmptyName_ReturnsFalse()
     {
@@ -498,6 +601,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // GetRegisteredClientNames tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>GetRegisteredClientNames</c> returns an empty collection when no clients are registered.
+    /// </summary>
     [Fact]
     public void GetRegisteredClientNames_WithNoClients_ReturnsEmptyList()
     {
@@ -509,6 +615,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         names.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that <c>GetRegisteredClientNames</c> returns every registered client name.
+    /// </summary>
     [Fact]
     public void GetRegisteredClientNames_WithMultipleClients_ReturnsAllNames()
     {
@@ -528,6 +637,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         names.Should().Contain("client3");
     }
 
+    /// <summary>
+    /// Verifies that each <c>GetRegisteredClientNames</c> call returns a new collection with the same contents.
+    /// </summary>
     [Fact]
     public void GetRegisteredClientNames_ReturnsCopyNotReference()
     {
@@ -547,6 +659,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // Dispose tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that disposing the factory disposes the message handlers of all registered clients.
+    /// </summary>
     [Fact]
     public void Dispose_WithMultipleClients_DisposesAllClients()
     {
@@ -573,6 +688,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         mockHandler2.DisposeCalls.Should().Be(1);
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> on a disposed factory throws and does not register a new client.
+    /// </summary>
     [Fact]
     public void Dispose_WithGetClientAfterDispose_DoesNotRegisterClient()
     {
@@ -591,6 +709,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // Handler pooling and connection lifetime tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that repeated <c>GetClient</c> calls with the same name reuse the same pooled handler.
+    /// </summary>
     [Fact]
     public void GetClient_WithSameName_ReusesSameHandler()
     {
@@ -607,6 +728,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         client1.Should().BeSameAs(client2);
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> with different names creates separate clients and handlers.
+    /// </summary>
     [Fact]
     public void GetClient_WithDifferentNames_CreatesDifferentHandlers()
     {
@@ -621,6 +745,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         client1.Should().NotBeSameAs(client2);
     }
 
+    /// <summary>
+    /// Verifies that <c>PooledConnectionLifetimeMs</c> defaults to 120000 ms (2 minutes).
+    /// </summary>
     [Fact]
     public void PooledConnectionLifetime_WithDefaultValue_IsSetCorrectly()
     {
@@ -631,6 +758,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         options.PooledConnectionLifetimeMs.Should().Be(120000); // 2 minutes
     }
 
+    /// <summary>
+    /// Verifies that a custom <c>PooledConnectionLifetimeMs</c> value is stored on the options.
+    /// </summary>
     [Fact]
     public void PooledConnectionLifetime_WithCustomValue_IsSetCorrectly()
     {
@@ -647,6 +777,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         options.PooledConnectionLifetimeMs.Should().Be(300000);
     }
 
+    /// <summary>
+    /// Verifies that disposing the factory clears its registered client names while leaving the client instances intact.
+    /// </summary>
     [Fact]
     public void Dispose_WithMultipleClients_DisposesHandlersNotClients()
     {
@@ -668,6 +801,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         finalNames.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that once the configured connection lifetime has elapsed, <c>GetClient</c> returns a new client instance.
+    /// </summary>
     [Fact]
     public async Task HandlerRotation_OccursAfterConfiguredLifetime()
     {
@@ -697,6 +833,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         factory.Dispose();
     }
 
+    /// <summary>
+    /// Verifies that a client created with non-default handler settings is created successfully and uses the request timeout.
+    /// </summary>
     [Fact]
     public void SocketsHttpHandler_ConfiguredWithProperSettings()
     {
@@ -721,6 +860,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // HttpClientFactoryOptions tests
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <see cref="HttpClientFactoryOptions"/> has the expected default values.
+    /// </summary>
     [Fact]
     public void HttpClientFactoryOptions_DefaultValues_AreCorrect()
     {
@@ -735,6 +877,9 @@ public sealed class HttpClientFactoryTests : IDisposable
         options.AllowInsecureHttps.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that custom values set on <see cref="HttpClientFactoryOptions"/> are applied to created clients.
+    /// </summary>
     [Fact]
     public void HttpClientFactoryOptions_WithCustomValues_AreSetCorrectly()
     {
@@ -760,6 +905,9 @@ public sealed class HttpClientFactoryTests : IDisposable
     // Disposal tracking tests - NEW TESTS
     // ─────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Verifies that <c>GetClient</c> on a disposed factory throws <see cref="ObjectDisposedException"/>.
+    /// </summary>
     [Fact]
     public void Dispose_WithGetClientAfterDispose_ThrowsObjectDisposedException()
     {
@@ -772,6 +920,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*The factory has been disposed*");
     }
 
+    /// <summary>
+    /// Verifies that <c>RegisterClient</c> on a disposed factory throws <see cref="ObjectDisposedException"/>.
+    /// </summary>
     [Fact]
     public void Dispose_WithRegisterClientAfterDispose_ThrowsObjectDisposedException()
     {
@@ -784,6 +935,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*The factory has been disposed*");
     }
 
+    /// <summary>
+    /// Verifies that <c>GetClientForUri</c> on a disposed factory throws <see cref="ObjectDisposedException"/>.
+    /// </summary>
     [Fact]
     public void Dispose_WithGetClientForUriAfterDispose_ThrowsObjectDisposedException()
     {
@@ -796,6 +950,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*The factory has been disposed*");
     }
 
+    /// <summary>
+    /// Verifies that <c>GetAsync</c> on a disposed factory throws <see cref="ObjectDisposedException"/>.
+    /// </summary>
     [Fact]
     public void Dispose_WithGetAsyncAfterDispose_ThrowsObjectDisposedException()
     {
@@ -808,6 +965,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*The factory has been disposed*");
     }
 
+    /// <summary>
+    /// Verifies that <c>PostJsonAsync</c> on a disposed factory throws <see cref="ObjectDisposedException"/>.
+    /// </summary>
     [Fact]
     public void Dispose_WithPostJsonAsyncAfterDispose_ThrowsObjectDisposedException()
     {
@@ -820,6 +980,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*The factory has been disposed*");
     }
 
+    /// <summary>
+    /// Verifies that <c>SendAsync</c> on a disposed factory throws <see cref="ObjectDisposedException"/>.
+    /// </summary>
     [Fact]
     public void Dispose_WithSendAsyncAfterDispose_ThrowsObjectDisposedException()
     {
@@ -832,6 +995,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*The factory has been disposed*");
     }
 
+    /// <summary>
+    /// Verifies that <c>RemoveClient</c> on a disposed factory throws <see cref="ObjectDisposedException"/>.
+    /// </summary>
     [Fact]
     public void Dispose_WithRemoveClientAfterDispose_ThrowsObjectDisposedException()
     {
@@ -844,6 +1010,9 @@ public sealed class HttpClientFactoryTests : IDisposable
             .WithMessage("*The factory has been disposed*");
     }
 
+    /// <summary>
+    /// Verifies that calling <c>Dispose</c> a second time throws <see cref="ObjectDisposedException"/>.
+    /// </summary>
     [Fact]
     public void Dispose_CalledTwice_ThrowsObjectDisposedException()
     {
