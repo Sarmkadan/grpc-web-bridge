@@ -4,6 +4,22 @@
 // CTO & Software Architect
 // =============================================================================
 
+// -----------------------------------------------------------------------------
+// Application entry point (top-level statements). Startup sequence:
+//   1. Create the WebApplicationBuilder and switch logging to Serilog
+//      (console plus a daily rolling file under logs/).
+//   2. Register services on builder.Services: gRPC options, the bridge core,
+//      Swagger, CORS, JWT authentication, Prometheus metrics, OpenTelemetry
+//      tracing, MVC controllers, request context and streaming sessions.
+//   3. Build the app and wire the middleware pipeline. The order matters:
+//      error handling must come first so later failures become JSON responses.
+//   4. Map endpoints: controllers, /metrics, OpenAPI (development only), gRPC
+//      reflection, health checks, and the minimal-API routes (/health,
+//      /api/services, /api/streams).
+//   5. Run the host. On an unhandled failure, log it as fatal, set a non-zero
+//      exit code for the supervisor, and flush the logs before exiting.
+// -----------------------------------------------------------------------------
+
 using Grpc.AspNetCore.Web;
 using GrpcWebBridge.Configuration;
 using GrpcWebBridge.Domain;
@@ -16,6 +32,7 @@ using OpenTelemetry.Trace;
 using Prometheus;
 using Serilog;
 
+// --- Host and logging setup ---
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog logging
@@ -30,8 +47,10 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
+// --- Service registration: everything below is added to builder.Services ---
 var services = builder.Services;
 
+// gRPC options: message size limits are shared through Constants.Grpc.MaxMessageSize.
 // Register gRPC services
 services.AddGrpc(options =>
 {
@@ -92,8 +111,10 @@ services.AddRequestContextManager();
 // Add StreamingSessionManager as a singleton
 services.AddSingleton<IStreamingSessionManager, StreamingSessionManager>();
 
+// --- Build the application ---
 var app = builder.Build();
 
+// --- Middleware pipeline: each step wraps the ones registered after it ---
 // Configure middleware
 // Error handling goes first so every exception below it becomes a proper JSON error response.
 app.UseErrorHandling();
@@ -109,6 +130,7 @@ app.UseAuthentication();
 app.UseRequestContext(); // Add RequestContext middleware for ambient context tracking
 app.UseAuthorization();
 
+// --- Endpoint mapping: routes are registered after the middleware pipeline above ---
 // Map controller routes (REST API controllers)
 app.MapControllers();
 
@@ -230,6 +252,7 @@ app.MapGet("/api/streams", (StreamingService streaming) =>
 .WithName("Stream Statistics")
 .WithOpenApi();
 
+// --- Run the host: a fatal error is logged and reported through the exit code ---
 try
 {
     Log.Information("Starting gRPC-Web Bridge server...");
