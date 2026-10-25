@@ -37,6 +37,7 @@
 - [RateLimitingMiddleware](#ratelimitingmiddleware)
 - [MaxBodySizeMiddleware](#maxbodysizemiddleware)
 - [ContentTypeValidationMiddleware](#contenttypevalidationmiddleware)
+- [RouteHeaderTransformMiddleware](#routeheadertransformmiddleware)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1899,6 +1900,110 @@ app.UseRouting();
 ```
 
 Keep it after `UseErrorHandling()` so that exceptions thrown by the rest of the pipeline still become JSON error responses. Keep it before `UseRouting()` so that invalid requests are rejected before routing runs.
+
+## RouteHeaderTransformMiddleware
+
+`src/GrpcWebBridge/Middleware/RouteHeaderTransformMiddleware.cs` runs every registered `IRouteHeaderTransformHook` whose route prefix matches the request path. A hook can rewrite HTTP request headers before the rest of the pipeline sees them, add entries to a per-request gRPC metadata dictionary, and rewrite response headers after the rest of the pipeline returns. The file defines four public types: `IRouteHeaderTransformHook`, `RouteHeaderTransformMiddleware`, `RouteHeaderTransformConstants`, and `RouteHeaderTransformExtensions`. It is **opt-in**: nothing in `Program.cs` adds it, so the middleware is a pass-through until you call `UseRouteHeaderTransforms()` and register at least one hook.
+
+### IRouteHeaderTransformHook
+
+Implement this interface to define a transform. It has one property and two methods:
+
+| Member | Description |
+|--------|-------------|
+| `string? RoutePrefix { get; }` | The path prefix the hook applies to, such as `/api/bridge/invoke`. `null` or an empty string applies the hook to every route. |
+| `Task TransformRequestAsync(IHeaderDictionary requestHeaders, Dictionary<string, string> grpcMetadata, CancellationToken cancellationToken)` | Called before the next middleware runs. Changes to `requestHeaders` affect the live `HttpRequest` headers. Entries added to `grpcMetadata` are collected for the request. |
+| `Task TransformResponseAsync(IHeaderDictionary responseHeaders, CancellationToken cancellationToken)` | Called after the next middleware has returned. Changes to `responseHeaders` are applied to the live `HttpResponse` headers. |
+
+Matching is a case-insensitive `StartsWith` on `HttpContext.Request.Path`. Because it is a plain string prefix, `/api/bridge` also matches `/api/bridgeXYZ`. Write the prefix with a trailing `/` if you need segment-level matching.
+
+```csharp
+public sealed class TenantHeaderHook : IRouteHeaderTransformHook
+{
+    public string? RoutePrefix => "/api/bridge";
+
+    public Task TransformRequestAsync(
+        IHeaderDictionary requestHeaders,
+        Dictionary<string, string> grpcMetadata,
+        CancellationToken cancellationToken)
+    {
+        var tenant = requestHeaders["X-Tenant-Id"];
+        if (!StringValues.IsNullOrEmpty(tenant))
+        {
+            grpcMetadata["x-tenant-id"] = tenant.ToString();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task TransformResponseAsync(
+        IHeaderDictionary responseHeaders,
+        CancellationToken cancellationToken)
+    {
+        responseHeaders.Remove("Server");
+        return Task.CompletedTask;
+    }
+}
+```
+
+### Registration
+
+`RouteHeaderTransformExtensions` provides three members:
+
+| Member | Purpose |
+|--------|---------|
+| `UseRouteHeaderTransforms()` | `IApplicationBuilder` extension that adds `RouteHeaderTransformMiddleware` to the pipeline. |
+| `AddRouteHeaderTransformHook<THook>()` | Registers a class that implements `IRouteHeaderTransformHook` as a **scoped** `IRouteHeaderTransformHook`. The class itself is not registered, so only the interface can resolve it. The hook can take scoped dependencies through its constructor. |
+| `AddRouteHeaderTransformHook(routePrefix, transformRequest, transformResponse = null)` | Registers a delegate-based hook without a class. `transformRequest` has the same shape as `TransformRequestAsync`. `transformResponse` is optional; when it is omitted, response headers are not changed. |
+
+The delegate-based hook is also registered as a scoped service.
+
+```csharp
+builder.Services.AddRouteHeaderTransformHook<TenantHeaderHook>();
+
+builder.Services.AddRouteHeaderTransformHook(
+    "/api/bridge/invoke",
+    (requestHeaders, grpcMetadata, cancellationToken) =>
+    {
+        grpcMetadata["x-request-source"] = "web";
+        return Task.CompletedTask;
+    });
+
+// In Program.cs, before UseRouting():
+app.UseRouteHeaderTransforms();
+```
+
+The middleware resolves hooks from the request scope on each request, so hooks registered as scoped are fresh for each request. Register all hooks before `builder.Build()`.
+
+Place `UseRouteHeaderTransforms()` before `UseRouting()`. The XML comment on the method says so: the transforms run before routing.
+
+### Request flow
+
+For each request, the middleware runs these steps in order:
+
+1. Collect the hooks whose `RoutePrefix` matches the path. If none match, the request goes straight to the next middleware and nothing else runs.
+2. Create a `Dictionary<string, string>` with case-insensitive keys and store it in `HttpContext.Items` under `RouteHeaderTransformConstants.GrpcMetadataKey` (`"GrpcWebBridge.GrpcMetadata"`).
+3. Call `TransformRequestAsync` on each matching hook, in DI registration order.
+4. Call the next middleware.
+5. Call `TransformResponseAsync` on each matching hook, in the same order.
+
+### RouteHeaderTransformConstants
+
+| Member | Value | Description |
+|--------|-------|-------------|
+| `GrpcMetadataKey` | `"GrpcWebBridge.GrpcMetadata"` | Key in `HttpContext.Items` for the per-request gRPC metadata dictionary. |
+
+The middleware only writes this key; nothing in `src/` reads it. Entries that hooks add to the dictionary are not merged into the gRPC call metadata by the bridge itself. Code that performs the gRPC call must read `HttpContext.Items[RouteHeaderTransformConstants.GrpcMetadataKey]` and apply the entries.
+
+The key is set only when at least one hook matches. Read it with a null check.
+
+### Error handling and caveats
+
+- **Hook exceptions are logged and swallowed.** If a `TransformRequestAsync` or `TransformResponseAsync` call throws, the middleware logs an error with the hook type name and path, and continues with the next hook and the rest of the pipeline. A failing hook does not fail the request.
+- **Exceptions from the rest of the pipeline are not caught here.** They propagate to `UseErrorHandling()`.
+- **Response transforms can fail after the response has started.** `TransformResponseAsync` runs after the next middleware returns. If the response has already started (for example, a body was streamed), changing its headers throws. That exception is caught and logged like any other hook failure.
+- **Cancellation.** Both methods receive `HttpContext.RequestAborted`. A hook that observes the token can stop early if the client disconnects.
+- **Without any hook, the middleware does nothing.** It does not inspect the request until at least one hook is registered and matches.
 
 ## License
 
