@@ -279,6 +279,12 @@ public sealed class ServiceRegistry
     {
         return GetRegistrySnapshot().ToJson();
     }
+
+    /// <summary>
+    /// Returns a string representation of the service registry.
+    /// </summary>
+    /// <returns>A string containing the number of registered services.</returns>
+    public override string ToString() => $"ServiceRegistry {{ RegisteredServiceCount = {RegisteredServiceCount} }}";
 }
 
 /// <summary>
