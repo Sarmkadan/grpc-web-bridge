@@ -26,8 +26,11 @@ public static class FlowControlOptionsExtensions
     /// <item><description><see cref="FlowControlOptions.AdaptiveAdjustmentInterval"/> is less than zero.</description></item>
     /// </list>
     /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
     public static void Validate(this FlowControlOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         if (options.InitialWindowSize <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(options.InitialWindowSize), "Must be positive.");
@@ -74,8 +77,11 @@ public static class FlowControlOptionsExtensions
     /// </summary>
     /// <param name="options">The <see cref="FlowControlOptions"/> instance to copy.</param>
     /// <returns>A new <see cref="FlowControlOptions"/> instance with the same property values as the specified instance.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
     public static FlowControlOptions Clone(this FlowControlOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         return new FlowControlOptions
         {
             InitialWindowSize = options.InitialWindowSize,
