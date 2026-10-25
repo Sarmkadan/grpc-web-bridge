@@ -45,6 +45,7 @@
 - [BridgePrometheusMetrics](#bridgeprometheusmetrics)
 - [StreamingSessionManager](#streamingsessionmanager)
 - [StreamDiagnosticsService](#streamdiagnosticsservice)
+- [ProtocolTranslationService](#protocoltranslationservice)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2662,6 +2663,103 @@ public sealed class StreamingAlertHook
     }
 }
 ```
+
+## ProtocolTranslationService
+
+`ProtocolTranslationService` (`src/GrpcWebBridge/Services/ProtocolTranslationService.cs`) translates request and response payloads and metadata between the HTTP/JSON side and the binary protobuf side of a gRPC call. It works on message payload bytes only. The gRPC-Web 5-byte frame header is handled separately by `StreamAdapter` (see [gRPC-Web framing](#grpc-web-framing)).
+
+The same file defines `ProtocolTranslationExtensions`, which contains one helper: `AsBytes(this string value)`, a UTF-8 encoding of a string. Add `using GrpcWebBridge.Services;` to use it.
+
+The service is registered as a singleton (`Configuration/DependencyInjection.cs`) and takes an `ILogger<ProtocolTranslationService>`. It holds no mutable state, so one instance can be shared across requests.
+
+### Where it is called
+
+| Caller | Method used |
+|---|---|
+| `Controllers/BridgeController.cs` (`invoke`, `stream`, `batch`) | `TranslateAndInvokeAsync` |
+| `Services/GrpcWebBridge.cs` | `TranslateHttpToGrpc` |
+| `Services/HttpTranscoder.cs` | `TranslateHttpToGrpc` |
+| `Extensions/ServiceExtensions.cs` | `CreateErrorResponse` |
+
+`ConvertJsonToProtobuf`, `ConvertProtobufToJson` and `TranslateGrpcToHttp` are public helpers. Nothing in `src/` calls them today; they are exercised by the unit tests and benchmarks.
+
+### Request flow: JSON to protobuf
+
+1. **Accept the body.** The caller passes the service name, method name, body bytes and a `SerializationFormat` to `TranslateHttpToGrpc`.
+2. **Build the request.** The blank checks run first. A `GrpcRequest` is then created, which validates the names and the payload size. The format is stored in `PayloadFormat`.
+3. **Validate.** `ValidateRequest` calls `GrpcRequest.Validate()` and then checks the payload against `Constants.Grpc.MaxMessageSize` (4 MB).
+4. **Translate metadata.** `TranslateMetadata` lowercases keys using invariant casing, skips blank keys, drops the `grpc-timeout` key, and replaces `null` values with `""`. When a key appears more than once after lowercasing, the last value wins.
+5. **Invoke.** `TranslateAndInvokeAsync` validates the request again. If the caller is authenticated, it adds `x-bridge-user` with the user ID to the outbound metadata. It then returns a `GrpcResponse` with status `Ok` and the request payload. See [Current limitations](#current-limitations).
+6. **Translate the response.** `TranslateGrpcToHttp(response, targetFormat)` converts the payload only when the formats differ:
+   - target `Json` and payload `Protobuf` goes through `ConvertProtobufToJson`;
+   - target `Protobuf` and payload `Json` goes through `ConvertJsonToProtobuf`;
+   - any other combination returns the payload unchanged.
+
+### JSON and protobuf conversion
+
+The conversion is an envelope, not a schema-aware mapping. The service does not read `.proto` definitions and does not map JSON fields to protobuf fields. The protobuf bytes are carried as base64 in a `data` property.
+
+| Method | Input | Output |
+|---|---|---|
+| `ConvertProtobufToJson` | Empty array | `{}` |
+| `ConvertProtobufToJson` | Any other bytes | `{"data":"<base64>"}`, with no indentation |
+| `ConvertJsonToProtobuf` | Empty array | Empty array |
+| `ConvertJsonToProtobuf` | Object with a non-empty string `data` | The base64-decoded bytes |
+| `ConvertJsonToProtobuf` | Any other valid JSON | The input bytes returned unchanged |
+
+```csharp
+using GrpcWebBridge.Services;
+
+var translator = serviceProvider.GetRequiredService<ProtocolTranslationService>();
+
+// {"data":"AQID"} decodes to the three bytes 0x01 0x02 0x03.
+byte[] protobuf = translator.ConvertJsonToProtobuf("{\"data\":\"AQID\"}".AsBytes());
+
+// Encodes back to {"data":"AQID"}.
+byte[] json = translator.ConvertProtobufToJson(protobuf);
+```
+
+### gRPC-Web framing
+
+Framing is not done by `ProtocolTranslationService`. `Streaming/StreamAdapter.cs` implements it, and `Services/GrpcWebBridge.cs` uses it to deframe the request and frame the response. Each frame has a 5-byte header followed by the payload:
+
+| Byte offset | Size | Meaning |
+|---|---|---|
+| 0 | 1 | Flags. `0x00` is a data frame. `0x80` is a trailer frame. |
+| 1–4 | 4 | Payload length as a 32-bit big-endian integer. |
+| 5 | Length | Payload bytes. For a data frame, these are the protobuf message bytes. |
+
+- The maximum frame payload is 4 MB (`StreamAdapter.MaxFrameSize`).
+- A trailer payload is ASCII text in the form `grpc-status:<code>\r\ngrpc-message:<text>\r\n`. `CreateTrailerFrame` writes it.
+- `DeframeMessageAsync` returns the payload of a data frame. It returns `null` when the stream ends cleanly or when it reads a trailer frame; trailer content is read and discarded.
+
+Example: a 3-byte message `0x0A 0x01 0x41` is framed as `00 00 00 00 03 0A 01 41`.
+
+### Error cases
+
+| Method | Condition | Result |
+|---|---|---|
+| `TranslateHttpToGrpc` | Blank service or method name | `ProtocolException` (`PROTOCOL_ERROR`) |
+| `TranslateHttpToGrpc` | `null` body | `ArgumentNullException` |
+| `TranslateHttpToGrpc` | Invalid name, payload over 4 MB, or any other failure | `ProtocolException` with the message `Protocol translation from <service> to <method> failed: ...` |
+| `ConvertJsonToProtobuf` | Malformed JSON, invalid base64 in `data`, or a root that is not an object (for example `[1]`) | `ProtocolException` (`JSON` to `Protobuf`) |
+| `ConvertProtobufToJson` | `null` input | `ArgumentNullException` |
+| `TranslateGrpcToHttp` | `null` response | `ArgumentNullException` |
+| `TranslateGrpcToHttp` | `response.Validate()` fails, such as an empty request ID or a negative duration | `ProtocolException` (`Protobuf` or `JSON` to the target format) |
+| `TranslateAndInvokeAsync` | `GrpcWebBridgeException` from validation | Rethrown unchanged |
+| `TranslateAndInvokeAsync` | Any other exception, including validation failures | Not thrown. Returns an error `GrpcResponse` with status `Internal` and the exception message |
+| `CreateErrorResponse` | Blank request ID or message | `ArgumentException` |
+| `CreateErrorResponse` | `statusCode` is `Ok` | `ArgumentException`, raised by `GrpcResponse.SetError` |
+| `StreamAdapter.DeframeMessageAsync` | Incomplete header or body, or a length that is negative or over 4 MB | `ProtocolException` |
+| `StreamAdapter.FrameMessage` | Payload over 4 MB | `ProtocolException` |
+
+Note that `TranslateAndInvokeAsync` does not throw for ordinary validation failures. The caller receives an `Internal` response instead, so check `GrpcResponse.Status` as well as catching exceptions.
+
+### Current limitations
+
+- **No backend call yet.** `TranslateAndInvokeAsync` does not open a gRPC channel. It returns `Ok` with the request payload echoed back. Callers that need a real backend response must wait for that integration.
+- **`x-bridge-user` is not sent.** The method adds it to the outbound metadata, but nothing forwards that metadata to a backend yet.
+- **Conversion is not schema-aware.** `ConvertJsonToProtobuf` and `ConvertProtobufToJson` only wrap and unwrap the base64 `data` envelope. Clients must send and receive that envelope, not plain JSON objects that match the message definition.
 
 ## License
 
