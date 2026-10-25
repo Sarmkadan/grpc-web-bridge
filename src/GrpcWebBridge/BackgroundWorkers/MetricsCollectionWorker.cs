@@ -17,6 +17,21 @@ namespace GrpcWebBridge.BackgroundWorkers;
 /// </summary>
 public sealed class MetricsCollectionWorker : BackgroundService
 {
+    /// <summary>
+    /// Number of bytes in one megabyte (1024 * 1024), used to convert memory sizes to MB.
+    /// </summary>
+    private const double BytesPerMegabyte = 1024.0 * 1024.0;
+
+    /// <summary>
+    /// Multiplier that converts a ratio into a percentage.
+    /// </summary>
+    private const double PercentMultiplier = 100;
+
+    /// <summary>
+    /// Number of decimal digits used when rounding metric values.
+    /// </summary>
+    private const int RoundingDigits = 2;
+
     private readonly ILogger<MetricsCollectionWorker> _logger;
     private readonly MetricsCollectionOptions _options;
     private readonly MetricsSnapshot _currentSnapshot;
@@ -77,7 +92,7 @@ public sealed class MetricsCollectionWorker : BackgroundService
             {
                 Timestamp = DateTime.UtcNow,
                 CpuUsagePercent = GetCpuUsage(),
-                MemoryUsageMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0),
+                MemoryUsageMb = GC.GetTotalMemory(false) / BytesPerMegabyte,
                 ThreadCount = System.Diagnostics.Process.GetCurrentProcess().Threads.Count,
                 GcCollections = new
                 {
@@ -90,7 +105,7 @@ public sealed class MetricsCollectionWorker : BackgroundService
                     TotalRequests = MetricsController._totalRequests,
                     TotalErrors = MetricsController._totalErrors,
                     ErrorRate = MetricsController._totalRequests > 0
-                        ? Math.Round((MetricsController._totalErrors / (double)MetricsController._totalRequests) * 100, 2)
+                        ? Math.Round((MetricsController._totalErrors / (double)MetricsController._totalRequests) * PercentMultiplier, RoundingDigits)
                         : 0
                 }
             };
@@ -107,7 +122,7 @@ public sealed class MetricsCollectionWorker : BackgroundService
             }
 
             _logger.LogDebug("Metrics snapshot collected: CPU={CPU}%, Memory={Memory}MB",
-                snapshot.CpuUsagePercent, Math.Round(snapshot.MemoryUsageMb, 2));
+                snapshot.CpuUsagePercent, Math.Round(snapshot.MemoryUsageMb, RoundingDigits));
 
             // Check thresholds and trigger alerts
             await CheckAlertsAsync(snapshot, cancellationToken).ConfigureAwait(false);
@@ -130,7 +145,7 @@ public sealed class MetricsCollectionWorker : BackgroundService
 
         if (snapshot.MemoryUsageMb > _options.MemoryAlertThresholdMb)
         {
-            _logger.LogWarning("High memory usage detected: {Usage}MB", Math.Round(snapshot.MemoryUsageMb, 2));
+            _logger.LogWarning("High memory usage detected: {Usage}MB", Math.Round(snapshot.MemoryUsageMb, RoundingDigits));
         }
 
         if (snapshot.RequestMetrics.ErrorRate > _options.ErrorRateAlertThresholdPercent)
@@ -165,15 +180,15 @@ public sealed class MetricsCollectionWorker : BackgroundService
                 snapshotCount = relevantSnapshots.Count,
                 cpu = new
                 {
-                    average = Math.Round(relevantSnapshots.Average(s => s.CpuUsagePercent), 2),
-                    min = Math.Round(relevantSnapshots.Min(s => s.CpuUsagePercent), 2),
-                    max = Math.Round(relevantSnapshots.Max(s => s.CpuUsagePercent), 2)
+                    average = Math.Round(relevantSnapshots.Average(s => s.CpuUsagePercent), RoundingDigits),
+                    min = Math.Round(relevantSnapshots.Min(s => s.CpuUsagePercent), RoundingDigits),
+                    max = Math.Round(relevantSnapshots.Max(s => s.CpuUsagePercent), RoundingDigits)
                 },
                 memory = new
                 {
-                    average = Math.Round(relevantSnapshots.Average(s => s.MemoryUsageMb), 2),
-                    min = Math.Round(relevantSnapshots.Min(s => s.MemoryUsageMb), 2),
-                    max = Math.Round(relevantSnapshots.Max(s => s.MemoryUsageMb), 2)
+                    average = Math.Round(relevantSnapshots.Average(s => s.MemoryUsageMb), RoundingDigits),
+                    min = Math.Round(relevantSnapshots.Min(s => s.MemoryUsageMb), RoundingDigits),
+                    max = Math.Round(relevantSnapshots.Max(s => s.MemoryUsageMb), RoundingDigits)
                 },
                 threads = new
                 {
@@ -215,7 +230,7 @@ public sealed class MetricsCollectionWorker : BackgroundService
         try
         {
             var process = System.Diagnostics.Process.GetCurrentProcess();
-            return Math.Round(process.TotalProcessorTime.TotalSeconds, 2);
+            return Math.Round(process.TotalProcessorTime.TotalSeconds, RoundingDigits);
         }
         catch
         {
@@ -298,6 +313,11 @@ public sealed class MetricsSnapshot
 public sealed class MetricsCollectionOptions
 {
     /// <summary>
+    /// The default memory usage threshold in MB for triggering alerts.
+    /// </summary>
+    public const double DefaultMemoryAlertThresholdMb = 1024;
+
+    /// <summary>
     /// The interval in seconds between metric collections.
     /// </summary>
     public int CollectionIntervalSeconds { get; set; } = 30;
@@ -312,7 +332,7 @@ public sealed class MetricsCollectionOptions
     /// <summary>
     /// The memory usage in MB threshold for triggering alerts.
     /// </summary>
-    public double MemoryAlertThresholdMb { get; set; } = 1024;
+    public double MemoryAlertThresholdMb { get; set; } = DefaultMemoryAlertThresholdMb;
     /// <summary>
     /// The error rate percentage threshold for triggering alerts.
     /// </summary>
