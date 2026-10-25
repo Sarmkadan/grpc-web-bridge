@@ -13,6 +13,16 @@ namespace GrpcWebBridge.Domain.Models;
 /// </summary>
 public sealed class GrpcService
 {
+    /// <summary>
+    /// The default port used by gRPC servers when none is specified.
+    /// </summary>
+    public const int DefaultGrpcPort = 50051;
+
+    /// <summary>
+    /// The maximum valid TCP/UDP port number.
+    /// </summary>
+    public const int MaxPortNumber = 65535;
+
     private readonly List<GrpcMethod> _methods = [];
 
     /// <summary>
@@ -48,7 +58,7 @@ public sealed class GrpcService
     /// <summary>
     /// Gets or sets the port number of the service.
     /// </summary>
-    public int Port { get; set; } = 50051;
+    public int Port { get; set; } = DefaultGrpcPort;
 
     /// <summary>
     /// Gets or sets a value indicating whether the service uses TLS.
@@ -199,9 +209,9 @@ public sealed class GrpcService
             throw new ArgumentException("Endpoint cannot be empty", nameof(Endpoint));
         }
 
-        if (Port <= 0 || Port > 65535)
+        if (Port <= 0 || Port > MaxPortNumber)
         {
-            throw new ArgumentException("Port must be between 1 and 65535", nameof(Port));
+            throw new ArgumentException($"Port must be between 1 and {MaxPortNumber}", nameof(Port));
         }
 
         if (_methods.Count == 0)
@@ -242,9 +252,9 @@ public sealed class GrpcService
 
     private static int ValidatePort(int port)
     {
-        if (port <= 0 || port > 65535)
+        if (port <= 0 || port > MaxPortNumber)
         {
-            throw new ArgumentException("Port must be between 1 and 65535", nameof(port));
+            throw new ArgumentException($"Port must be between 1 and {MaxPortNumber}", nameof(port));
         }
 
         return port;
