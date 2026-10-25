@@ -36,11 +36,18 @@ public sealed class HealthCheckController : ControllerBase
     /// <param name="serviceRegistry">The registry used to retrieve service health information.</param>
     /// <param name="streamingService">The service used to retrieve streaming metrics.</param>
     /// <param name="logger">The logger used to record health check errors.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="serviceRegistry"/>, <paramref name="streamingService"/>, or <paramref name="logger"/> is <c>null</c>.
+    /// </exception>
     public HealthCheckController(
         ServiceRegistry serviceRegistry,
         StreamingService streamingService,
         ILogger<HealthCheckController> logger)
     {
+        ArgumentNullException.ThrowIfNull(serviceRegistry);
+        ArgumentNullException.ThrowIfNull(streamingService);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _serviceRegistry = serviceRegistry;
         _streamingService = streamingService;
         _logger = logger;
