@@ -12,6 +12,9 @@ using Xunit;
 
 namespace GrpcWebBridge.Tests;
 
+/// <summary>
+/// Unit tests for <c>RequestContextManager</c>, covering context creation, metadata, timing, clearing and async flow.
+/// </summary>
 public sealed class RequestContextManagerTests
 {
     private readonly ILogger<RequestContextManager> _mockLogger;
@@ -23,6 +26,9 @@ public sealed class RequestContextManagerTests
         _manager = new RequestContextManager(_mockLogger);
     }
 
+    /// <summary>
+    /// Verifies that CreateContext stores the request and user IDs and marks the context as active.
+    /// </summary>
     [Fact]
     public void CreateContext_ShouldInitializeProperties_AndBeActive()
     {
@@ -41,6 +47,9 @@ public sealed class RequestContextManagerTests
         _manager.GetUserId().Should().Be(userId);
     }
 
+    /// <summary>
+    /// Verifies that GetContext returns the same instance that CreateContext produced.
+    /// </summary>
     [Fact]
     public void GetContext_ShouldReturnCurrentContext()
     {
@@ -55,6 +64,9 @@ public sealed class RequestContextManagerTests
         retrieved.Should().BeSameAs(ctx);
     }
 
+    /// <summary>
+    /// Verifies that metadata set on the current context can be read back by its key.
+    /// </summary>
     [Fact]
     public void SetAndGetMetadata_ShouldStoreAndRetrieveValues()
     {
@@ -71,6 +83,9 @@ public sealed class RequestContextManagerTests
         retrieved.Should().Be(value);
     }
 
+    /// <summary>
+    /// Verifies that GetMetadata returns null for a key that was never set.
+    /// </summary>
     [Fact]
     public void GetMetadata_NonExistingKey_ShouldReturnNull()
     {
@@ -82,6 +97,9 @@ public sealed class RequestContextManagerTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that SetMetadata does not throw when no context has been created.
+    /// </summary>
     [Fact]
     public void SetMetadata_WhenNoContext_ShouldNotThrow()
     {
@@ -91,6 +109,9 @@ public sealed class RequestContextManagerTests
         act.Should().NotThrow();
     }
 
+    /// <summary>
+    /// Verifies that RecordElapsedTime sets the end time and a non-negative elapsed duration on the context.
+    /// </summary>
     [Fact]
     public void RecordElapsedTime_ShouldPopulateEndTime_AndElapsedMilliseconds()
     {
@@ -107,6 +128,9 @@ public sealed class RequestContextManagerTests
         ctx.ElapsedMilliseconds.Should().BeGreaterOrEqualTo(0);
     }
 
+    /// <summary>
+    /// Verifies that Clear removes the current context, deactivates it and resets all accessors to null.
+    /// </summary>
     [Fact]
     public void Clear_ShouldRemoveContext_AndDeactivate()
     {
@@ -124,6 +148,9 @@ public sealed class RequestContextManagerTests
         _manager.GetUserId().Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that IsContextActive reflects the state across context creation and clearing.
+    /// </summary>
     [Fact]
     public void IsContextActive_ShouldReflectCurrentState()
     {
@@ -139,6 +166,9 @@ public sealed class RequestContextManagerTests
         _manager.IsContextActive().Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that the context remains available after yielding to the scheduler with Task.Yield.
+    /// </summary>
     [Fact]
     public async Task Context_Survives_After_Await_Task_Yield()
     {
@@ -155,6 +185,9 @@ public sealed class RequestContextManagerTests
         manager.GetRequestId().Should().Be(requestId);
     }
 
+    /// <summary>
+    /// Verifies that contexts created from concurrently running tasks are each observed with their own request ID.
+    /// </summary>
     [Fact]
     public async Task Context_Isolated_Between_Concurrent_Requests()
     {
@@ -190,6 +223,9 @@ public sealed class RequestContextManagerTests
         manager.IsContextActive().Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that a context created by the caller is visible inside a Task.Run background task.
+    /// </summary>
     [Fact]
     public async Task Context_Flows_Through_Task_Run()
     {
@@ -208,6 +244,9 @@ public sealed class RequestContextManagerTests
         manager.GetRequestId().Should().Be(requestId);
     }
 
+    /// <summary>
+    /// Verifies that the context remains available across several consecutive awaits.
+    /// </summary>
     [Fact]
     public async Task Context_Survives_Multiple_Awaits()
     {
@@ -226,6 +265,9 @@ public sealed class RequestContextManagerTests
         manager.GetRequestId().Should().Be(requestId);
     }
 
+    /// <summary>
+    /// Verifies that Clear resets the current context to null.
+    /// </summary>
     [Fact]
     public void Clear_Should_Reset_Context_To_Null()
     {
@@ -242,6 +284,9 @@ public sealed class RequestContextManagerTests
         manager.GetContext().Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that after a context is cleared and replaced synchronously, the new request ID is the only one visible.
+    /// </summary>
     [Fact]
     public void Context_Should_Not_Leak_Between_Sync_Contexts()
     {
