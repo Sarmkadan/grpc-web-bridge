@@ -262,4 +262,22 @@ public sealed class GrpcWebBridgeOptions
     {
         Configuration.Validate();
     }
+
+    /// <summary>
+    /// Returns a summary of the main option values. Secrets are masked: custom header values are never printed.
+    /// </summary>
+    /// <returns>A human-readable summary of the options.</returns>
+    public override string ToString()
+    {
+        var c = Configuration;
+        var origins = string.Join(", ", c.AllowedOrigins);
+        var headers = string.Join(", ", c.CustomHeaders.Keys.Select(key => $"{key}=***"));
+
+        return $"GrpcWebBridgeOptions {{ Environment = {c.Environment}, InstanceName = {c.InstanceName ?? "(none)"}, " +
+               $"RequireAuthentication = {c.RequireAuthentication}, RequireAuthenticationForDetailedHealth = {c.RequireAuthenticationForDetailedHealth}, " +
+               $"EnableCors = {c.EnableCors}, AllowedOrigins = [{origins}], EnableSwagger = {c.EnableSwagger}, EnableLogging = {c.EnableLogging}, " +
+               $"EnableMetrics = {c.EnableMetrics}, MaxStreamCount = {c.MaxStreamCount}, StreamIdleTimeoutSeconds = {c.StreamIdleTimeoutSeconds}, " +
+               $"MaxMessageSize = {c.MaxMessageSize}, DefaultTimeoutMilliseconds = {c.DefaultTimeoutMilliseconds}, " +
+               $"CompressResponses = {c.CompressResponses}, CompressionLevel = {c.CompressionLevel}, CustomHeaders = [{headers}] }}";
+    }
 }
