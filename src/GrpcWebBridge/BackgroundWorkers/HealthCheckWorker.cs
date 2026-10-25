@@ -261,17 +261,30 @@ public sealed class HealthCheckWorker : BackgroundService
 public sealed class HealthCheckOptions
 {
     /// <summary>
+    /// Default interval in seconds between health check cycles (30 seconds).
+    /// </summary>
+    public const int DefaultCheckIntervalSeconds = 30;
+    /// <summary>
+    /// Default timeout in milliseconds for each health check request (5000 milliseconds, 5 seconds).
+    /// </summary>
+    public const int DefaultCheckTimeoutMs = 5000;
+    /// <summary>
+    /// Default initial delay in seconds before the first health check run (10 seconds).
+    /// </summary>
+    public const int DefaultInitialDelaySeconds = 10;
+
+    /// <summary>
     /// The interval in seconds between health check cycles. Default is 30 seconds.
     /// </summary>
-    public int CheckIntervalSeconds { get; set; } = 30;
+    public int CheckIntervalSeconds { get; set; } = DefaultCheckIntervalSeconds;
     /// <summary>
     /// The timeout in milliseconds for each health check request. Default is 5000 milliseconds (5 seconds).
     /// </summary>
-    public int CheckTimeoutMs { get; set; } = 5000;
+    public int CheckTimeoutMs { get; set; } = DefaultCheckTimeoutMs;
     /// <summary>
     /// The initial delay in seconds before the first health check run. Default is 10 seconds.
     /// </summary>
-    public int InitialDelaySeconds { get; set; } = 10;
+    public int InitialDelaySeconds { get; set; } = DefaultInitialDelaySeconds;
 }
 
 /// <summary>
