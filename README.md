@@ -29,6 +29,7 @@
 - [HttpClientFactory](#httpclientfactory)
 - [EventBus](#eventbus)
 - [CacheManager](#cachemanager)
+- [BridgeController](#bridgecontroller)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1091,6 +1092,174 @@ if (cache.TryGet<string>("user:42", out var userName))
 cache.SetExpiration("user:42", TimeSpan.FromMinutes(1));
 var remaining = cache.GetTimeToLive("user:42");
 var statistics = cache.GetStatistics();
+```
+
+## BridgeController
+
+`src/GrpcWebBridge/Controllers/BridgeController.cs` is mounted at `api/bridge` (`[Route("api/bridge")]`) and produces `application/json`. It exposes three `POST` endpoints:
+
+| Verb | Route | Purpose |
+|------|-------|---------|
+| POST | `/api/bridge/invoke` | Invoke one gRPC method and return a JSON result |
+| POST | `/api/bridge/stream` | Open a streaming session and write JSON objects to the response until the client disconnects |
+| POST | `/api/bridge/batch` | Invoke several methods in one request and return a result per operation |
+
+Caveats that apply to all three endpoints:
+
+- **No backend call is made.** `invoke` and `batch` go through `ProtocolTranslationService.TranslateAndInvokeAsync`, which returns an OK response without opening a channel to the registered endpoint. Responses echo the request payload.
+- **Authentication is optional.** An `Authorization: Bearer <token>` header is read if present. A token that fails validation is treated as anonymous rather than rejected. When the token is valid, its user ID is added to the outbound gRPC metadata. Requests without a token are not rejected.
+- **Service lookup.** `invoke` and `stream` match a service by `Id` or `Name`. `batch` matches by `Id` only.
+
+### POST /api/bridge/invoke
+
+Request body (`BridgeRequest`):
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `serviceId` | string | yes | Service `Id` or `Name` from the registry |
+| `methodName` | string | yes | Method name within that service |
+| `payload` | any JSON | no | Forwarded only when it binds to `byte[]`. JSON values bind to a JSON element, so in practice the payload is sent empty |
+| `headers` | object (string → string) | no | Metadata for the gRPC request |
+| `timeoutMs` | int | no | Call timeout in milliseconds. Defaults to `30000` |
+
+Success (`200 OK`):
+
+```json
+{
+  "success": true,
+  "data": "",
+  "metadata": {},
+  "timestamp": "2026-10-25T12:00:00.0000000Z"
+}
+```
+
+`data` is the response payload as a base64 string (`""` when empty), and `metadata` is the response metadata dictionary.
+
+Errors:
+
+| Status | Cause | Body |
+|--------|-------|------|
+| 400 | Request body is missing | `{ "error": "Request body is required" }` |
+| 404 | Service not found | `{ "error": "Service '<serviceId>' not found" }` |
+| 404 | Method not found in the service | `{ "error": "Method '<methodName>' not found in service" }` |
+| 500 | Unhandled exception | `{ "error": "Method invocation failed", "details": "<exception message>" }` |
+
+Example:
+
+```bash
+BRIDGE_URL="${BRIDGE_URL:-http://localhost:5000}"
+
+curl -s -X POST "$BRIDGE_URL/api/bridge/invoke" \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+        "serviceId": "greeter",
+        "methodName": "SayHello",
+        "headers": { "x-request-source": "docs" },
+        "timeoutMs": 5000
+      }'
+```
+
+### POST /api/bridge/stream
+
+Request body (`StreamRequest`):
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `serviceId` | string | yes | Service `Id` or `Name` |
+| `methodName` | string | yes | Method name |
+| `initialMessage` | any JSON | no | Accepted by the model but not read by the endpoint |
+
+The method type comes from the registry. If the service or method is unknown, the stream defaults to server streaming rather than returning `404`.
+
+The response is `application/json` with no SSE framing. It is written as back-to-back JSON objects, with no delimiter between them:
+
+1. A header object, written immediately:
+
+   ```json
+   {"status":"streaming","streamId":"<guid>","service":"greeter","method":"SayHello"}
+   ```
+
+2. For each message queued on the stream by other components, a message object:
+
+   ```json
+   {"sequenceNumber":1,"type":"<MessageType>","data":{}}
+   ```
+
+   The endpoint only drains the queue. Nothing in this controller enqueues messages, so only the header is written unless another component adds messages.
+
+The stream is closed when the client disconnects (the request cancellation token fires) or when the handler exits. Cleanup runs in a `finally` block.
+
+Errors:
+
+| Status | Cause |
+|--------|-------|
+| 401 | The auth context reports the caller is not authenticated |
+| 500 | Unhandled exception outside the streaming loop |
+
+Example (`-N` disables curl buffering so messages print as they arrive):
+
+```bash
+curl -N -X POST "$BRIDGE_URL/api/bridge/stream" \
+  -H 'Content-Type: application/json' \
+  -d '{"serviceId":"greeter","methodName":"SayHelloStream"}'
+```
+
+### POST /api/bridge/batch
+
+Request body (`BatchRequest`):
+
+```json
+{
+  "operations": [
+    {
+      "id": "op-1",
+      "serviceId": "greeter",
+      "methodName": "SayHello",
+      "payload": null,
+      "headers": { "x-request-source": "docs" }
+    }
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `operations` | array | yes, at least one | Operations to run in order |
+| `operations[].id` | string | no | Operation ID echoed in the result. Defaults to a new GUID |
+| `operations[].serviceId` | string | yes | Service `Id` (not `Name`) |
+| `operations[].methodName` | string | yes | Method name |
+| `operations[].payload` | any JSON | no | Same binding rules as `invoke` |
+| `operations[].headers` | object | no | Metadata for the gRPC request |
+
+Success (`200 OK`). A failed operation does not fail the batch. Its entry has `success: false` and an `error` message:
+
+```json
+{
+  "success": true,
+  "operationCount": 1,
+  "successCount": 1,
+  "failureCount": 0,
+  "results": [
+    { "operationId": "op-1", "success": true, "data": "", "error": null }
+  ],
+  "timestamp": "2026-10-25T12:00:00.0000000Z"
+}
+```
+
+Errors:
+
+| Status | Cause | Body |
+|--------|-------|------|
+| 400 | `operations` is missing or empty | `{ "error": "At least one operation is required" }` |
+| 500 | Failure outside the per-operation loop | `{ "error": "Batch invocation failed", "details": "<exception message>" }` |
+
+Example:
+
+```bash
+curl -s -X POST "$BRIDGE_URL/api/bridge/batch" \
+  -H 'Content-Type: application/json' \
+  -d '{"operations":[{"id":"op-1","serviceId":"greeter","methodName":"SayHello"}]}'
 ```
 
 ## License
