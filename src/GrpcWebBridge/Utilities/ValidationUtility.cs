@@ -340,4 +340,28 @@ public static class ValidationUtility
             .Replace("\"", "&quot;")
             .Replace("'", "&#x27;");
     }
+
+    /// <summary>
+    /// Throws an <see cref="ArgumentException"/> when a validation result is invalid.
+    /// Lets callers chain any <c>Validate*</c> method in this class with a guard.
+    /// </summary>
+    /// <param name="result">The validation result returned by a <c>Validate*</c> method.</param>
+    /// <param name="paramName">The name of the parameter being validated, used as <see cref="ArgumentException.ParamName"/>.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="result"/> is not valid.</exception>
+    /// <example>
+    /// <code>
+    /// public void Register(string email)
+    /// {
+    ///     ValidationUtility.ValidateEmail(email).ThrowIfInvalid(nameof(email));
+    ///     // email is known to be well-formed here
+    /// }
+    /// </code>
+    /// </example>
+    public static void ThrowIfInvalid(this (bool Valid, string? Error) result, string paramName)
+    {
+        if (!result.Valid)
+        {
+            throw new ArgumentException(result.Error, paramName);
+        }
+    }
 }
