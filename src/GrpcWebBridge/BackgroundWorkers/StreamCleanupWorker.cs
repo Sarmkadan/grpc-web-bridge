@@ -28,11 +28,15 @@ public sealed class StreamCleanupWorker : BackgroundService
     /// <param name="logger">The logger instance.</param>
     /// <param name="streamingService">The streaming service instance.</param>
     /// <param name="options">The stream cleanup options. If null, default options are used.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> or <paramref name="streamingService"/> is null.</exception>
     public StreamCleanupWorker(
         ILogger<StreamCleanupWorker> logger,
         StreamingService streamingService,
         StreamCleanupOptions? options = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(streamingService);
+
         _logger = logger;
         _streamingService = streamingService;
         _options = options ?? new StreamCleanupOptions();
