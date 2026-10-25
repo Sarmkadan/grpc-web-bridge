@@ -253,19 +253,39 @@ public sealed class ClientRateLimit
 public sealed class RateLimitingOptions
 {
     /// <summary>
+    /// Default maximum number of requests a single client may make per second.
+    /// </summary>
+    public const int DefaultRequestsPerSecond = 100;
+
+    /// <summary>
+    /// Default size of the rate-limit window, in seconds.
+    /// </summary>
+    public const int DefaultWindowSizeSeconds = 1;
+
+    /// <summary>
+    /// Default number of seconds clients should wait before retrying after being rate limited.
+    /// </summary>
+    public const int DefaultRetryAfterSeconds = 60;
+
+    /// <summary>
+    /// Default maximum number of requests allowed globally per second.
+    /// </summary>
+    public const int DefaultGlobalRequestsPerSecond = 10000;
+
+    /// <summary>
     /// Gets or sets the maximum number of requests allowed per second.
     /// </summary>
-    public int RequestsPerSecond { get; set; } = 100;
+    public int RequestsPerSecond { get; set; } = DefaultRequestsPerSecond;
 
     /// <summary>
     /// Gets or sets the size of the rate-limit window, in seconds.
     /// </summary>
-    public int WindowSizeSeconds { get; set; } = 1;
+    public int WindowSizeSeconds { get; set; } = DefaultWindowSizeSeconds;
 
     /// <summary>
     /// Gets or sets the number of seconds clients should wait before retrying.
     /// </summary>
-    public int RetryAfterSeconds { get; set; } = 60;
+    public int RetryAfterSeconds { get; set; } = DefaultRetryAfterSeconds;
 
     /// <summary>
     /// Gets or sets a value indicating whether the global rate limit is enabled.
@@ -275,7 +295,7 @@ public sealed class RateLimitingOptions
     /// <summary>
     /// Gets or sets the maximum number of requests allowed globally per second.
     /// </summary>
-    public int GlobalRequestsPerSecond { get; set; } = 10000;
+    public int GlobalRequestsPerSecond { get; set; } = DefaultGlobalRequestsPerSecond;
 
     /// <summary>
     /// Gets or sets the request paths that are exempt from rate limiting.
