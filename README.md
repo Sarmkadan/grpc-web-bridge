@@ -39,6 +39,7 @@
 - [ContentTypeValidationMiddleware](#contenttypevalidationmiddleware)
 - [RouteHeaderTransformMiddleware](#routeheadertransformmiddleware)
 - [ErrorHandlingMiddleware](#errorhandlingmiddleware)
+- [RequestLoggingMiddleware](#requestloggingmiddleware)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2095,6 +2096,88 @@ An example for a `ValidationException` (the `instance` field is `null` and is le
 - **The `type` URIs for 504 and 400 point at other RFC 7231 sections.** `TimeoutException` uses `section-6.6.4` and `OperationCanceledException` uses `section-6.6.3`. In RFC 7231, those sections describe 503 and 502. The URIs are copied from the code, so the table lists them as they are.
 - **If the response has already started, the middleware fails.** It sets `Response.StatusCode` before writing the body. Once the response has started, that assignment throws, and the exception leaves the middleware.
 - **`exceptionType` is always added.** The code comment says it is for debugging and not for production, but the code adds it on every response.
+
+## RequestLoggingMiddleware
+
+`src/GrpcWebBridge/Middleware/RequestLoggingMiddleware.cs` logs each HTTP request when it arrives and each response when it leaves the pipeline. It also records how long the rest of the pipeline took. It is **on by default**: `Program.cs` calls `app.UseRequestLogging()` right after `UseGrpcWebContentTypeValidation()` and before `UseRouting()`, so requests are logged before routing and before any endpoint runs.
+
+### What is logged
+
+For every request that is not excluded (see [Excluded paths](#excluded-paths)), the middleware writes two structured entries at Information level:
+
+1. **Incoming request** (`Incoming request: {RequestData}`), written before the next middleware runs. Fields:
+   - `type` (`"request"`), `method`, `path`, `queryString`, `scheme`, `host`, `contentType`, `contentLength`;
+   - `headers`, with sensitive headers removed (see [Header filtering](#header-filtering));
+   - `body`, the request body when its content type is loggable (see [Body capture](#body-capture));
+   - `ip` (the remote IP address, or `null`), and `timestamp` (UTC).
+2. **Outgoing response** (`Outgoing response: {ResponseData}`), written after the rest of the pipeline returns. Fields:
+   - `type` (`"response"`), `method`, `path`, `statusCode`, `contentType`, `contentLength`;
+   - `headers` (filtered the same way), `body` (the response body when its content type is loggable);
+   - `elapsedMilliseconds`, the time from the start of `InvokeAsync` until the rest of the pipeline returned, and `timestamp` (UTC).
+
+The response entry's level depends on the status code:
+
+| Status code | Log level |
+|-------------|-----------|
+| `>= 500` | Error |
+| `400`-`499` | Warning |
+| Anything else | Information |
+
+The middleware also writes progress lines at Information level that name the method and path: `InvokeAsync started for {Method} {Path}`, `LogRequestAsync started for ...`, and `LogResponseAsync started for ... after {ElapsedMilliseconds} ms`. These are written before the exclusion check, so they appear even for excluded paths.
+
+### Excluded paths
+
+Excluded paths get no `Incoming request` or `Outgoing response` entry and no header or body capture. The list is a private constant, `DefaultExcludedPaths`, and cannot be changed without editing the source:
+
+| Prefix | Notes |
+|--------|-------|
+| `/health` | Health endpoints. The prefix also matches paths such as `/healthcheck`. |
+| `/swagger` | Swagger UI and OpenAPI documents. |
+| `/api/metrics` | `MetricsController` routes. |
+| `/favicon.ico` | Browser favicon requests. |
+
+The check is a prefix match on `Request.Path` using `string.StartsWith`. The only exclusion is the prefix list above; the middleware does not match on method or query string.
+
+### Header filtering
+
+Headers whose names match one of these entries (compared in lowercase, exact match) are left out of both the request and response `headers` fields:
+
+- `authorization`
+- `cookie`
+- `x-api-key`
+- `x-auth-token`
+- `token`
+
+All other headers are logged in full, including any custom header that carries a secret. Add such names to the code if your clients send them.
+
+### Body capture
+
+A body is logged only when its content type contains `application/json`, `application/xml` or `text/` (case-insensitive). Other types, including `application/grpc-web+proto` and `application/grpc-web-text`, are logged as an empty string. The check uses `Contains`, so `application/grpc-web-text` does not match `text/`.
+
+- **Request:** the body is logged only when `ContentLength > 0`. The middleware calls `EnableBuffering()`, reads the whole body into memory, and then resets the stream position so that downstream code can read it.
+- **Response:** the response is written into a `MemoryStream` while the rest of the pipeline runs. The body is logged only when `ContentLength > 0`. Responses without a known length, such as streamed or chunked responses, are logged with an empty `body`. After logging, the buffered bytes are copied to the real response stream.
+
+Bodies longer than 1000 characters are cut to the first 1000 characters and followed by `...`. The cut happens only in the log. The whole body is still read into memory first, so large JSON payloads cost memory even though only part of the body is logged.
+
+### UseRequestLogging
+
+`UseRequestLogging()` is an `IApplicationBuilder` extension in `RequestLoggingMiddlewareExtensions`. It takes no options and adds the middleware with `UseMiddleware<RequestLoggingMiddleware>()`:
+
+```csharp
+app.UseErrorHandling();
+app.UseGrpcWebContentTypeValidation();
+app.UseRequestLogging();
+app.UseRouting();
+```
+
+The position in the pipeline matters. Logging only sees what runs after it, so the `ErrorHandlingMiddleware` placed before it can still turn exceptions into responses that this middleware never logs. See the caveats below.
+
+### Caveats
+
+- **Sensitive data in bodies.** Request and response bodies are logged as they are, without masking. A JSON body with a password or token is written to the log in clear text, up to 1000 characters.
+- **Exceptions skip the response entry.** The response entry is written only when the rest of the pipeline returns normally. If an exception is thrown, no `Outgoing response` entry is written for that request. `ErrorHandlingMiddleware` logs the exception instead.
+- **Timing excludes the body copy.** `elapsedMilliseconds` stops before the buffered response is copied to the client, so it does not include that copy.
+- **Logs can be large.** Every non-excluded request produces two entries with full headers, and the Error and Warning levels follow the status code. Set the log level for this type in configuration if the volume is too high.
 
 ## License
 
