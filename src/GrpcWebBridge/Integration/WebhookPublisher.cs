@@ -465,6 +465,14 @@ public sealed class WebhookEvent
     /// Gets or sets the maximum number of retry attempts.
     /// </summary>
     public int MaxRetries { get; set; }
+
+    /// <summary>
+    /// Returns a string that represents the webhook event.
+    /// </summary>
+    public override string ToString()
+    {
+        return $"EventId={EventId}, EventType={EventType}, Timestamp={Timestamp:O}, SubscriptionId={SubscriptionId}, RetryCount={RetryCount}, MaxRetries={MaxRetries}";
+    }
 }
 
 /// <summary>
@@ -481,4 +489,12 @@ public sealed class WebhookPublisherOptions
     /// Gets or sets the failure count above which a subscription is disabled.
     /// </summary>
     public int FailureThresholdForDisable { get; set; } = 10;
+
+    /// <summary>
+    /// Returns a string that represents the webhook publisher options.
+    /// </summary>
+    public override string ToString()
+    {
+        return $"MaxRetries={MaxRetries}, FailureThresholdForDisable={FailureThresholdForDisable}";
+    }
 }
