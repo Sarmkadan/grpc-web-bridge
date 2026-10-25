@@ -122,4 +122,11 @@ public sealed class ReflectionResult<T>
     /// <param name="errorMessage">A human-readable explanation of the failure.</param>
     public static ReflectionResult<T> Fail(string errorMessage) =>
         new() { Success = false, ErrorMessage = errorMessage };
+
+    /// <summary>
+    /// Returns a string that represents the reflection result.
+    /// </summary>
+    /// <returns>A string containing the payload type, success flag, error message, and timestamp.</returns>
+    public override string ToString() =>
+        $"ReflectionResult<{typeof(T).Name}> {{ Success = {Success}, ErrorMessage = {ErrorMessage}, Timestamp = {Timestamp:O} }}";
 }
