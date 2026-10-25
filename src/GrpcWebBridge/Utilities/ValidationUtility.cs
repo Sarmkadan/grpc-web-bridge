@@ -15,6 +15,26 @@ namespace GrpcWebBridge.Utilities;
 /// </summary>
 public static class ValidationUtility
 {
+    /// <summary>
+    /// Maximum length of an email address (RFC 5321).
+    /// </summary>
+    private const int MaxEmailLength = 254;
+
+    /// <summary>
+    /// Maximum length of a gRPC service ID or method name.
+    /// </summary>
+    private const int MaxIdentifierLength = 255;
+
+    /// <summary>
+    /// Lowest valid network port for explicit configuration (port 0 is reserved for dynamic assignment).
+    /// </summary>
+    private const int MinPort = 1;
+
+    /// <summary>
+    /// Highest valid network port (TCP/UDP port range upper bound).
+    /// </summary>
+    private const int MaxPort = 65535;
+
     // Common regex patterns
     private static readonly Regex _emailRegex = new(
         @"^[^\s@]+@[^\s@]+\.[^\s@]+$",
@@ -89,7 +109,7 @@ public static class ValidationUtility
             return (false, "Email format is invalid");
         }
 
-        if (email.Length > 254) // RFC 5321
+        if (email.Length > MaxEmailLength)
         {
             return (false, "Email is too long");
         }
@@ -149,9 +169,9 @@ public static class ValidationUtility
             return (false, "Service ID cannot be null or empty");
         }
 
-        if (serviceId.Length > 255)
+        if (serviceId.Length > MaxIdentifierLength)
         {
-            return (false, "Service ID cannot exceed 255 characters");
+            return (false, $"Service ID cannot exceed {MaxIdentifierLength} characters");
         }
 
         if (!_serviceIdRegex.IsMatch(serviceId))
@@ -173,9 +193,9 @@ public static class ValidationUtility
             return (false, "Method name cannot be null or empty");
         }
 
-        if (methodName.Length > 255)
+        if (methodName.Length > MaxIdentifierLength)
         {
-            return (false, "Method name cannot exceed 255 characters");
+            return (false, $"Method name cannot exceed {MaxIdentifierLength} characters");
         }
 
         if (!_grpcMethodNameRegex.IsMatch(methodName))
@@ -217,9 +237,9 @@ public static class ValidationUtility
     /// <returns>A tuple indicating validity and an optional error message.</returns>
     public static (bool Valid, string? Error) ValidatePort(int port, string fieldName = "Port")
     {
-        if (port < 1 || port > 65535)
+        if (port < MinPort || port > MaxPort)
         {
-            return (false, $"{fieldName} must be between 1 and 65535, got {port}");
+            return (false, $"{fieldName} must be between {MinPort} and {MaxPort}, got {port}");
         }
 
         return (true, null);
