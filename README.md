@@ -41,6 +41,7 @@
 - [ErrorHandlingMiddleware](#errorhandlingmiddleware)
 - [RequestLoggingMiddleware](#requestloggingmiddleware)
 - [WebhookPublisher](#webhookpublisher)
+- [TracingService and BridgeActivitySource](#tracingservice-and-bridgeactivitysource)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2284,6 +2285,111 @@ Console.WriteLine($"Subscription {subscriptionId}: {statistics}");
 ```
 
 The `WEBHOOK_TOKEN` variable is read from the environment, so no credential is stored in code. `PublishEventAsync` returns once the event is queued, not once it is delivered. Disposing the publisher cancels the worker, so events that have not been sent by then are not delivered.
+
+## TracingService and BridgeActivitySource
+
+The `GrpcWebBridge.Telemetry` namespace holds the bridge's distributed-tracing types. `BridgeActivitySource` defines the `ActivitySource` and the names used for its spans and tags. `TracingService` starts those spans for bridge operations and records their status. Spans are only created when an OpenTelemetry listener is subscribed to the source. The OpenTelemetry hook-up is done by `AddGrpcWebBridgeTracing`.
+
+### BridgeActivitySource
+
+`GrpcWebBridge.Telemetry.BridgeActivitySource` is a static class.
+
+- `const string Name = "GrpcWebBridge"` is the activity source name. Register it with `AddSource` or filter on it in a tracing backend.
+- `const string Version = "2.0.2"` is the source version. It is also reported as the `service.version` resource attribute by `AddGrpcWebBridgeTracing`.
+- `static readonly ActivitySource Source` is the shared source, created as `new(Name, Version)`. `StartActivity` returns `null` unless a listener is subscribed to `Name`.
+
+Well-known span names:
+
+| Constant | Span name | Used for |
+|----------|-----------|----------|
+| `GrpcCall` | `grpc.bridge.call` | Unary gRPC call proxied by the bridge. |
+| `GrpcStream` | `grpc.bridge.stream` | Server-streaming call. |
+| `ProtocolTranslation` | `grpc.bridge.translate` | Translation between gRPC-Web and gRPC. |
+| `Authentication` | `grpc.bridge.auth` | Authentication token check. |
+
+Tag keys:
+
+| Constant | Tag | Set on |
+|----------|-----|--------|
+| `TagRpcSystem` | `rpc.system` | gRPC call spans (value `"grpc"`). |
+| `TagRpcService` | `rpc.service` | gRPC call spans. |
+| `TagRpcMethod` | `rpc.method` | gRPC call spans. |
+| `TagStreaming` | `bridge.streaming` | gRPC call spans. |
+| `TagGrpcStatus` | `rpc.grpc.status_code` | Set by `RecordException` and `SetGrpcStatus`. |
+| `TagBridgeInstance` | `bridge.instance` | All spans created by `TracingService`. |
+
+Some tags are written as string literals rather than constants: `bridge.source_protocol` and `bridge.target_protocol` on translation spans, and `auth.scheme` on authentication spans.
+
+### TracingService
+
+`GrpcWebBridge.Telemetry.TracingService` is a `sealed` class. It is registered as a singleton by `AddGrpcWebBridgeTracing`. Its constructor is `TracingService(ILogger<TracingService> logger, string? instanceName = null)`. A `null` or blank `instanceName` becomes `"default"`. The value is attached to every span as `bridge.instance`.
+
+Instance methods start spans:
+
+- `Activity? StartGrpcCallActivity(string serviceName, string methodName, bool isStreaming = false)` starts a `grpc.bridge.call` span, or a `grpc.bridge.stream` span when `isStreaming` is `true`. The span kind is `ActivityKind.Client`. It sets `rpc.system`, `rpc.service`, `rpc.method`, `bridge.streaming` and `bridge.instance`. It logs an information message on every call, and a warning when no span is created. Throws `ArgumentException` when `serviceName` or `methodName` is null or empty.
+- `Activity? StartProtocolTranslationActivity(string sourceProtocol, string targetProtocol)` starts a `grpc.bridge.translate` span with kind `ActivityKind.Internal`. It sets `bridge.source_protocol`, `bridge.target_protocol` and `bridge.instance`. Throws `ArgumentException` when either argument is null or empty.
+- `Activity? StartAuthenticationActivity(string scheme)` starts a `grpc.bridge.auth` span with kind `ActivityKind.Internal`. It sets `auth.scheme` and `bridge.instance`. Throws `ArgumentException` when `scheme` is null or empty.
+
+Static methods update a span the caller already owns. Each one ignores a `null` activity.
+
+- `static void RecordException(Activity? activity, Exception exception, string? grpcStatus = null)` sets the status to `Error` with the exception message, adds the exception as a span event, and sets `rpc.grpc.status_code` when `grpcStatus` is not blank. Throws `ArgumentNullException` when `exception` is `null`.
+- `static void SetGrpcStatus(Activity? activity, string grpcStatus)` sets `rpc.grpc.status_code`. The status is `Ok` when the value is `"OK"`, and `Error` with the message `gRPC status: <code>` for any other value. Throws `ArgumentException` when `grpcStatus` is null or empty.
+
+The returned span is owned by the caller. Dispose it when the operation ends, with `using var`, which also accepts `null`:
+
+```csharp
+using var activity = tracing.StartGrpcCallActivity("UserService", "GetUser");
+try
+{
+    var user = await userClient.GetUserAsync(request, cancellationToken: ct);
+    TracingService.SetGrpcStatus(activity, "OK");
+    return user;
+}
+catch (Exception ex)
+{
+    TracingService.RecordException(activity, ex, "UNAVAILABLE");
+    throw;
+}
+```
+
+The example hard-codes `"UNAVAILABLE"`. In real code, pass the status code that the gRPC exception carries.
+
+### OpenTelemetry hook-up
+
+`AddGrpcWebBridgeTracing` is an extension on `IServiceCollection` in `GrpcWebBridge.Configuration.DependencyInjection`:
+
+```csharp
+public static IServiceCollection AddGrpcWebBridgeTracing(
+    this IServiceCollection services,
+    string serviceName = "grpc-web-bridge",
+    string? instanceName = null,
+    Action<TracerProviderBuilder>? configureBuilder = null)
+```
+
+It does four things:
+
+1. Registers `TracingService` as a singleton, with the resolved `instanceName`.
+2. Calls `AddOpenTelemetry()` and sets the resource to `serviceName`, with `service.version` set to `BridgeActivitySource.Version`, and the `bridge.instance` attribute.
+3. Adds the `GrpcWebBridge` source with `AddSource`, so bridge spans are exported.
+4. Adds ASP.NET Core instrumentation with `RecordException = true`. It skips requests whose path starts with `/metrics` or `/health`, to reduce noise.
+
+`configureBuilder` runs last, on the same `TracerProviderBuilder`. Use it to add an exporter. The bridge does not add one itself. In `src/GrpcWebBridge/Program.cs`, the Development environment adds the console exporter. Other environments need an exporter added in the same way, such as OTLP:
+
+```csharp
+services.AddGrpcWebBridgeTracing(
+    serviceName: "grpc-web-bridge",
+    instanceName: builder.Configuration["GrpcWebBridge:InstanceName"],
+    configureBuilder: tracing => tracing.AddOtlpExporter());
+```
+
+`AddOtlpExporter` comes from the `OpenTelemetry.Exporter.OpenTelemetryProtocol` package. The bridge does not reference it, so add that package to the host project before you use this call.
+
+### Caveats
+
+- **Spans only appear when the source is registered.** If no listener subscribes to `GrpcWebBridge`, `StartActivity` returns `null`. `TracingService` then logs a warning on every gRPC call. This happens when `TracingService` is created without `AddGrpcWebBridgeTracing`.
+- **No built-in call sites.** Nothing in `src/GrpcWebBridge` calls the `Start*Activity` methods yet. The only wiring in the bridge is the DI registration and the `AddSource` call. A span exists only where your code calls `TracingService`.
+- **The caller ends each span.** `TracingService` does not dispose spans. A span is reported to exporters when it is stopped, which happens on `Dispose`, so a span that is never disposed is never exported.
+- **Parenting follows `Activity.Current`.** A `grpc.bridge.*` span started while an ASP.NET Core request is active becomes a child of that request's span.
 
 ## License
 
