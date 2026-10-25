@@ -810,6 +810,15 @@ public sealed class StreamStartedEvent : EventBase
     /// Gets or sets the name of the method associated with the stream.
     /// </summary>
     public string MethodName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Returns a string representation of the stream started event.
+    /// </summary>
+    /// <returns>A string containing StreamId, ServiceId and MethodName.</returns>
+    public override string ToString()
+    {
+        return $"StreamStartedEvent: StreamId: {StreamId}, ServiceId: {ServiceId}, MethodName: {MethodName}";
+    }
 }
 
 /// <summary>
@@ -846,6 +855,15 @@ public sealed class StreamEndedEvent : EventBase
     /// Gets or sets a human-readable description of the termination reason.
     /// </summary>
     public string? CloseReason { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the stream ended event.
+    /// </summary>
+    /// <returns>A string containing StreamId, MessageCount, DurationMs, CompletionStatus and ErrorCode.</returns>
+    public override string ToString()
+    {
+        return $"StreamEndedEvent: StreamId: {StreamId}, MessageCount: {MessageCount}, DurationMs: {DurationMs}, CompletionStatus: {CompletionStatus}, ErrorCode: {ErrorCode}";
+    }
 }
 
 /// <summary>
@@ -862,4 +880,13 @@ public sealed class AuthenticationFailedEvent : EventBase
     /// Gets or sets the client IP address.
     /// </summary>
     public string? ClientIp { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the authentication failed event.
+    /// </summary>
+    /// <returns>A string containing FailureReason and ClientIp.</returns>
+    public override string ToString()
+    {
+        return $"AuthenticationFailedEvent: FailureReason: {FailureReason}, ClientIp: {ClientIp}";
+    }
 }
