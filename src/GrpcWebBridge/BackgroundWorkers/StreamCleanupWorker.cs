@@ -29,9 +29,9 @@ public sealed class StreamCleanupWorker : BackgroundService
     /// <param name="streamingService">The streaming service instance.</param>
     /// <param name="options">The stream cleanup options. If null, default options are used.</param>
     public StreamCleanupWorker(
-            ILogger<StreamCleanupWorker> logger,
-            StreamingService streamingService,
-            StreamCleanupOptions? options = null)
+        ILogger<StreamCleanupWorker> logger,
+        StreamingService streamingService,
+        StreamCleanupOptions? options = null)
     {
         _logger = logger;
         _streamingService = streamingService;
