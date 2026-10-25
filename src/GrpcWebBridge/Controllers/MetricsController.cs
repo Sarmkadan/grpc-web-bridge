@@ -41,11 +41,16 @@ public sealed class MetricsController : ControllerBase
     /// <param name="streamingService">The service that manages active streams.</param>
     /// <param name="serviceRegistry">The registry containing available gRPC services.</param>
     /// <param name="logger">The logger used to record metrics-related events.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="streamingService"/>, <paramref name="serviceRegistry"/> or <paramref name="logger"/> is null.</exception>
     public MetricsController(
         StreamingService streamingService,
         ServiceRegistry serviceRegistry,
         ILogger<MetricsController> logger)
     {
+        ArgumentNullException.ThrowIfNull(streamingService);
+        ArgumentNullException.ThrowIfNull(serviceRegistry);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _streamingService = streamingService;
         _serviceRegistry = serviceRegistry;
         _logger = logger;
