@@ -55,6 +55,7 @@
 - [HealthCheckWorker](#healthcheckworker)
 - [MetricsCollectionWorker](#metricscollectionworker)
 - [StreamingWorkerSupervisor](#streamingworkersupervisor)
+- [GrpcConnectionManager](#grpcconnectionmanager)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3785,6 +3786,85 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<StreamingWorkerSup
 - After a restart the failure count is `0`. The next healthy check therefore publishes no recovery event.
 - `RestartDelayMs` is awaited with `CancellationToken.None`, so host shutdown can wait up to that long after a restart.
 - The counters are plain `int` and `DateTime?` fields with no locking. Read the statistics for monitoring only.
+
+## GrpcConnectionManager
+
+`GrpcWebBridge.Data.GrpcConnectionManager` is a sealed class that keeps one `GrpcChannel` per backend service and records basic usage metrics for each channel. `AddGrpcWebBridge` registers it as a singleton (`services.AddSingleton<GrpcConnectionManager>()` in `Configuration/DependencyInjection.cs`), so inject it instead of creating instances. Its constructor takes `ILogger<GrpcConnectionManager>` and throws `ArgumentNullException` when the logger is `null`. The class implements `IAsyncDisposable`. Helper methods for reading metrics live in `Data/GrpcConnectionManagerExtensions.cs`.
+
+### Channel pooling
+
+`GetOrCreateChannel(GrpcService service)` returns the pooled channel for the service, or creates one. The pool key is `{service.Id}:{service.FullName}`. A new channel is created with:
+
+- the address `{https|http}://{Endpoint}:{Port}`, where `https` is used when `UseTls` is set;
+- `MaxReceiveMessageSize` and `MaxSendMessageSize` set to `Constants.Grpc.MaxMessageSize`;
+- `DisposeHttpClient = false`.
+
+Creation runs under the manager's lock, so concurrent callers for the same service get the same channel. If channel creation fails, the method logs the error and throws `ServiceRegistrationException` with the service name, endpoint, and the original message.
+
+```csharp
+public sealed class CatalogProxy(GrpcConnectionManager connections, GrpcService service)
+{
+    public CatalogService.CatalogServiceClient CreateClient()
+    {
+        var channel = connections.GetOrCreateChannel(service);
+        return new CatalogService.CatalogServiceClient(channel);
+    }
+}
+```
+
+Other members:
+
+- `ActiveConnectionCount` is the number of pooled channels.
+- `GetChannel(string serviceFullName)` returns the existing channel or `null`. It does not create one.
+- `GetMetrics(string serviceFullName)` returns the `ConnectionMetrics` for a service, or `null`.
+- `TestConnectionAsync(GrpcService service)` gets or creates the channel and returns `true` when its state is `Ready` or `Idle`. It does not wait for a connection attempt. Exceptions are logged and turned into `false`.
+
+`GetChannel` and `GetMetrics` find the entry with `Keys.FirstOrDefault(k => k.EndsWith(serviceFullName))`. This is a suffix match on the pool key, not an equality check. Pass the full service name. A name can match an unrelated entry if one of its keys ends with that text.
+
+### ConnectionMetrics
+
+`ConnectionMetrics` holds the metrics for one channel:
+
+| Member | Meaning |
+|--------|---------|
+| `ServiceName` | `GrpcService.FullName` |
+| `Address` | The channel address |
+| `CreatedAt` | UTC time the channel was created |
+| `LastUsedAt` | UTC time of the last lookup through `GetOrCreateChannel` |
+| `RequestCount` | Number of `GetOrCreateChannel` calls that reused the channel |
+| `BytesSent`, `BytesReceived` | Byte counters with public setters |
+| `GetConnectionDuration()` | `DateTime.UtcNow - CreatedAt`, computed on each call |
+
+Keep these caveats in mind when you read the values:
+
+- `RequestCount` counts channel lookups, not completed RPCs. The manager does not wrap calls, so it cannot observe their outcome.
+- The manager never writes `BytesSent` or `BytesReceived`. They stay `0` unless code outside the manager sets them.
+- `CreatedAt` is set once, when the channel is created. `UpdateMetrics` takes an `isNewConnection` flag, but every caller passes `false`.
+- `ToString()` on the manager describes the most recently used entry, not all entries.
+
+### Disposal semantics
+
+- `CloseChannelAsync(GrpcService service)` removes the channel and its metrics from the pool. It does not call `ShutdownAsync` or `Dispose` on the channel, so the underlying transport stays open until the channel is collected. Call `CloseAllChannelsAsync` if you need the channels shut down.
+- `CloseAllChannelsAsync()` clears the pool under the lock, then calls `ShutdownAsync()` on each channel outside the lock. A failure on one channel is logged and does not stop the others. Channels are shut down, not disposed.
+- `DisposeAsync()` calls `CloseAllChannelsAsync()` and then sets an internal `_disposed` flag. Calling it again does nothing once the flag is set.
+- `DisposeAsync()` does not block later use. `GetOrCreateChannel` does not check the flag, so a call after disposal creates a new channel that nothing will shut down. The flag is also read and written outside the lock, so two concurrent `DisposeAsync` calls can both run the close step.
+
+Dispose the manager when the host stops. The DI container does this when it owns the singleton. Do not use the manager after disposal.
+
+### Extension helpers
+
+`GrpcConnectionManagerExtensions` adds read-only queries over the metrics. Every method throws `ArgumentNullException` when `manager` is `null`, and the name-based methods throw `ArgumentException` when the name is null or whitespace.
+
+- Aggregates: `GetAllMetrics()`, `GetActiveConnectionCount()`, `GetTotalRequestCount()`, `GetTotalBytesSent()`, `GetTotalBytesReceived()`, `GetAverageConnectionDuration()` (returns `TimeSpan.Zero` when there are no connections).
+- Selectors: `GetMostRecentlyUsed()`, `GetOldestConnection()`, `GetMostActiveConnection()` (highest `RequestCount`), and `GetHighestThroughputConnection()` (highest `BytesSent + BytesReceived`). They return `null` when there are no connections.
+- Lists: `GetAllConnectionAddresses()`, `GetAllServiceNames()`, and `GetMetricsByService()`. `GetMetricsByService()` keys its dictionary by the pool key (`{Id}:{FullName}`), not by the bare service name.
+- Per-service lookups by `ServiceName` (exact, ordinal match): `GetConnectionDuration(name)`, `GetRequestCount(name)`, `GetBytesSent(name)`, `GetBytesReceived(name)`, `GetLastUsedAt(name)`, `GetCreatedAt(name)`, and `IsServiceConnected(name)`. For a service that is not connected, the numeric ones return `0`, `GetConnectionDuration` returns `TimeSpan.Zero`, and the timestamps return `DateTime.MinValue`.
+- `GetChannel(name)` is an extension with the same signature as the instance method. C# always binds `manager.GetChannel(name)` to the instance method, so call the extension as `GrpcConnectionManagerExtensions.GetChannel(manager, name)`. Both return the same result.
+
+Caveats:
+
+- `GetAllConnectionAddresses()` and `GetAllServiceNames()` return lazy sequences. They enumerate the live dictionary after the lock is released, so enumerating them while another thread changes the pool can throw. Call `ToList()` on the result right away.
+- The private helpers `GetMetricsDictionary()` and `GetLock()` read the `_metrics` and `_lock` fields through reflection on every call. Renaming those fields breaks the extensions at runtime with a `NullReferenceException`, not the `InvalidOperationException` their XML comments describe. Make the same change in both places if you rename them.
 
 ## License
 
