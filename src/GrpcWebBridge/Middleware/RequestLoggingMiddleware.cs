@@ -37,8 +37,12 @@ public sealed class RequestLoggingMiddleware
     /// </summary>
     /// <param name="next">The next delegate in the middleware pipeline.</param>
     /// <param name="logger">The logger instance for logging request and response details.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="next"/> or <paramref name="logger"/> is null.</exception>
     public RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggingMiddleware> logger)
     {
+        ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _next = next;
         _logger = logger;
         // Exclude noisy endpoints from detailed logging
@@ -50,8 +54,11 @@ public sealed class RequestLoggingMiddleware
     /// </summary>
     /// <param name="context">The HTTP context containing request and response information.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is null.</exception>
     public async Task InvokeAsync(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         _logger.LogInformation("InvokeAsync started for {Method} {Path}", context.Request.Method, context.Request.Path.Value);
         var stopwatch = Stopwatch.StartNew();
         var originalBodyStream = context.Response.Body;
