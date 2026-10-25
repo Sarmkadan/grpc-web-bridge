@@ -80,4 +80,27 @@ public static class EnumExtensions
 
         return false;
     }
+
+    /// <summary>
+    /// Returns the display strings of all values of <typeparamref name="TEnum"/>.
+    /// Each entry is produced by <see cref="ToDisplayString(Enum)"/>, so
+    /// <see cref="DisplayAttribute"/> names are respected where present.
+    /// </summary>
+    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <returns>A read-only list of display strings, one per enum value, in declaration order of <see cref="Enum.GetValues(Type)"/>.</returns>
+    public static IReadOnlyList<string> GetDisplayStrings<TEnum>() where TEnum : struct, Enum
+    {
+        return Enum.GetValues<TEnum>().Select(v => v.ToDisplayString()).ToArray();
+    }
+
+    /// <summary>
+    /// Determines whether the value is one of the defined constants of its enum type.
+    /// </summary>
+    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <param name="value">The enum value to check.</param>
+    /// <returns>True if <paramref name="value"/> is defined in <typeparamref name="TEnum"/>; otherwise false.</returns>
+    public static bool IsDefined<TEnum>(this TEnum value) where TEnum : struct, Enum
+    {
+        return Enum.IsDefined(value);
+    }
 }
