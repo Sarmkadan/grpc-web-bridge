@@ -271,6 +271,8 @@ public static class ValidationUtility
         Regex pattern,
         string patternDescription = "")
     {
+        ArgumentNullException.ThrowIfNull(pattern);
+
         if (string.IsNullOrEmpty(value))
         {
             return (false, $"{fieldName} cannot be null or empty");
