@@ -52,6 +52,7 @@
 - [ValidationUtility](#validationutility)
 - [ProtobufUtility and ReflectionUtility](#protobufutility-and-reflectionutility)
 - [StreamUtility, JsonUtility, CacheUtility](#streamutility-jsonutility-cacheutility)
+- [HealthCheckWorker](#healthcheckworker)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3465,6 +3466,99 @@ Methods:
 | `TotalMemoryUsed` | `long` | Bytes used by the cache. Set by the caller. |
 | `KeysByNamespace` | `Dictionary<string, long>` | Key count per namespace. Starts empty. |
 | `HitRate` | `double` (computed) | Hits as a percentage of hits plus misses, from 0 to 100. Returns `0` when there are no lookups. |
+
+## HealthCheckWorker
+
+`GrpcWebBridge.BackgroundWorkers.HealthCheckWorker` is a `BackgroundService` that periodically probes every service in the `ServiceRegistry`, updates each service's `Status`, and publishes a `ServiceHealthChangedEvent` on the `EventBus` when a service goes from serving to not serving. It is declared in `src/GrpcWebBridge/BackgroundWorkers/HealthCheckWorker.cs`.
+
+`AddGrpcWebBridge` does not register the worker. Add it yourself if you want background health checks:
+
+```csharp
+builder.Services.AddSingleton(new HealthCheckOptions { CheckIntervalSeconds = 60 });
+builder.Services.AddHostedService<HealthCheckWorker>();
+```
+
+The constructor takes `ILogger<HealthCheckWorker>`, `ServiceRegistry`, `EventBus`, and an optional `HealthCheckOptions`. If the options are not supplied, the worker uses `new HealthCheckOptions()`. The worker does not register `HealthCheckOptions` in DI, so the `AddSingleton` line above is needed only when you want non-default values.
+
+### HealthCheckOptions
+
+| Property | Default | Accepted range (`Validate()`) | Meaning |
+|---|---|---|---|
+| `CheckIntervalSeconds` | `30` (`DefaultCheckIntervalSeconds`) | 5 to 300 | Delay between the end of one check cycle and the start of the next. |
+| `CheckTimeoutMs` | `5000` (`DefaultCheckTimeoutMs`) | 100 to 30000 | Timeout for each individual service probe. |
+| `InitialDelaySeconds` | `10` (`DefaultInitialDelaySeconds`) | 0 to 300 | Pause after the worker starts, before the first cycle, so services can finish starting. |
+
+Options are plain mutable properties with the defaults above. `HealthCheckOptionsExtensions` provides `Validate()`, which returns a list of problems (empty when valid), `Clone()`, and `GetCheckTimeout()`, which returns `CheckTimeoutMs` as a `TimeSpan`. `HealthCheckWorkerValidation` provides `Validate()`, `IsValid()`, and `EnsureValid()` for a worker instance. `EnsureValid()` throws `ArgumentException` listing the problems.
+
+```csharp
+var problems = new HealthCheckOptions { CheckTimeoutMs = 50 }.Validate();
+// problems: "CheckTimeoutMs must be at least 100 milliseconds, but was 50."
+```
+
+### Check cycle
+
+1. After `InitialDelaySeconds`, `ExecuteAsync` runs `PerformHealthCheckAsync` in a loop.
+2. Each cycle takes a snapshot of `ServiceRegistry.ListServices()` and probes all services in parallel with `Task.WhenAll`. If no services are registered, the cycle logs at debug level and returns.
+3. Each probe sends `GET http://{Endpoint}:{Port}/health` through a new `HttpClient`, bounded by `CheckTimeoutMs`. A 2xx response counts as healthy. A timeout, connection failure, or non-2xx response counts as unhealthy.
+4. The worker waits `CheckIntervalSeconds`, then repeats until the host stops it.
+
+The probe always uses plain `http`. It does not use TLS and does not call gRPC. Any exception escaping a cycle is logged and the loop continues. Cancellation ends the loop and logs the total number of cycles.
+
+### Status updates and events
+
+Each probe result changes `GrpcService.Status` and `GrpcService.UpdatedAt`:
+
+| Probe result | Previous status | New status | Event published |
+|---|---|---|---|
+| Healthy | not `Serving` | `Serving` (logs "Service recovered") | No |
+| Healthy | `Serving` | unchanged | No |
+| Unhealthy | `Serving` | `NotServing` (logs "Service degraded") | Yes, `IsHealthy = false` |
+| Unhealthy | not `Serving` | unchanged | No |
+
+A `ServiceHealthChangedEvent` is therefore emitted only on a serving-to-not-serving transition. Recovery does not publish an event, and a service that fails before it was ever `Serving` does not publish one either. Subscribe to the registry state or the logs if you need those transitions.
+
+### ServiceHealthChangedEvent
+
+`ServiceHealthChangedEvent` derives from `EventBase`, so it also carries `EventId`, `CreatedAt`, `Source`, and `Metadata`. The worker sets `Source` to `"HealthCheckWorker"` and `Timestamp` to the UTC time of publication.
+
+| Property | Value |
+|---|---|
+| `ServiceId` | `GrpcService.Id` |
+| `ServiceName` | `GrpcService.Name` |
+| `IsHealthy` | Always `false` for the events the worker publishes |
+| `Timestamp` | UTC time the event was published |
+
+### EventBus interaction
+
+The worker calls `EventBus.PublishAsync` on the event. Subscribers registered with `Subscribe<ServiceHealthChangedEvent>` receive it. Publish errors are caught and logged with the service ID, so a failing handler does not stop the health check cycle.
+
+```csharp
+using GrpcWebBridge.BackgroundWorkers;
+
+eventBus.Subscribe<ServiceHealthChangedEvent>(evt =>
+{
+    Console.WriteLine($"{evt.ServiceName} ({evt.ServiceId}) is unhealthy at {evt.Timestamp:O}");
+});
+```
+
+With the default `DispatchOptions` (`UseAsyncDispatch = false`), handlers run inline, so `PublishAsync` waits for them before the worker continues. Enabling async dispatch hands events to a bounded queue instead. See [EventBus](#eventbus) for queue and backpressure settings.
+
+### Statistics
+
+`GetStatistics()` returns an anonymous object with these fields:
+
+- `totalHealthChecksRun`: the number of cycles started since the worker was created.
+- `lastHealthyCount` and `lastUnhealthyCount`: counts from the most recent cycle.
+- `checkInterval`, `checkTimeout`, `initialDelay`: the configured option values.
+
+`ToString()` returns a summary that includes the timing options and the first registered service. The worker itself does not map an HTTP endpoint for these numbers.
+
+### Caveats
+
+- The worker creates a new `HttpClient` for every probe. This is simple but does not reuse connections.
+- Cycles run every `CheckIntervalSeconds` after the previous cycle finishes, so a slow cycle delays the next one.
+- Health probes assume each service exposes `/health` over HTTP on its registered port. Services without that endpoint are reported unhealthy.
+- The counters are plain `int` fields updated without locking. Read `GetStatistics()` for monitoring only, not for exact figures.
 
 ## License
 
