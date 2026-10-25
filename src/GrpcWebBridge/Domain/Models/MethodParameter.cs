@@ -11,6 +11,9 @@ namespace GrpcWebBridge.Domain.Models;
 /// </summary>
 public sealed class MethodParameter
 {
+    /// <summary>The maximum protobuf field number (2^29 - 1, 536870911).</summary>
+    public const int MaxFieldNumber = 536870911;
+
     /// <summary>Represents the name of the parameter.</summary>
     public string Name { get; set; } = string.Empty;
     /// <summary>Represents the type name of the parameter.</summary>
@@ -86,9 +89,9 @@ public sealed class MethodParameter
 
     private static int ValidateFieldNumber(int fieldNumber)
     {
-        if (fieldNumber <= 0 || fieldNumber > 536870911)
+        if (fieldNumber <= 0 || fieldNumber > MaxFieldNumber)
         {
-            throw new ArgumentException("Field number must be between 1 and 536870911", nameof(fieldNumber));
+            throw new ArgumentException($"Field number must be between 1 and {MaxFieldNumber}", nameof(fieldNumber));
         }
 
         return fieldNumber;
