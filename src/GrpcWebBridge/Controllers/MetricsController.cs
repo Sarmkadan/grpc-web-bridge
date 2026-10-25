@@ -23,6 +23,8 @@ public sealed class MetricsController : ControllerBase
     private const int MaximumStreamCount = 10000;
     private const double BytesPerMegabyte = 1024.0 * 1024.0;
     private const int MaximumDisplayedStreamCount = 100;
+    private const int PercentMultiplier = 100;
+    private const int PercentPrecision = 2;
 
     private readonly StreamingService _streamingService;
     private readonly ServiceRegistry _serviceRegistry;
@@ -60,7 +62,7 @@ public sealed class MetricsController : ControllerBase
         {
             var uptime = DateTime.UtcNow - _startTime;
             var successCount = _totalRequests - _totalErrors;
-            var errorRate = _totalRequests > 0 ? (_totalErrors / (double)_totalRequests) * 100 : 0;
+            var errorRate = _totalRequests > 0 ? (_totalErrors / (double)_totalRequests) * PercentMultiplier : 0;
             var services = _serviceRegistry.ListServices();
 
             var metrics = new
@@ -84,14 +86,14 @@ public sealed class MetricsController : ControllerBase
                     totalRequests = _totalRequests,
                     successfulRequests = successCount,
                     failedRequests = _totalErrors,
-                    errorRate = Math.Round(errorRate, 2),
+                    errorRate = Math.Round(errorRate, PercentPrecision),
                     averageRequestsPerMinute = _totalRequests > 0 ? Math.Round(_totalRequests / uptime.TotalMinutes, 2) : 0
                 },
                 streamMetrics = new
                 {
                     activeStreams = _streamingService.ActiveStreamCount,
                     maxStreams = MaximumStreamCount,
-                    streamUtilization = Math.Round((_streamingService.ActiveStreamCount / (double)MaximumStreamCount) * 100, 2)
+                    streamUtilization = Math.Round((_streamingService.ActiveStreamCount / (double)MaximumStreamCount) * PercentMultiplier, PercentPrecision)
                 },
                 serviceMetrics = new
                 {
@@ -135,7 +137,7 @@ public sealed class MetricsController : ControllerBase
                 method = kvp.Key,
                 callCount = kvp.Value,
                 errorCount = _methodErrorCounts.ContainsKey(kvp.Key) ? _methodErrorCounts[kvp.Key] : 0,
-                errorRate = kvp.Value > 0 ? Math.Round(((_methodErrorCounts.ContainsKey(kvp.Key) ? _methodErrorCounts[kvp.Key] : 0) / (double)kvp.Value) * 100, 2) : 0
+                errorRate = kvp.Value > 0 ? Math.Round(((_methodErrorCounts.ContainsKey(kvp.Key) ? _methodErrorCounts[kvp.Key] : 0) / (double)kvp.Value) * PercentMultiplier, PercentPrecision) : 0
             })
             .OrderByDescending(x => x.callCount)
             .ToList();
