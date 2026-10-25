@@ -44,6 +44,7 @@
 - [TracingService and BridgeActivitySource](#tracingservice-and-bridgeactivitysource)
 - [BridgePrometheusMetrics](#bridgeprometheusmetrics)
 - [StreamingSessionManager](#streamingsessionmanager)
+- [StreamDiagnosticsService](#streamdiagnosticsservice)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -2566,6 +2567,98 @@ public sealed class ClientConnectionHandler(IStreamingSessionManager sessions)
     public Task OnDisconnectedAsync(string sessionId, CancellationToken cancellationToken)
     {
         return sessions.CloseSessionAsync(sessionId, GrpcStatusCode.Cancelled, cancellationToken);
+    }
+}
+```
+
+## StreamDiagnosticsService
+
+`GrpcWebBridge.Streaming.StreamDiagnosticsService` is a `BackgroundService` that periodically reads the metrics of every active bidirectional stream from `IBidirectionalStreamingEngine.GetAllMetrics()`. On each pass it aggregates them, logs a structured summary, flags streams with anomalies, and publishes a `StreamingDiagnosticsEvent` to the application `EventBus`. The service only observes. It does not close or modify streams.
+
+Source: `src/GrpcWebBridge/Streaming/StreamDiagnosticsService.cs`. Registration is done by `AddStreamingDiagnostics(...)` in `src/GrpcWebBridge/Streaming/StreamingExtensions.cs`:
+
+```csharp
+services.AddStreamingDiagnostics(
+    diagnosticsInterval: TimeSpan.FromSeconds(30),
+    staleThreshold: TimeSpan.FromMinutes(5),
+    backpressureWarnThreshold: 0.10);
+```
+
+`AddStreamingDiagnostics` registers a `StreamDiagnosticsOptions` singleton with `TryAddSingleton`, so the first registration wins. It then calls `AddHostedService<StreamDiagnosticsService>()`. A `null` interval or threshold argument falls back to the default shown in the table below.
+
+### StreamDiagnosticsOptions
+
+`StreamDiagnosticsOptions` is a `sealed record` with `init` properties, so it can be created with `new` and `with` expressions.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `CollectionInterval` | `TimeSpan` | `60 seconds` | Sampling interval between diagnostic passes. Passed to a `PeriodicTimer`. |
+| `StaleStreamThreshold` | `TimeSpan` | `5 minutes` | Documented as the idle duration after which a stream is considered stale. It is currently stored but never read; see the Caveats below. |
+| `BackpressureWarnThreshold` | `double` | `0.10` (10 %) | A stream is flagged at `Warning` when `BackpressureEvents / (MessagesIn + MessagesOut)` is greater than this value. |
+
+### Sampling interval
+
+- `CollectionInterval` is the only scheduling setting. `ExecuteAsync` waits on a `PeriodicTimer` built from it, so the first pass runs one full interval after the service starts, not immediately.
+- Each pass is a point-in-time sample of the streams that exist at that moment. Counters are read as cumulative values, so the service does not compute rates. Rates can be derived by the consumer from two events.
+- An exception in one pass is logged at `Error` and the loop continues with the next tick. A failing pass does not stop the service.
+- The loop ends when the host shuts down, and the service logs `stopped`.
+
+### Collection pass
+
+For each pass the service does the following:
+
+1. If there are no active streams, it clears its internal tracking, logs at `Debug` level, and returns. No event is published in this case.
+2. Otherwise it sums messages, bytes, backpressure events and credit wait time across all streams.
+3. For each stream with at least one message, it computes the backpressure ratio. A ratio above `BackpressureWarnThreshold` is logged at `Warning` with the suggestion to increase `InitialWindowSize` or channel capacity.
+4. For each stream it compares `MessagesIn + MessagesOut` with the value stored at the previous pass. An unchanged value is counted as zero-activity and logged at `Debug` level. The stored value is then updated.
+5. Tracking entries for streams that have closed since the last pass are removed.
+6. It logs one `Information` summary line containing the counts and totals.
+7. If an `EventBus` is available, it publishes a `StreamingDiagnosticsEvent` (see below).
+
+### StreamingDiagnosticsEvent
+
+`StreamingDiagnosticsEvent` derives from `EventBase`. It is a `sealed class` with `required init` properties, so every field must be set by the publisher. `Source` is set to `nameof(StreamDiagnosticsService)`.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `ActiveStreamCount` | `int` | Number of active streams in the sample. |
+| `TotalMessagesIn` | `long` | Sum of inbound messages. |
+| `TotalMessagesOut` | `long` | Sum of outbound messages. |
+| `TotalBytesIn` | `long` | Sum of inbound payload bytes. |
+| `TotalBytesOut` | `long` | Sum of outbound payload bytes. |
+| `TotalBackpressureEvents` | `long` | Sum of backpressure throttle events. |
+| `TotalCreditWaitMs` | `long` | Sum of credit wait time, in milliseconds. |
+| `ZeroActivityStreamCount` | `int` | Streams whose message total did not change since the previous pass. |
+| `HighBackpressureStreamCount` | `int` | Streams whose backpressure ratio is above the threshold. |
+
+`EventBase` also provides `EventId`, `CreatedAt` and `Source`. The event is published with `_ = _eventBus.PublishAsync(...)`, which is fire-and-forget. The service does not await the publish.
+
+### Caveats
+
+- **`StaleStreamThreshold` has no effect.** The option is declared and registered, but `CollectAndReport` never reads it. Zero-activity detection is based only on the change between two consecutive passes, not on elapsed idle time. Treat the option as reserved until it is wired up.
+- **The first pass cannot detect zero activity.** A stream has no previous count on the first pass it appears in, so it is not counted as zero-activity until the next pass.
+- **Zero-activity is a message-count check.** A stream that is busy on bytes but sends no messages in an interval still counts as zero-activity. A stream with no messages at all also has no backpressure ratio, so it is never flagged as high-backpressure.
+- **The event is optional.** `StreamDiagnosticsService` takes `EventBus?`. If no `EventBus` is resolved, the service still logs, but no event is published.
+- **Empty passes publish nothing.** Subscribers do not receive an event with `ActiveStreamCount = 0`.
+- **Totals cover live streams only.** The totals are sums over streams alive at the sample. When a stream closes, its counters leave the sum, so totals can decrease between events.
+
+### Usage example
+
+```csharp
+using GrpcWebBridge.Events;
+using GrpcWebBridge.Streaming;
+
+public sealed class StreamingAlertHook
+{
+    public StreamingAlertHook(EventBus eventBus)
+    {
+        eventBus.Subscribe<StreamingDiagnosticsEvent>(evt =>
+        {
+            if (evt.HighBackpressureStreamCount > 0)
+            {
+                // Forward to metrics or alerting here.
+            }
+        });
     }
 }
 ```
