@@ -56,6 +56,7 @@
 - [MetricsCollectionWorker](#metricscollectionworker)
 - [StreamingWorkerSupervisor](#streamingworkersupervisor)
 - [GrpcConnectionManager](#grpcconnectionmanager)
+- [ServiceRepository](#servicerepository)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -3865,6 +3866,73 @@ Caveats:
 
 - `GetAllConnectionAddresses()` and `GetAllServiceNames()` return lazy sequences. They enumerate the live dictionary after the lock is released, so enumerating them while another thread changes the pool can throw. Call `ToList()` on the result right away.
 - The private helpers `GetMetricsDictionary()` and `GetLock()` read the `_metrics` and `_lock` fields through reflection on every call. Renaming those fields breaks the extensions at runtime with a `NullReferenceException`, not the `InvalidOperationException` their XML comments describe. Make the same change in both places if you rename them.
+
+## ServiceRepository
+
+`GrpcWebBridge.Data.IServiceRepository` is the data-access contract for registered gRPC services and for the request and response records the bridge stores. Its implementation, `GrpcWebBridge.Data.ServiceRepository`, is a sealed, in-memory class. `AddGrpcWebBridge` registers it as a singleton (`services.AddSingleton<IServiceRepository, ServiceRepository>()` in `Configuration/DependencyInjection.cs`), so inject `IServiceRepository` rather than creating instances. The constructor takes `ILogger<ServiceRepository>` and throws `ArgumentNullException` when the logger is `null`. `StartupConfiguration` uses the same registration to seed the sample services.
+
+### Interface contract
+
+All 15 members are asynchronous and accept a `CancellationToken` (default `default`).
+
+| Member | Behavior |
+|--------|----------|
+| `AddAsync(GrpcService)` | Validates the service and stores it under its `Id`. Returns `false` if that `Id` already exists. |
+| `GetByIdAsync(string)` | Returns the service with that `Id`, or `null`. |
+| `GetByFullNameAsync(string)` | Returns the first service whose `FullName` matches, or `null`. |
+| `GetAllAsync()` | Returns a new list of all services. |
+| `GetByPackageAsync(string)` | Returns a new list of services whose `PackageName` matches exactly. |
+| `UpdateAsync(GrpcService)` | Replaces the entry with the same `Id`, sets `UpdatedAt` to the current UTC time, and returns `false` if the `Id` is not stored. |
+| `DeleteAsync(string)` | Removes the service with that `Id` and returns whether it was removed. |
+| `ExistsAsync(string)` | Returns whether any service has that `FullName`. |
+| `CountAsync()` | Returns the number of stored services. |
+| `SearchAsync(Func<GrpcService, bool>)` | Returns a new list of services that match the predicate. |
+| `GetPagedAsync(int, int)` | Returns `(Items, Total)` for one page, ordered by `CreatedAt`. |
+| `AddRequestAsync` / `GetRequestAsync(string)` | Store and fetch a `GrpcRequest` by its `Id`. |
+| `AddResponseAsync` / `GetResponseAsync(string)` | Store and fetch a `GrpcResponse` by its `Id`. |
+
+Argument handling:
+
+- `AddAsync`, `UpdateAsync`, `AddRequestAsync`, and `AddResponseAsync` throw `ArgumentNullException` for a `null` argument. They then call the model's `Validate()`, which can throw `ArgumentException` for invalid data. Validation runs before the lock is taken.
+- `SearchAsync` throws `ArgumentNullException` when the predicate is `null`.
+- Lookups by string (`GetByIdAsync`, `GetByFullNameAsync`, `GetByPackageAsync`, `DeleteAsync`, `ExistsAsync`, and the request and response getters) return `null`, an empty list, or `false` for a `null`, empty, or whitespace argument. They do not throw.
+- `GetPagedAsync` replaces a `pageNumber` below 1 with `1`, and a `pageSize` below 1 with `10`. It does not reject large values, and a page past the end returns an empty `Items` sequence with the correct `Total`.
+
+`TryRegisterServiceAsync` in `Extensions/ServiceExtensions.cs` wraps `AddAsync` for callers that want a `bool` result instead of an exception.
+
+### Storage
+
+The repository keeps three dictionaries, all keyed by `Id`:
+
+- `_services` holds `GrpcService` objects.
+- `_requests` holds `GrpcRequest` objects.
+- `_responses` holds `GrpcResponse` objects.
+
+Objects are stored by reference. The repository does not copy them, so changes made to an object after it is added also change what the repository returns. Nothing is persisted: all data is lost when the process stops.
+
+Keep these points in mind:
+
+- Uniqueness is enforced only on `Id`. `AddAsync` does not check `FullName`, so two services with the same `FullName` and different `Id` values can both be stored. `GetByFullNameAsync` then returns whichever one comes first in dictionary enumeration order, and `ExistsAsync` only reports that a match exists.
+- `GetByFullNameAsync`, `ExistsAsync`, `GetByPackageAsync`, `SearchAsync`, and `GetPagedAsync` scan the dictionary. Their cost grows with the number of services.
+- `GetPagedAsync` orders by `CreatedAt`. Services with equal timestamps have no guaranteed order between calls, so page contents can shift when services are added or removed.
+- Request and response records have no update, delete, count, or paging methods, and they are not linked to a service.
+
+### Thread safety
+
+A single private object, `_lock`, guards all three dictionaries. Each method takes the lock only around its dictionary work:
+
+- Reads that return one item (`GetByIdAsync`, `GetRequestAsync`, `GetResponseAsync`) return the stored reference.
+- Reads that return a collection (`GetAllAsync`, `GetByPackageAsync`, `SearchAsync`, `GetPagedAsync`) build a new list while holding the lock. The list is a snapshot of membership, so it is safe to enumerate after the call returns.
+- Writes (`AddAsync`, `UpdateAsync`, `DeleteAsync`, `AddRequestAsync`, `AddResponseAsync`) check and modify the dictionary in one locked block, so two concurrent adds of the same `Id` cannot both succeed.
+
+The lock does not protect the objects that are returned:
+
+- The `GrpcService`, `GrpcRequest`, and `GrpcResponse` instances are shared references. Changing one of their properties from another thread is not synchronized by the repository. Use `UpdateAsync` to replace the entry, and do not mutate a stored object while another thread might read it.
+- The predicate passed to `SearchAsync` runs while the lock is held. A slow predicate blocks every other repository call. A predicate that adds or removes services changes the dictionary during enumeration and throws `InvalidOperationException`.
+
+The methods are declared `async`, but they contain no `await`, so each one completes synchronously. The `CancellationToken` parameters are accepted and never checked, so cancelling a token has no effect on these methods.
+
+Logging uses `Information` for add, update, and delete of services, and `Debug` for stored requests and responses.
 
 ## License
 
