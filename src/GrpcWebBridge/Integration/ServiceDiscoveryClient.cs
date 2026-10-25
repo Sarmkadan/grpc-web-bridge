@@ -333,4 +333,6 @@ public sealed class ServiceDiscoveryOptions
     /// Interval for refreshing service discovery in seconds.
     /// </summary>
     public int RefreshIntervalSeconds { get; set; } = 60;
+
+    public override string ToString() => $"ServiceDiscoveryOptions {{ DiscoveryServiceUrl = {DiscoveryServiceUrl}, RegistrationTtlSeconds = {RegistrationTtlSeconds}, HeartbeatIntervalSeconds = {HeartbeatIntervalSeconds}, EnableAutoRefresh = {EnableAutoRefresh}, RefreshIntervalSeconds = {RefreshIntervalSeconds} }}";
 }
