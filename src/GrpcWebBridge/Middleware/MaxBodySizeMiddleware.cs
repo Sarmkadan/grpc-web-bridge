@@ -23,6 +23,9 @@ public sealed class MaxBodySizeOptions
     /// Default is 4 MiB.
     /// </summary>
     public long MaxRequestBodySizeBytes { get; set; } = DefaultMaxRequestBodySizeBytes;
+
+    /// <inheritdoc/>
+    public override string ToString() => $"MaxRequestBodySizeBytes={MaxRequestBodySizeBytes}";
 }
 
 /// <summary>
