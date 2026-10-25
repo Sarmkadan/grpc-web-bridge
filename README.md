@@ -33,6 +33,7 @@
 - [MetricsController](#metricscontroller)
 - [HealthCheckController](#healthcheckcontroller)
 - [ConfigurationController](#configurationcontroller)
+- [StreamDiagnosticsController](#streamdiagnosticscontroller)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1637,6 +1638,58 @@ Example:
 ```bash
 curl -s "$BRIDGE_URL/api/configuration" | jq '.data.Environment, .data.CompressionLevel'
 curl -s -X POST "$BRIDGE_URL/api/configuration/reset"
+```
+
+## StreamDiagnosticsController
+
+`src/GrpcWebBridge/Controllers/StreamDiagnosticsController.cs` is mounted at `api/streams` (`[Route("api/streams")]`) and exposes one read-only route, `GET /api/streams/diagnostics`. Each request takes a fresh snapshot from `IBidirectionalStreamingEngine.GetAllMetrics()` and aggregates it in the action. Nothing is stored between requests.
+
+| Verb | Route | Purpose |
+|------|-------|---------|
+| GET | `/api/streams/diagnostics` | Aggregate counters and anomaly counts for all active bidirectional streams |
+
+### Relation to StreamDiagnosticsService
+
+`StreamDiagnosticsService` (`src/GrpcWebBridge/Streaming/StreamDiagnosticsService.cs`) is a periodic `BackgroundService`. It is registered by `AddStreamingDiagnostics(...)`. On each pass it logs a summary, warns about high-backpressure streams, and publishes a `StreamingDiagnosticsEvent` to the `EventBus`.
+
+The controller is a pull-based alternative and does not call the service:
+
+- **Same engine source.** Both read `IBidirectionalStreamingEngine.GetAllMetrics()`. The controller needs only the engine to be registered (`AddBidirectionalStreaming`). It does not need `AddStreamingDiagnostics`, and it does not depend on the service being running.
+- **Same response fields.** The JSON body has the same property names as `StreamingDiagnosticsEvent`, so a consumer can use either source.
+- **Same high-backpressure rule.** A stream counts as high-backpressure when `BackpressureEvents / (MessagesIn + MessagesOut)` is greater than `0.10`. The service uses the same ratio, but its threshold comes from `StreamDiagnosticsOptions.BackpressureWarnThreshold`.
+- **No event, no log.** A request to the controller publishes nothing to the `EventBus` and writes no diagnostic log line.
+
+Caveats:
+
+- **Threshold is hard-coded.** `DefaultBackpressureWarnThreshold` is a `const` of `0.10` in the controller. Changing `backpressureWarnThreshold` in `AddStreamingDiagnostics` has no effect on this endpoint.
+- **Zero-activity means different things.** The controller counts a stream as zero-activity when its lifetime `MessagesIn` and `MessagesOut` are both `0`. The service counts a stream as zero-activity when its total message count did not change since the previous collection pass. A long-lived stream that was once busy but is now idle is counted by the service and not by the controller.
+- **Anomaly counts are a point-in-time view.** `ZeroActivityStreamCount` and `HighBackpressureStreamCount` are recomputed on each request. They are not kept as history.
+- **No authorization attribute.** The controller has no `[Authorize]`, so any caller that can reach the bridge can read these counters. Restrict `api/streams` at the gateway or network level.
+
+### GET /api/streams/diagnostics
+
+Success (`200 OK`). The body is a flat JSON object, with no `data` wrapper:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ActiveStreamCount` | int | Number of streams returned by `GetAllMetrics()` |
+| `TotalMessagesIn` | long | Sum of `MessagesIn` across all streams |
+| `TotalMessagesOut` | long | Sum of `MessagesOut` across all streams |
+| `TotalBytesIn` | long | Sum of `BytesIn` across all streams |
+| `TotalBytesOut` | long | Sum of `BytesOut` across all streams |
+| `TotalBackpressureEvents` | long | Sum of `BackpressureEvents` across all streams |
+| `TotalCreditWaitMs` | long | Sum of `TotalCreditWaitMs` across all streams |
+| `ZeroActivityStreamCount` | int | Streams with `MessagesIn == 0` and `MessagesOut == 0` |
+| `HighBackpressureStreamCount` | int | Streams with at least one message whose backpressure ratio is above `0.10` |
+
+When no streams are open, every field is `0`.
+
+The action has no `try`/`catch`. Any exception from the engine goes to `ErrorHandlingMiddleware`.
+
+Example:
+
+```bash
+curl -s "$BRIDGE_URL/api/streams/diagnostics" | jq '.ActiveStreamCount, .HighBackpressureStreamCount'
 ```
 
 ## License
