@@ -359,6 +359,14 @@ public sealed class StreamingWorkerSupervisorOptions
     /// Gets or sets the restart delay in milliseconds (default: 100ms)
     /// </summary>
     public int RestartDelayMs { get; set; } = DefaultRestartDelayMs;
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"MonitoringIntervalSeconds={MonitoringIntervalSeconds}, MaxConsecutiveFailures={MaxConsecutiveFailures}, " +
+               $"HeartbeatTimeoutSeconds={HeartbeatTimeoutSeconds}, InitialDelaySeconds={InitialDelaySeconds}, " +
+               $"ErrorDelaySeconds={ErrorDelaySeconds}, RestartDelayMs={RestartDelayMs}";
+    }
 }
 
 /// <summary>
@@ -395,6 +403,13 @@ public class StreamingWorkerHealthChangedEvent : EventBase
     /// Gets or sets the event timestamp.
     /// </summary>
     public DateTime Timestamp { get; set; }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"IsHealthy={IsHealthy}, ConsecutiveFailures={ConsecutiveFailures}, TotalRestarts={TotalRestarts}, " +
+               $"ActiveStreamCount={ActiveStreamCount}, MaxStreamCapacity={MaxStreamCapacity}, Timestamp={Timestamp:O}";
+    }
 }
 
 /// <summary>
@@ -421,4 +436,11 @@ public class StreamingWorkerRestartedEvent : EventBase
     /// Gets or sets the event timestamp.
     /// </summary>
     public DateTime Timestamp { get; set; }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"ConsecutiveFailuresBeforeRestart={ConsecutiveFailuresBeforeRestart}, TotalRestarts={TotalRestarts}, " +
+               $"ActiveStreamCount={ActiveStreamCount}, Timestamp={Timestamp:O}";
+    }
 }
