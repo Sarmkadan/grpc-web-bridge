@@ -340,6 +340,14 @@ public static class HealthEndpoints
         /// Gets or sets the system status information
         /// </summary>
         public SystemStatus? system { get; set; }
+
+        /// <summary>
+        /// Returns a short summary of the detailed health response
+        /// </summary>
+        public override string ToString()
+        {
+            return $"DetailedHealthResponse {{ status = {status}, timestamp = {timestamp:o}, uptime_seconds = {uptime_seconds} }}";
+        }
     }
 
     /// <summary>
@@ -361,6 +369,14 @@ public static class HealthEndpoints
         /// Gets or sets the list of individual service health items
         /// </summary>
         public List<ServiceHealthItem>? services { get; set; }
+
+        /// <summary>
+        /// Returns a short summary of the service health summary
+        /// </summary>
+        public override string ToString()
+        {
+            return $"ServiceHealthSummary {{ registered_count = {registered_count}, health_status = {health_status}, services = {services?.Count ?? 0} }}";
+        }
     }
 
     /// <summary>
@@ -417,6 +433,14 @@ public static class HealthEndpoints
         /// Gets or sets the service last update timestamp
         /// </summary>
         public DateTime updated_at { get; set; }
+
+        /// <summary>
+        /// Returns a short summary of the individual service health item
+        /// </summary>
+        public override string ToString()
+        {
+            return $"ServiceHealthItem {{ id = {id}, full_name = {full_name}, status = {status}, health_status = {health_status} }}";
+        }
     }
 
     /// <summary>
@@ -506,5 +530,13 @@ public static class HealthEndpoints
         /// Gets or sets the timestamp when the response was generated
         /// </summary>
         public DateTime timestamp { get; set; }
+
+        /// <summary>
+        /// Returns a short summary of the registry health response
+        /// </summary>
+        public override string ToString()
+        {
+            return $"RegistryHealthResponse {{ total_service_count = {total_service_count}, registered_services = {registered_services}, timestamp = {timestamp:o} }}";
+        }
     }
 }
