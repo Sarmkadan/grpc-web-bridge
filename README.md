@@ -59,6 +59,7 @@
 - [GrpcConnectionManager](#grpcconnectionmanager)
 - [ServiceRepository](#servicerepository)
 - [Misc Extensions (EnumExtensions, ServiceExtensions, HttpContextGrpcExtensions)](#misc-extensions-enumextensions-serviceextensions-httpcontextgrpcextensions)
+- [FlowControlledStream](#flowcontrolledstream)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -4135,6 +4136,87 @@ Caveats:
 - `IsGrpcWebRequest` also returns `true` for plain `application/grpc`, which is native gRPC over HTTP/2 and not gRPC-Web. Check the protocol separately if you need to tell them apart.
 - `IsGrpcWebTextRequest` and `TryGetGrpcMethodPath` throw `ArgumentNullException` for a null `context`. `IsGrpcWebRequest` and `GetGrpcMethodPath` do not check, so a null `context` throws `NullReferenceException` there.
 - `GetGrpcMethodPath` returns the raw request path with its leading slash, such as `/shop.v1.Catalog/GetItem`. It does not check that the path is a gRPC method.
+
+## FlowControlledStream
+
+`GrpcWebBridge.Streaming.FlowControlledStream` is the concrete `IFlowControlledStream` that the bidirectional streaming engine returns for each open stream. It wraps a `BidirectionalStreamContext` (the bounded inbound and outbound channels plus lifetime state) with a `BackpressureController` credit window. It is declared in `src/GrpcWebBridge/Streaming/FlowControlledStream.cs` as an `internal sealed class`, so application code never constructs it. Get an instance from `BidirectionalStreamingEngine.OpenStreamAsync`, which returns it as `IFlowControlledStream`.
+
+### Relation to FlowControlOptions and BackpressureController
+
+- **`FlowControlOptions`** supplies the numbers. The stream reads `CreditReplenishmentBatch` to decide how many inbound messages must be consumed before credits go back to the producer. The engine reads `InboundChannelCapacity` and `OutboundChannelCapacity` when it creates the channels, and passes the same options object to the `BackpressureController`, which reads `InitialWindowSize`, `MaxWindowSize`, `Mode`, `MaxProducerWaitTime`, and `BackpressureThreshold`. The defaults and presets (`HighThroughput`, `LowLatency`) are defined on `FlowControlOptions` in `src/GrpcWebBridge/Streaming/FlowControlOptions.cs`.
+- **`BackpressureController`** owns the credit window. `FlowControlledStream` calls `ConsumeCreditAsync(1)` before every write and `ReleaseCredit` after reads. The stream does not manage the semaphore itself. Its public `BackpressureController` property exposes the controller, so callers can read `AvailableCredits`, `WindowUtilization`, and `IsThrottled`.
+
+The stream adds the channel and credit wiring on top of these two types:
+
+| Member | Behaviour |
+|---|---|
+| `WriteAsync(message, ct)` | Rejects `null` messages. Throws `ObjectDisposedException` after disposal, and `InvalidOperationException` when the state is `Failed`, `Closed`, or `HalfClosed`. Waits for one credit, then writes to the outbound channel. The wait is recorded in `Metrics` when it is non-zero. |
+| `ReadAllAsync(ct)` | Yields messages from the inbound channel and counts them. After every `CreditReplenishmentBatch` messages, it calls `ReleaseCredit` with that batch. When the channel completes, the remaining partial batch is released. Credits are returned only as the consumer reads, so a slow consumer keeps the producer waiting. |
+| `CompleteWritingAsync()` | Completes the outbound channel. An `Active` stream moves to `HalfClosed`. |
+| `AbortAsync(status, detail)` | Records the status and detail, completes both channels with an `OperationCanceledException`, sets the state to `Failed`, and cancels the lifetime token. |
+| `DisposeAsync()` | Idempotent. Disposes the `BackpressureController` if it implements `IDisposable`, then disposes the context. |
+
+The inbound channel has no public writer. The transport layer that receives messages from the remote peer fills it. In `CreditWindow` mode a producer blocks when the window is exhausted, and credits come back only when the local side reads inbound messages with `ReadAllAsync`. A producer that never reads therefore stalls after `InitialWindowSize` writes. Once `MaxProducerWaitTime` elapses (30 seconds by default), the wait is cancelled with `OperationCanceledException`. With `Mode = Disabled` the credit calls return immediately, so writes are bounded only by the channel capacity.
+
+### Usage
+
+Open a stream through the engine, run a reader next to the producer, and write outbound messages. The engine is constructed directly here. With DI, `AddBidirectionalStreaming` registers it.
+
+```csharp
+using GrpcWebBridge.Domain;
+using GrpcWebBridge.Domain.Models;
+using GrpcWebBridge.Streaming;
+using Microsoft.Extensions.Logging.Abstractions;
+
+var options = FlowControlOptions.LowLatency with
+{
+    CreditReplenishmentBatch = 8
+};
+options.Validate();
+
+await using var engine = new BidirectionalStreamingEngine(NullLoggerFactory.Instance, options);
+
+IFlowControlledStream stream = await engine.OpenStreamAsync(
+    "orders-42",
+    MethodType.BidirectionalStreaming);
+
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+// Reader: each batch of CreditReplenishmentBatch inbound messages returns credits to the window.
+// The transport layer feeds the inbound channel; this example does not show that part.
+Task reader = Task.Run(async () =>
+{
+    await foreach (StreamMessage reply in stream.ReadAllAsync(cts.Token))
+    {
+        Console.WriteLine($"reply seq={reply.SequenceNumber} bytes={reply.Data.Length}");
+    }
+}, cts.Token);
+
+// Producer: each write takes one credit and waits when the window is empty.
+for (int seq = 1; seq <= 100; seq++)
+{
+    byte[] payload = System.Text.Encoding.UTF8.GetBytes($"order-{seq}");
+    await stream.WriteAsync(new StreamMessage(stream.StreamId, seq, payload), cts.Token);
+}
+
+// Tell the remote side that no more outbound messages are coming.
+await stream.CompleteWritingAsync();
+
+// Observe the window while the stream is open.
+Console.WriteLine(
+    $"credits={stream.BackpressureController.AvailableCredits} " +
+    $"utilisation={stream.BackpressureController.WindowUtilization:P0} " +
+    $"throttled={stream.BackpressureController.IsThrottled}");
+```
+
+`FlowControlOptions` is a record, so `with` returns a copy and leaves the `LowLatency` preset unchanged. `OpenStreamAsync` does not validate options, so call `Validate()` yourself on custom options, as shown above.
+
+### Caveats
+
+- `FlowControlledStream` is internal, and the examples above use only the public interface. Do not cast `IFlowControlledStream` to the concrete type.
+- `ReadAllAsync` releases credits only for messages it has yielded. A consumer that stops reading early keeps the rest of the window closed. Disposing the enumerator without finishing it also skips the final partial-batch release.
+- `AbortAsync` completes the inbound channel with an `OperationCanceledException`. A reader gets the buffered messages first, then the exception, so an aborted stream does not end in a normal loop exit. The state changes to `Failed`.
+- `StreamThroughputMetrics` counters are updated without locking. Read them for monitoring only.
 
 ## License
 
