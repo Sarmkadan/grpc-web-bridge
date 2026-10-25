@@ -30,6 +30,7 @@
 - [EventBus](#eventbus)
 - [CacheManager](#cachemanager)
 - [BridgeController](#bridgecontroller)
+- [MetricsController](#metricscontroller)
 - [License](#license)
 
 For GoalTracker integration, credentials should be stored in environment variables rather than hardcoded in documentation.
@@ -1260,6 +1261,168 @@ Example:
 curl -s -X POST "$BRIDGE_URL/api/bridge/batch" \
   -H 'Content-Type: application/json' \
   -d '{"operations":[{"id":"op-1","serviceId":"greeter","methodName":"SayHello"}]}'
+```
+
+## MetricsController
+
+`src/GrpcWebBridge/Controllers/MetricsController.cs` is mounted at `api/metrics` (`[Route("api/metrics")]`) and produces `application/json`. It exposes four endpoints:
+
+| Verb | Route | Purpose |
+|------|-------|---------|
+| GET | `/api/metrics` | System, request, stream, service and resource metrics in one object |
+| GET | `/api/metrics/methods` | Call and error counts per gRPC method, busiest first |
+| GET | `/api/metrics/streaming` | Active stream count and per-stream statistics (at most 100 streams) |
+| POST | `/api/metrics/reset` | Clear request, error and per-method counters and restart the uptime clock |
+
+Caveats:
+
+- **Counters have no producer in `src/`.** Request and error totals come from the static methods `MetricsController.RecordMethodCall(methodName)` and `MetricsController.RecordMethodError(methodName)`. Nothing under `src/` calls them, so `totalRequests`, `totalErrors` and the method list stay empty until a caller wires them up (for example, a gRPC interceptor).
+- **Counters are process-wide.** They are static fields, so they reset on restart and are shared by all requests. `reset` clears them but leaves live stream state alone.
+- **`errorRate` is a percentage, not a fraction.** `2.5` means 2.5%. It is rounded to two decimals.
+- **Stream utilization uses a fixed capacity.** `streamUtilization` is `activeStreams / maxStreams * 100`, where `maxStreams` is the controller's own constant `10000`. It does not read the configured limit.
+- **No authorization attribute.** The controller has no `[Authorize]`, so `POST /api/metrics/reset` is open to any caller that can reach the bridge. Restrict it at the network or gateway level.
+
+### GET /api/metrics
+
+Success (`200 OK`). Every field sits under `data`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.systemMetrics.uptime` | object | `days`, `hours`, `minutes`, `seconds` (the clock components) and `totalSeconds` (the full span) since `startTime` |
+| `data.systemMetrics.startTime` | datetime (UTC) | When the counters were last initialized or reset |
+| `data.systemMetrics.currentTime` | datetime (UTC) | Server time when the response was built |
+| `data.systemMetrics.processId` | int | OS process ID of the bridge |
+| `data.requestMetrics.totalRequests` | long | Count recorded by `RecordMethodCall` |
+| `data.requestMetrics.successfulRequests` | long | `totalRequests - totalErrors` |
+| `data.requestMetrics.failedRequests` | long | Count recorded by `RecordMethodError` |
+| `data.requestMetrics.errorRate` | double | `failedRequests / totalRequests * 100`, rounded to two decimals. `0` when there are no requests |
+| `data.requestMetrics.averageRequestsPerMinute` | double | `totalRequests` divided by uptime in minutes, rounded to two decimals. `0` when there are no requests |
+| `data.streamMetrics.activeStreams` | int | Streams currently open in `StreamingService` |
+| `data.streamMetrics.maxStreams` | int | Fixed capacity used for utilization (`10000`) |
+| `data.streamMetrics.streamUtilization` | double | `activeStreams / maxStreams * 100`, rounded to two decimals |
+| `data.serviceMetrics.totalServices` | int | Services in the registry |
+| `data.serviceMetrics.healthyServices` | int | Services whose `Status` is `Serving` |
+| `data.serviceMetrics.totalMethods` | int | Methods across all registered services |
+| `data.resourceMetrics.memoryUsageMb` | double | Managed heap size (`GC.GetTotalMemory(false)`) in MB |
+| `data.resourceMetrics.processorCount` | int | Logical processors visible to the process |
+| `data.resourceMetrics.workingSetMb` | double | Process working set in MB |
+
+The top level also has `success` (always `true` on success) and `timestamp` (UTC).
+
+Errors:
+
+| Status | Body |
+|--------|------|
+| 500 | `{ "error": "Failed to retrieve metrics" }` |
+
+Example response (values are illustrative):
+
+```json
+{
+  "success": true,
+  "data": {
+    "systemMetrics": {
+      "uptime": { "days": 2, "hours": 3, "minutes": 14, "seconds": 9, "totalSeconds": 184449.48 },
+      "startTime": "2026-10-23T08:46:00.1234567Z",
+      "currentTime": "2026-10-25T12:00:09.4821033Z",
+      "processId": 4242
+    },
+    "requestMetrics": {
+      "totalRequests": 1520,
+      "successfulRequests": 1482,
+      "failedRequests": 38,
+      "errorRate": 2.5,
+      "averageRequestsPerMinute": 0.49
+    },
+    "streamMetrics": {
+      "activeStreams": 12,
+      "maxStreams": 10000,
+      "streamUtilization": 0.12
+    },
+    "serviceMetrics": {
+      "totalServices": 4,
+      "healthyServices": 3,
+      "totalMethods": 17
+    },
+    "resourceMetrics": {
+      "memoryUsageMb": 84.37,
+      "processorCount": 4,
+      "workingSetMb": 131.9
+    }
+  },
+  "timestamp": "2026-10-25T12:00:09.4821033Z"
+}
+```
+
+Example:
+
+```bash
+curl -s "$BRIDGE_URL/api/metrics" | jq '.data.requestMetrics'
+```
+
+### GET /api/metrics/methods
+
+Success (`200 OK`). `methods` is sorted by `callCount`, highest first:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `methodCount` | int | Number of distinct methods with at least one recorded call |
+| `totalCalls` | long | Sum of `callCount` |
+| `totalErrors` | long | Sum of `errorCount` |
+| `methods[].method` | string | Method name as passed to `RecordMethodCall` |
+| `methods[].callCount` | long | Calls recorded for this method |
+| `methods[].errorCount` | long | Errors recorded for this method (`0` if none) |
+| `methods[].errorRate` | double | Percentage of calls that failed, rounded to two decimals |
+
+```json
+{
+  "success": true,
+  "methodCount": 2,
+  "totalCalls": 1520,
+  "totalErrors": 38,
+  "methods": [
+    { "method": "greeter.SayHello", "callCount": 1100, "errorCount": 10, "errorRate": 0.91 },
+    { "method": "orders.GetOrder", "callCount": 420, "errorCount": 28, "errorRate": 6.67 }
+  ],
+  "timestamp": "2026-10-25T12:00:09.4821033Z"
+}
+```
+
+Errors: `500` with `{ "error": "Failed to retrieve method metrics" }`.
+
+### GET /api/metrics/streaming
+
+Success (`200 OK`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `activeStreamCount` | int | Total open streams |
+| `displayedStreamCount` | int | Streams included in `streams`, capped at 100 |
+| `totalMessageCount` | long | Sum of `messageCount` across the displayed streams only |
+| `streams` | array | `StreamStatistics` objects: `streamId`, `messageCount`, `queuedMessageCount`, `state`, `createdAt`, `lastActivityTime` |
+
+Errors: `500` with `{ "error": "Failed to retrieve streaming metrics" }`.
+
+### POST /api/metrics/reset
+
+Clears `totalRequests`, `totalErrors` and both per-method dictionaries, and sets `startTime` to now. Active streams are not affected. Logs a warning on each call.
+
+Success (`200 OK`):
+
+```json
+{
+  "success": true,
+  "message": "Metrics reset successfully",
+  "timestamp": "2026-10-25T12:05:00.0000000Z"
+}
+```
+
+Errors: `500` with `{ "error": "Failed to reset metrics" }`.
+
+Example:
+
+```bash
+curl -s -X POST "$BRIDGE_URL/api/metrics/reset"
 ```
 
 ## License
